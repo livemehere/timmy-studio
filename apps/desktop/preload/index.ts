@@ -1,0 +1,35 @@
+import { contextBridge, ipcRenderer } from "electron";
+
+const listeners = new Map<string, Set<(...args: any[]) => void>>();
+
+contextBridge.exposeInMainWorld("app", {
+  invoke: (channel: string, ...args: any[]) =>
+    ipcRenderer.invoke(channel, ...args),
+  on: (channel: string, listener: (...args: any[]) => void) => {
+    const listenerSet = listeners.get(channel) || new Set();
+    listenerSet.add(listener);
+    listeners.set(channel, listenerSet);
+    ipcRenderer.on(channel, listener);
+    return () => {
+      const set = listeners.get(channel);
+      if (set) {
+        ipcRenderer.removeListener(channel, listener);
+        set.delete(listener);
+      }
+    };
+  },
+  off: (channel: string, listener?: (...args: any[]) => void) => {
+    const set = listeners.get(channel);
+    if (set) {
+      if (listener) {
+        ipcRenderer.removeListener(channel, listener);
+        set.delete(listener);
+      } else {
+        for (const lst of set) {
+          ipcRenderer.removeListener(channel, lst);
+        }
+        listeners.delete(channel);
+      }
+    }
+  },
+});
