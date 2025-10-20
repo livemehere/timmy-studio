@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 
 const listeners = new Map<string, Set<(...args: any[]) => void>>();
 
+// TODO: 타입 구체적으로 정의
 contextBridge.exposeInMainWorld("app", {
   invoke: (channel: string, ...args: any[]) =>
     ipcRenderer.invoke(channel, ...args),
