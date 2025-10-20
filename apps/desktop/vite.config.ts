@@ -5,6 +5,13 @@ import { spawn } from "node:child_process";
 import { rmSync } from "node:fs";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@renderer": path.resolve(__dirname, "renderer/src"),
+      "@main": path.resolve(__dirname, "main"),
+      "@preload": path.resolve(__dirname, "preload"),
+    },
+  },
   plugins: [
     electron({
       main: {},
@@ -117,7 +124,6 @@ function electron(options: {
           "main",
           isServe
             ? async () => {
-                console.log("main changed");
                 app?.kill();
                 app = spawn("electron", ["."], {
                   stdio: "inherit",
@@ -132,7 +138,6 @@ function electron(options: {
           "preload",
           isServe
             ? async () => {
-                console.log("preload changed");
                 devServer.ws.send({ type: "full-reload" });
               }
             : undefined,
