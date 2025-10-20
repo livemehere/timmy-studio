@@ -10,8 +10,7 @@ contextBridge.exposeInMainWorld("app", {
   // evet, ...args => ...args 로 첫번쨰 인자 제거
   on: (channel: string, listener: (...args: any[]) => void) => {
     const listenerSet = listeners.get(channel) || new Set();
-    const wrapped = (event: IpcRendererEvent, ...args: any[]) =>
-      listener(...args);
+    const wrapped = (_e: IpcRendererEvent, ...args: any[]) => listener(...args);
     listenerSet.add(wrapped);
     listeners.set(channel, listenerSet);
     ipcRenderer.on(channel, wrapped);
