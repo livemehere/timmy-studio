@@ -13,8 +13,8 @@ export default function App() {
       <h1>Hello</h1>
       <button
         onClick={async () => {
-          const unuSub = window.app.on("ping", (e, data) => {
-            console.log(e, data);
+          const unuSub = window.app.on("ping", (data) => {
+            console.log(data);
           });
           unSubs.current.push(unuSub);
         }}

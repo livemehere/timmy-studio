@@ -31,6 +31,7 @@
   "include": [
     "renderer/src",
     "main",
-    "preload"
+    "preload",
+    "custom.d.ts"
   ]
 }

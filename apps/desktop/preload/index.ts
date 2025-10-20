@@ -1,20 +1,24 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 
 const listeners = new Map<string, Set<(...args: any[]) => void>>();
 
 contextBridge.exposeInMainWorld("app", {
   invoke: (channel: string, ...args: any[]) =>
     ipcRenderer.invoke(channel, ...args),
+
+  // evet, ...args => ...args 로 첫번쨰 인자 제거
   on: (channel: string, listener: (...args: any[]) => void) => {
     const listenerSet = listeners.get(channel) || new Set();
-    listenerSet.add(listener);
+    const wrapped = (event: IpcRendererEvent, ...args: any[]) =>
+      listener(...args);
+    listenerSet.add(wrapped);
     listeners.set(channel, listenerSet);
-    ipcRenderer.on(channel, listener);
+    ipcRenderer.on(channel, wrapped);
     return () => {
       const set = listeners.get(channel);
       if (set) {
-        ipcRenderer.removeListener(channel, listener);
-        set.delete(listener);
+        ipcRenderer.removeListener(channel, wrapped);
+        set.delete(wrapped);
       }
     };
   },
