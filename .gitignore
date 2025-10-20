@@ -44,3 +44,5 @@ temp/
 # Optional
 .pnpm-lock.yaml.bak
 
+
+.idea

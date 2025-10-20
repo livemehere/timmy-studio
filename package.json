@@ -5,5 +5,13 @@
   "main": "index.js",
   "author": "livemehere",
   "license": "ISC",
-  "packageManager": "pnpm@10.18.1"
+  "packageManager": "pnpm@10.18.1",
+  "devDependencies": {
+    "prettier": "^3.6.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron"
+    ]
+  }
 }
