@@ -1,6 +1,24 @@
-declare global {
-  interface Window {
-    app: any; // TODO: 타입 구체적으로 정의
+/// <reference types="@timmy-studio/electron-utils/ipc/renderer" />
+
+/**
+ * Extend the IPC channel interfaces with app-specific channels
+ */
+declare module "@timmy-studio/electron-utils/ipc" {
+  interface IpcInvokeChannels {
+    add: {
+      payload: [a: number, b: number];
+      response: number;
+    };
+    hello: {
+      payload: [];
+      response: string;
+    };
+  }
+
+  interface IpcSendChannels {
+    ping: {
+      payload: [timestamp: string];
+    };
   }
 }
 

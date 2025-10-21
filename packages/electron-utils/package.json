@@ -9,6 +9,14 @@
       "types": "./dist/index.d.ts",
       "require": "./dist/index.js",
       "import": "./dist/index.mjs"
+    },
+    "./ipc": {
+      "types": "./dist/ipc/index.d.ts",
+      "require": "./dist/ipc/index.js",
+      "import": "./dist/ipc/index.mjs"
+    },
+    "./ipc/renderer": {
+      "types": "./dist/ipc/renderer.d.ts"
     }
   },
   "files": [
