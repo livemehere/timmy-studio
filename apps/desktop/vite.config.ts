@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import * as path from "node:path";
-import { electron } from "@timmy-studio/electron-utils";
+import { electron } from "@timmy-studio/electron-utils/vite";
 
 export default defineConfig({
   resolve: {

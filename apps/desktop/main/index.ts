@@ -5,7 +5,7 @@ import {
   loadWindowUrl,
   setupDevTools,
 } from "@timmy-studio/electron-utils";
-import { ipc } from "@timmy-studio/electron-utils/ipc";
+import { ipc } from "@timmy-studio/electron-utils/ipc/main";
 
 app.whenReady().then(async () => {
   const win = new BrowserWindow({

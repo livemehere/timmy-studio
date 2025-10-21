@@ -14,6 +14,22 @@ This package is part of the Timmy Studio workspace and should be installed via w
 }
 ```
 
+## Package Structure
+
+This package provides modular exports for different parts of Electron development:
+
+- **`.`** - Common utilities (paths, window helpers, env checks)
+- **`./vite`** - Vite plugin for Electron build orchestration
+- **`./ipc/main`** - Main process IPC utilities
+- **`./ipc/preload`** - Preload script IPC utilities
+- **`./ipc/renderer`** - TypeScript types for renderer process
+
+This structure allows for future expansion with additional features like:
+
+- `./store/main`, `./store/preload` - State management (future)
+- `./logger/main`, `./logger/preload` - Logging utilities (future)
+- etc.
+
 ## Usage
 
 ### Vite Plugin
@@ -22,7 +38,7 @@ In your `vite.config.ts`:
 
 ```typescript
 import { defineConfig } from "vite";
-import { electron } from "@timmy-studio/electron-utils";
+import { electron } from "@timmy-studio/electron-utils/vite";
 
 export default defineConfig({
   plugins: [
@@ -37,7 +53,7 @@ export default defineConfig({
 });
 ```
 
-### Utility Functions
+### Common Utilities
 
 ```typescript
 import {
@@ -87,9 +103,81 @@ if (isPackaged()) {
 }
 ```
 
+### Type-Safe IPC in Main Process
+
+```typescript
+import { ipc } from "@timmy-studio/electron-utils/ipc/main";
+
+// Type-safe IPC handlers - parameters and return types are inferred
+ipc.handle("add", (_event, a, b) => {
+  return a + b;
+});
+
+ipc.handle("multiply", (_event, a, b) => {
+  return a * b;
+});
+
+// Cancellable handler for long-running tasks
+ipc.handleCancellable("longTask", async (_event, ctx, duration) => {
+  return new Promise<string>((resolve, reject) => {
+    const interval = setInterval(() => {
+      if (ctx.isCancelled()) {
+        clearInterval(interval);
+        reject(new Error("Task was cancelled"));
+        return;
+      }
+      // ... task logic
+    }, 100);
+
+    ctx.onCancel(() => {
+      clearInterval(interval);
+    });
+  });
+});
+
+// Send messages to renderer
+ipc.send(win.webContents, "ping", new Date().toISOString());
+```
+
+### Preload Script
+
+```typescript
+import { exposeIpcApi } from "@timmy-studio/electron-utils/ipc/preload";
+
+// Expose type-safe IPC API to renderer
+exposeIpcApi();
+```
+
+### Renderer Types
+
+Add this to your renderer TypeScript files or `custom.d.ts`:
+
+```typescript
+/// <reference types="@timmy-studio/electron-utils/ipc/renderer" />
+
+// Now you can use window.app with full type safety
+const result = await window.app.invoke("add", 1, 2);
+console.log(result); // 3
+
+// Subscribe to messages from main process
+const unsubscribe = window.app.on("ping", (timestamp) => {
+  console.log("Ping received:", timestamp);
+});
+
+// Cancel subscription when needed
+unsubscribe();
+
+// Batch invoke for multiple requests
+const results = await window.app.batchInvoke([
+  { channel: "add", args: [1, 2] },
+  { channel: "multiply", args: [3, 4] },
+]);
+```
+
 ## Features
 
 ### Vite Plugin
+
 - **Automatic build orchestration** for main, preload, and renderer processes
 - **Hot Reload** support in development mode
 - **Process Management**: Automatic Electron restart during development
@@ -98,6 +186,7 @@ if (isPackaged()) {
 ### Utility Functions
 
 #### Path Utilities
+
 - `getPreloadPath()` - Get compiled preload script path
 - `getRendererUrl()` - Get renderer URL (dev server or file://)
 - `getResourcePath()` - Get resource files path
@@ -106,14 +195,17 @@ if (isPackaged()) {
 - `getTempPath()` - Get temp directory
 
 #### Window Utilities
+
 - `loadWindowUrl()` - Load renderer with automatic env detection
 - `setupDevTools()` - Setup DevTools with F5/F12 shortcuts (dev only)
 
 #### Environment Checks
+
 - `isDev()` - Check if running in development mode
 - `isPackaged()` - Check if running as packaged app
 
 ### TypeScript
+
 - Full TypeScript support with type definitions
 - Dual format output (CJS + ESM)
 
@@ -137,6 +229,7 @@ pnpm dev
 ```
 
 This will:
+
 1. Build `@timmy-studio/electron-utils` first
 2. Start `tsup --watch` for the package (auto-rebuild on changes)
 3. Start the desktop app dev server in parallel
@@ -157,9 +250,38 @@ dist/
 
 ```
 src/
-├── index.ts          # Barrel exports
+├── index.ts          # Common utilities export
 ├── vite-plugin.ts    # Vite plugin for Electron
-└── utils.ts          # Utility functions
+├── utils.ts          # Utility functions
+└── ipc/
+    ├── index.ts      # IPC barrel exports (deprecated)
+    ├── main.ts       # Main process IPC utilities
+    ├── preload.ts    # Preload script IPC API
+    ├── renderer.d.ts # Renderer process type definitions
+    └── types.ts      # Shared IPC types
+```
+
+### Exports Map
+
+```json
+{
+  ".": "Common utilities (paths, window, env)",
+  "./vite": "Vite plugin for Electron",
+  "./ipc/main": "Main process IPC utilities",
+  "./ipc/preload": "Preload script IPC API",
+  "./ipc/renderer": "Renderer TypeScript types"
+}
+```
+
+**Future expansion examples:**
+
+```json
+{
+  "./store/main": "State management for main process",
+  "./store/preload": "State management for preload",
+  "./logger/main": "Logging utilities for main process",
+  "./logger/preload": "Logging utilities for preload"
+}
 ```
 
 ### Technology

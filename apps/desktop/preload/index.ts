@@ -1,3 +1,3 @@
-import { exposeIpcApi } from "@timmy-studio/electron-utils/ipc";
+import { exposeIpcApi } from "@timmy-studio/electron-utils/ipc/preload";
 
 exposeIpcApi();

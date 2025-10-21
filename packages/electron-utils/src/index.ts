@@ -1,5 +1,2 @@
-// Vite plugins
-export * from "./vite-plugin";
-
-// Utility functions
+// Common utility functions for Electron apps
 export * from "./utils";
