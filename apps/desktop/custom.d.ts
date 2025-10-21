@@ -9,8 +9,16 @@ declare module "@timmy-studio/electron-utils/ipc" {
       payload: [a: number, b: number];
       response: number;
     };
+    multiply: {
+      payload: [a: number, b: number];
+      response: number;
+    };
     hello: {
       payload: [];
+      response: string;
+    };
+    longTask: {
+      payload: [duration: number];
       response: string;
     };
   }
