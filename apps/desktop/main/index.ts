@@ -1,29 +1,29 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import { add } from "@main/utils";
-import path from "node:path";
+import {
+  getPreloadPath,
+  loadWindowUrl,
+  setupDevTools,
+} from "@timmy-studio/electron-utils";
 
 app.whenReady().then(async () => {
   const win = new BrowserWindow({
     width: 1280,
     height: 720,
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
+      preload: getPreloadPath(),
     },
   });
 
-  win.webContents.openDevTools();
+  // 개발 모드에서만 DevTools와 단축키 설정
+  setupDevTools(win);
 
   ipcMain.handle("add", (_e, a: number, b: number) => {
     return add(a, b);
   });
 
-  if (!app.isPackaged) {
-    const url = process.env["RENDERER_URL"];
-    if (!url) throw new Error("RENDERER_URL 이 정의되지 않았습니다.");
-    await win.loadURL(url);
-  } else {
-    await win.loadFile(path.join(__dirname, "../renderer/index.html"));
-  }
+  // loadWindowUrl이 자동으로 dev/prod 환경 처리
+  await loadWindowUrl(win);
 
   setInterval(() => {
     win.webContents.send("ping", new Date().toISOString());
