@@ -4,7 +4,7 @@ import {
   getPreloadPath,
   loadWindowUrl,
   setupDevTools,
-} from "@timmy-studio/electron-utils";
+} from "@timmy-studio/electron-utils/utils/main";
 import { ipc } from "@timmy-studio/electron-utils/ipc/main";
 
 app.whenReady().then(async () => {
