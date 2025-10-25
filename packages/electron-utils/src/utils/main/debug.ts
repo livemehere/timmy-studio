@@ -1,7 +1,7 @@
 import process from 'node:process';
 import { app, BrowserWindow, OpenDevToolsOptions } from 'electron';
 import * as localShortcut from './local-shortcuts';
-import { isDev } from './is';
+import { isDev, isPreview } from './is';
 
 const isMacOS = process.platform === 'darwin';
 
@@ -27,7 +27,7 @@ function toggleDevelopmentTools(win: BrowserWindow | null = BrowserWindow.getFoc
 }
 
 function shouldRun(options: DebugOptions): boolean {
-	return !!(options && (options.isEnabled === true || (options.isEnabled === null && isDev())));
+	return  (options.isEnabled === true || (options.isEnabled === null && (isDev() || isPreview())));
 }
 
 function getOptionsForWindow(win: BrowserWindow, options: DebugOptions): DebugOptions {

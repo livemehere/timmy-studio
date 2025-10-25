@@ -1,8 +1,8 @@
-import path from "path";
+import path from 'path';
 
 export function getPreloadPath(): string {
   const rootPath = process.cwd();
-  return path.join(rootPath, "dist/preload.js");
+  return path.join(rootPath, 'dist/preload.js');
 }
 
 /**
@@ -10,15 +10,14 @@ export function getPreloadPath(): string {
  * @returns {string} 렌더러 프로세스의 진입점 경로 process.env.RENDERER_URL || file://{프로젝트 루트}/dist/renderer/index.html
  */
 export function getRendererPath(): string {
-  const rendererUrl = process.env["RENDERER_URL"];
+  const rendererUrl = process.env['RENDERER_URL'];
   if (rendererUrl) {
     return rendererUrl;
   }
 
   const rootPath = process.cwd();
-  return `file://${path.join(rootPath, "dist/renderer/index.html")}`;
+  return path.join(rootPath, 'dist/renderer/index.html');
 }
-
 
 /**
  * Get resource path (for production builds)
