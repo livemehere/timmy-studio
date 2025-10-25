@@ -1,5 +1,5 @@
 import { build as viteBuild, mergeConfig, type Plugin, type UserConfig, type ViteDevServer } from "vite";
-import * as path from "node:path";
+import path from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
 import { rmSync } from "node:fs";
 

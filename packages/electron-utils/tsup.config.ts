@@ -12,7 +12,8 @@ export default defineConfig({
     "ipc/renderer": "src/ipc/renderer.d.ts",
 
     // utils
-    "utils/main": "src/utils/main.ts",
+    "utils/shared": "src/utils/shared/index.ts",
+    "utils/main": "src/utils/main/index.ts",
   },
   format: ["cjs", "esm"],
   dts: true,

@@ -10,7 +10,7 @@
       "require": "./dist/vite/index.js",
       "import": "./dist/vite/index.mjs"
     },
-    "./ipc":{
+    "./ipc": {
       "types": "./dist/ipc/index.d.ts"
     },
     "./ipc/main": {
@@ -26,6 +26,11 @@
     "./ipc/renderer": {
       "types": "./dist/ipc/renderer.d.ts"
     },
+    "./utils/shared": {
+      "types": "./dist/utils/shared.d.ts",
+      "require": "./dist/utils/shared.js",
+      "import": "./dist/utils/shared.mjs"
+    },
     "./utils/main": {
       "types": "./dist/utils/main.d.ts",
       "require": "./dist/utils/main.js",
@@ -37,7 +42,8 @@
   ],
   "scripts": {
     "build": "tsup",
-    "dev": "tsup --watch"
+    "dev": "tsup --watch",
+    "test": "vitest"
   },
   "peerDependencies": {
     "electron": "^38.0.0",
@@ -48,6 +54,7 @@
     "electron": "^38.3.0",
     "tsup": "^8.3.5",
     "typescript": "~5.9.3",
-    "vite": "^7.1.7"
+    "vite": "^7.1.7",
+    "vitest": "^4.0.3"
   }
 }

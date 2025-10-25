@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef } from 'react';
 
 export default function App() {
   const unSubs = useRef<(() => void)[]>([]);
@@ -6,21 +6,21 @@ export default function App() {
   useEffect(() => {
     // Type-safe invoke: 파라미터 타입과 리턴 타입이 자동으로 추론됨
     // result는 자동으로 number 타입으로 추론됨
-    window.app.invoke("add", 2, 3).then((result) => {
-      console.log("Result of add:", result);
+    window.app.invoke('add', 2, 3).then((result) => {
+      console.log('Result of add:', result);
     });
   }, []);
 
   return (
-    <div style={{ padding: "20px" }}>
+    <div style={{ padding: '20px' }}>
       <h1>IPC Examples</h1>
 
-      <section style={{ marginBottom: "20px" }}>
+      <section style={{ marginBottom: '20px' }}>
         <h2>Basic Invoke</h2>
         <button
           onClick={() => {
-            window.app.invoke("hello").then((result) => {
-              console.log("Result of hello:", result);
+            window.app.invoke('hello').then((result) => {
+              console.log('Result of hello:', result);
             });
           }}
         >
@@ -28,12 +28,12 @@ export default function App() {
         </button>
       </section>
 
-      <section style={{ marginBottom: "20px" }}>
+      <section style={{ marginBottom: '20px' }}>
         <h2>Event Listeners</h2>
         <button
           onClick={async () => {
-            const unSub = window.app.on("ping", (timestamp) => {
-              console.log("Ping received:", timestamp);
+            const unSub = window.app.on('ping', (timestamp) => {
+              console.log('Ping received:', timestamp);
             });
             unSubs.current.push(unSub);
           }}
@@ -62,7 +62,7 @@ export default function App() {
         </button>
         <button
           onClick={() => {
-            window.app.off("ping");
+            window.app.off('ping');
           }}
         >
           Off All Ping Listeners
