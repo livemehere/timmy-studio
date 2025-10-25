@@ -4,6 +4,11 @@
   "description": "Vite plugin for Electron development",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "electron-dev": "./dist/cli/dev.js",
+    "electron-preview": "./dist/cli/preview.js",
+    "electron-build": "./dist/cli/build.js"
+  },
   "exports": {
     "./vite": {
       "types": "./dist/vite/index.d.ts",
