@@ -10,6 +10,7 @@
       "require": "./dist/vite/index.js",
       "import": "./dist/vite/index.mjs"
     },
+
     "./ipc": {
       "types": "./dist/ipc/index.d.ts"
     },
@@ -26,6 +27,7 @@
     "./ipc/renderer": {
       "types": "./dist/ipc/renderer.d.ts"
     },
+    
     "./utils/shared": {
       "types": "./dist/utils/shared.d.ts",
       "require": "./dist/utils/shared.js",
