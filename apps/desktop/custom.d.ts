@@ -3,31 +3,19 @@
 /**
  * Extend the IPC channel interfaces with app-specific channels
  */
-declare module "@timmy-studio/electron-utils/ipc" {
+declare module '@timmy-studio/electron-utils/ipc' {
   interface IpcInvokeChannels {
-    add: {
-      payload: [a: number, b: number];
-      response: number;
-    };
-    multiply: {
-      payload: [a: number, b: number];
-      response: number;
-    };
-    hello: {
-      payload: [];
-      response: string;
-    };
-    longTask: {
-      payload: [duration: number];
-      response: string;
+    getAppInfo: {
+      response: {
+        isDev: boolean;
+        isPackaged: boolean;
+        isPreview: boolean;
+        version: string;
+      };
     };
   }
 
-  interface IpcSendChannels {
-    ping: {
-      payload: [timestamp: string];
-    };
-  }
+  interface IpcSendChannels {}
 }
 
 export {};

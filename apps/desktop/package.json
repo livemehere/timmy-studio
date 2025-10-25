@@ -1,7 +1,7 @@
 {
   "name": "desktop",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "main": "dist/main.js",
   "scripts": {
     "dev": "pnpm electron-dev",
@@ -9,6 +9,8 @@
     "build": "pnpm electron-build"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.5",
+    "@tanstack/react-query-devtools": "^5.90.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
@@ -21,6 +23,7 @@
     "@vitejs/plugin-react": "^5.0.4",
     "babel-plugin-react-compiler": "1.0.0",
     "electron": "^38.3.0",
+    "electron-builder": "^26.0.12",
     "eslint": "^9.36.0",
     "eslint-plugin-react-hooks": "^7.0.0",
     "eslint-plugin-react-refresh": "^0.4.22",
