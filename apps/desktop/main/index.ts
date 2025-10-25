@@ -24,7 +24,7 @@ app.whenReady().then(async () => {
 
   const rendererPath = getRendererPath();
   if(isDev()) {  
-    await win.loadURL(rendererPath );
+    await win.loadURL(rendererPath);
   }else {
     await win.loadFile(rendererPath);
   }
