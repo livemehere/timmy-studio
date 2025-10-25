@@ -7,9 +7,9 @@
   "license": "ISC",
   "packageManager": "pnpm@10.18.1",
   "scripts": {
+    "dev": "turbo run dev",
     "build": "turbo run build",
-    "dev": "turbo run build --filter=@timmy-studio/electron-utils && turbo run dev --parallel",
-    "lint": "turbo run lint"
+    "preview": "pnpm --filter ./apps/desktop preview"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
