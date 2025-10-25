@@ -50,7 +50,6 @@ ${stack}
  * method on the same window instance.
  */
 export function disableAll(win: BrowserWindow): void {
-	console.log(`Disabling all shortcuts on window ${title(win)}`);
 	const wc = win.webContents;
 	const shortcutsOfWindow = windowsWithShortcuts.get(wc);
 
@@ -66,7 +65,6 @@ export function disableAll(win: BrowserWindow): void {
  * you had previously disabled calling disableAll method.
  */
 export function enableAll(win: BrowserWindow): void {
-	console.log(`Enabling all shortcuts on window ${title(win)}`);
 	const wc = win.webContents;
 	const shortcutsOfWindow = windowsWithShortcuts.get(wc);
 
@@ -130,19 +128,15 @@ const _onBeforeInput = (shortcutsOfWindow: ShortcutsCollection) => (e: any, inpu
 
 	const event = _normalizeEvent(input);
 
-	console.log(`before-input-event: ${JSON.stringify(input)} is translated to: ${JSON.stringify(event)}`);
 	for (const { eventStamp, callback, enabled } of shortcutsOfWindow) {
 		if (!enabled) {
 			continue;
 		}
 		
 		if (eventsAreEqual(eventStamp, event)) {
-			console.log(`eventStamp: ${JSON.stringify(eventStamp)} match`);
 			callback();
 			return;
 		}
-
-		console.log(`eventStamp: ${JSON.stringify(eventStamp)} no match`);
 	}
 };
 
@@ -186,14 +180,10 @@ export function register(
 	console.log(`Registering callback for ${accelerator} on window ${title(win)}`);
 	_checkAccelerator(accelerator);
 
-	console.log(`${accelerator} seems a valid shortcut sequence.`);
-
 	let shortcutsOfWindow: ShortcutsCollection;
 	if (windowsWithShortcuts.has(wc)) {
-		console.log('Window has others shortcuts registered.');
 		shortcutsOfWindow = windowsWithShortcuts.get(wc)!;
 	} else {
-		console.log('This is the first shortcut of the window.');
 		shortcutsOfWindow = [] as ShortcutsCollection;
 		windowsWithShortcuts.set(wc, shortcutsOfWindow);
 
@@ -232,8 +222,6 @@ export function register(
 		}
 	}
 
-	console.log('Adding shortcut to window set.');
-
 	const eventStamp = toKeyEvent(accelerator);
 
 	shortcutsOfWindow.push({
@@ -264,7 +252,6 @@ export function unregister(
 	} else {
 		win = winOrAccelerator as BrowserWindow;
 		if (win.isDestroyed()) {
-			console.log('Early return because window is destroyed.');
 			return;
 		}
 		wc = win.webContents;
@@ -284,10 +271,7 @@ export function unregister(
 
 	_checkAccelerator(accelerator);
 
-	console.log(`${accelerator} seems a valid shortcut sequence.`);
-
 	if (!windowsWithShortcuts.has(wc)) {
-		console.log('Early return because window has never had shortcuts registered.');
 		return;
 	}
 
