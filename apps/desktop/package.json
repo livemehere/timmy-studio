@@ -4,11 +4,9 @@
   "version": "0.0.0",
   "main": "dist/main.js",
   "scripts": {
-    "dev": "vite",
-    "start": "electron .",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "dev": "NODE_ENV=development vite",
+    "preview": "ELECTRON_PREVIEW=1 electron .",
+    "build": "tsc -b && vite build"
   },
   "dependencies": {
     "react": "^19.2.0",
