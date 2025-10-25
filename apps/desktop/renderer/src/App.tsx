@@ -29,26 +29,6 @@ export default function App() {
       </section>
 
       <section style={{ marginBottom: "20px" }}>
-        <h2>Batch Invoke</h2>
-        <button
-          onClick={async () => {
-            // Batch invoke - 여러 요청을 한 번에!
-            const [sum, product] = await window.app.batchInvoke([
-              { channel: "add", args: [10, 20] },
-              { channel: "multiply", args: [5, 6] },
-            ] as const);
-
-            console.log("Batch results:");
-            console.log("Sum (10 + 20):", sum); // 30
-            console.log("Product (5 * 6):", product); // 30
-            alert(`Sum: ${sum}, Product: ${product}`);
-          }}
-        >
-          Execute Batch Request
-        </button>
-      </section>
-
-      <section style={{ marginBottom: "20px" }}>
         <h2>Event Listeners</h2>
         <button
           onClick={async () => {

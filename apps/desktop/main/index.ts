@@ -32,31 +32,6 @@ app.whenReady().then(async () => {
     return "1";
   });
 
-  // Cancellable handler example
-  ipc.handleCancellable("longTask", async (_e, ctx, duration) => {
-    const startTime = Date.now();
-
-    return new Promise<string>((resolve, reject) => {
-      const interval = setInterval(() => {
-        if (ctx.isCancelled()) {
-          clearInterval(interval);
-          reject(new Error("Task was cancelled"));
-          return;
-        }
-
-        const elapsed = Date.now() - startTime;
-        if (elapsed >= duration) {
-          clearInterval(interval);
-          resolve(`Task completed after ${elapsed}ms`);
-        }
-      }, 100);
-
-      ctx.onCancel(() => {
-        clearInterval(interval);
-      });
-    });
-  });
-
   // loadWindowUrl이 자동으로 dev/prod 환경 처리
   await loadWindowUrl(win);
 
