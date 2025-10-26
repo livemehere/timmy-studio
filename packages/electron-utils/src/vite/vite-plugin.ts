@@ -9,10 +9,17 @@ import path from 'node:path';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { rmSync } from 'node:fs';
 
+export type ElectronPackageOptions = {
+  appId: string;
+  icon: string;
+  targets: ('mac' | 'win')[];
+};
+
 interface ElectronOptions {
   main: Record<string, unknown>;
   preload: Record<string, unknown>;
   renderer: UserConfig;
+  packge: ElectronPackageOptions;
 }
 
 export function electron(options: ElectronOptions): Plugin[] {
@@ -116,6 +123,8 @@ export function electron(options: ElectronOptions): Plugin[] {
     },
     {
       name: 'vite-plugin-electron',
+      //@ts-ignore
+      _options: options.packge,
       async buildStart() {
         rmSync(outDir, { recursive: true, force: true });
         await buildBundle(
