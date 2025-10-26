@@ -1,14 +1,13 @@
-import { app, BrowserWindow, Menu, nativeImage, Tray } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import log from 'electron-log/main';
 import {
-  getPreloadPath,
   isDev,
   setupSessionSecurity,
   debug,
-  loadWindow,
-  getExtraResourcePath,
 } from '@timmy-studio/electron-utils/utils/main';
 import { ipc } from '@timmy-studio/electron-utils/ipc/main';
+import { createWindow, setupTray } from './setup-utils';
+import fs from 'fs';
 
 log.initialize();
 log.info('App starting...');
@@ -18,33 +17,16 @@ app.whenReady().then(async () => {
   debug({
     isEnabled: true,
   });
+  setupTray();
+  const win = createWindow();
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
 
-  const icon = nativeImage
-    .createFromPath(getExtraResourcePath('tray.png'))
-    .resize({ width: 24, height: 24 });
-
-  const tray = new Tray(icon);
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: 'Quit',
-      role: 'quit',
-      click: () => {
-        app.quit();
-      },
-    },
-  ]);
-  tray.setContextMenu(contextMenu);
-
-  log.info('resource path:', getExtraResourcePath('vite.svg'));
-
-  const win = new BrowserWindow({
-    width: 1280,
-    height: 720,
-    webPreferences: {
-      preload: getPreloadPath(),
-    },
-    frame: false,
-    titleBarStyle: 'hiddenInset',
+  app.on('window-all-closed', () => {
+    app.quit();
   });
 
   ipc.handle('getAppInfo', () => {
@@ -54,8 +36,6 @@ app.whenReady().then(async () => {
       version: app.getVersion(),
     };
   });
-
-  loadWindow(win);
 });
 
 process.on('uncaughtException', (error) => {
