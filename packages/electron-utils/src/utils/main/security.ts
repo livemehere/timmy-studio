@@ -1,5 +1,8 @@
 import { session } from 'electron';
 
+/**
+ * 반드시 'ready' 이벤트 이후에 호출되어야 합니다.
+ */
 export function setupSessionSecurity(): void {
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({

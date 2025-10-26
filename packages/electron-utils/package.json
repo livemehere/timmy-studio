@@ -48,7 +48,7 @@
   ],
   "scripts": {
     "build": "tsup",
-    "watch": "tsup --watch",
+    "dev": "tsup --watch",
     "test": "vitest"
   },
   "peerDependencies": {
