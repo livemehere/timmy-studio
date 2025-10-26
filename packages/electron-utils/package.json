@@ -51,7 +51,8 @@
   },
   "peerDependencies": {
     "electron": "^38.0.0",
-    "vite": "^7.0.0"
+    "vite": "^7.0.0",
+    "electron-builder": "^26.0.12"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",

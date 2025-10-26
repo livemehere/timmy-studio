@@ -26,6 +26,6 @@ export default defineConfig({
   clean: true,
   splitting: false,
   treeshake: true,
-  external: ['electron', 'vite'],
+  external: ['electron', 'vite', 'electron-builder'],
   outDir: 'dist',
 });

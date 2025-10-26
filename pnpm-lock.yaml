@@ -80,6 +80,10 @@ importers:
         version: 7.1.11(@types/node@24.8.1)
 
   packages/electron-utils:
+    dependencies:
+      electron-builder:
+        specifier: ^26.0.12
+        version: 26.0.12(electron-builder-squirrel-windows@26.0.12)
     devDependencies:
       '@types/node':
         specifier: ^24.6.0
