@@ -10,6 +10,14 @@ const config: Configuration = {
   appId: 'com.livemehere.timmy-desktop',
   // productName: 'Timmy Studio', // package.json의 name 필드 사용
   files: ['dist'],
+  extraResources: [
+    {
+      from: './extra-resources/',
+      to: './extra-resources/',
+      filter: ['**/*'],
+    },
+  ],
+  icon: './extra-resources/icon.png',
   directories: {
     output: 'release/${version}',
   },
