@@ -10,7 +10,7 @@ import {
 import { ipc } from '@timmy-studio/electron-utils/ipc/main';
 
 log.initialize();
-log.info('App starting...', process.argv);
+log.info('App starting...');
 app.whenReady().then(async () => {
   setupSessionSecurity();
   debug({
