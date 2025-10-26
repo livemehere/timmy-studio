@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "pnpm electron-dev",
     "preview": "pnpm electron-preview",
-    "build": "pnpm electron-build"
+    "build": "pnpm electron-build",
+    "package": "pnpm electron-package"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.5",

@@ -1,30 +1,16 @@
 #!/usr/bin/env node
-import { spawn } from 'node:child_process';
-
-async function runCommand(command: string, args: string[]): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const proc = spawn(command, args, {
-      stdio: 'inherit',
-      shell: true,
-    });
-
-    proc.on('exit', (code) => {
-      if (code === 0) {
-        resolve();
-      } else {
-        reject(new Error(`${command} exited with code ${code}`));
-      }
-    });
-  });
-}
+import { build as viteBuild } from 'vite';
+import { resolve } from 'node:path';
 
 async function build() {
   try {
-    console.log('📦 Building TypeScript...');
-    await runCommand('tsc', ['-b']);
+    console.log('📦 Building Electron app with Vite...');
 
-    console.log('📦 Building with Vite...');
-    await runCommand('vite', ['build', ...process.argv.slice(2)]);
+    // Build main process
+    await viteBuild({
+      configFile: resolve(process.cwd(), 'vite.config.ts'),
+      mode: 'production',
+    });
 
     console.log('✅ Build completed!');
   } catch (error) {

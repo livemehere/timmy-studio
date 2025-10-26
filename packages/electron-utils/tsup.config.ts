@@ -19,6 +19,7 @@ export default defineConfig({
     'cli/dev': 'src/cli/dev.ts',
     'cli/preview': 'src/cli/preview.ts',
     'cli/build': 'src/cli/build.ts',
+    'cli/package': 'src/cli/package.ts',
   },
   format: ['cjs', 'esm'],
   dts: true,

@@ -84,6 +84,9 @@ export function electron(options: ElectronOptions): Plugin[] {
         sharedConfig = {
           ...config,
           plugins: [], // plugin 은 중첩되면 안됨.
+          build: {
+            emptyOutDir: true,
+          },
         };
         isServe = command === 'serve';
         const rendererBaseConfig: UserConfig = {

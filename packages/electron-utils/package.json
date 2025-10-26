@@ -7,7 +7,8 @@
   "bin": {
     "electron-dev": "./dist/cli/dev.js",
     "electron-preview": "./dist/cli/preview.js",
-    "electron-build": "./dist/cli/build.js"
+    "electron-build": "./dist/cli/build.js",
+    "electron-package": "./dist/cli/package.js"
   },
   "exports": {
     "./vite": {
@@ -47,6 +48,7 @@
   ],
   "scripts": {
     "build": "tsup",
+    "watch": "tsup --watch",
     "test": "vitest"
   },
   "peerDependencies": {
