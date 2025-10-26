@@ -41,6 +41,11 @@
       "types": "./dist/utils/main.d.ts",
       "require": "./dist/utils/main.js",
       "import": "./dist/utils/main.mjs"
+    },
+    "./utils/renderer": {
+      "types": "./dist/utils/renderer.d.ts",
+      "require": "./dist/utils/renderer.js",
+      "import": "./dist/utils/renderer.mjs"
     }
   },
   "files": [

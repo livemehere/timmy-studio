@@ -9,7 +9,8 @@
     "dev": "pnpm electron-dev",
     "preview": "pnpm electron-preview",
     "build": "pnpm electron-build",
-    "package": "pnpm electron-package"
+    "package": "pnpm electron-package",
+    "prepackage": "pnpm run build"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.5",

@@ -14,6 +14,7 @@ export default defineConfig({
     // utils
     'utils/shared': 'src/utils/shared/index.ts',
     'utils/main': 'src/utils/main/index.ts',
+    'utils/renderer': 'src/utils/renderer/index.ts',
 
     // cli
     'cli/dev': 'src/cli/dev.ts',
