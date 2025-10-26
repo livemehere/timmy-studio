@@ -124,7 +124,7 @@ export function electron(options: ElectronOptions): Plugin[] {
     {
       name: 'vite-plugin-electron',
       //@ts-ignore
-      _options: options.packge,
+      _options: options.packge, // cli/package.ts 에서 사용하기 위한, 참조값 전달
       async buildStart() {
         rmSync(outDir, { recursive: true, force: true });
         await buildBundle(

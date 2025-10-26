@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 
 async function build() {
   try {
-    console.log('📦 Building Electron app with Vite...');
+    console.log('📦 Vite로 Electron 앱 빌드 중...');
 
     // Build main process
     await viteBuild({
@@ -12,9 +12,9 @@ async function build() {
       mode: 'production',
     });
 
-    console.log('✅ Build completed!');
+    console.log('✅ 빌드 완료!');
   } catch (error) {
-    console.error('❌ Build failed:', error);
+    console.error('❌ 빌드 실패:', error);
     process.exit(1);
   }
 }

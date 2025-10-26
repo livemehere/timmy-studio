@@ -5,7 +5,7 @@ import {
   createTargets,
   Platform,
 } from 'electron-builder';
-import { loadConfigFromFile, type PluginOption } from 'vite';
+import { loadConfigFromFile } from 'vite';
 import type { ElectronPackageOptions } from '../vite/vite-plugin';
 
 type ElectronPackagePlugin = {
