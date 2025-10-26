@@ -26,6 +26,8 @@ export default defineConfig({
           }),
         ],
       },
+      // TODO: electron-builder 를 사용하여, 빌드하는 부분에서, 부분적으로 추상화한 옵션 넣기
+      // packge:{}
     }),
   ],
 });
