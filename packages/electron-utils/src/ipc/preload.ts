@@ -1,12 +1,11 @@
-import { ipcRenderer, type IpcRendererEvent } from "electron";
-import type { IpcInvokeChannels, IpcSendChannels } from "./types";
+import { ipcRenderer, type IpcRendererEvent } from 'electron';
+import type { IpcInvokeChannels, IpcSendChannels } from './types';
 
 type AnyListener = (...args: any[]) => void;
 type WrappedListener = (event: IpcRendererEvent, ...args: any[]) => void;
 type ExtractPayload<T> = T extends { payload: infer P } ? P : never;
 
 const listeners = new Map<string, Map<AnyListener, WrappedListener>>();
-
 
 /**
  * Type-safe app interface for preload script
@@ -36,7 +35,7 @@ export function createAppApi() {
       ]
         ? P
         : never
-    ): Promise<IpcInvokeChannels[K]["response"]> {
+    ): Promise<IpcInvokeChannels[K]['response']> {
       return ipcRenderer.invoke(channel as string, ...args);
     },
 
@@ -54,7 +53,7 @@ export function createAppApi() {
         ]
           ? P
           : never
-      ) => void,
+      ) => void
     ) {
       const listenerMap =
         listeners.get(channel as string) ||
@@ -90,7 +89,7 @@ export function createAppApi() {
         ]
           ? P
           : never
-      ) => void,
+      ) => void
     ) {
       const map = listeners.get(channel as string);
       if (map) {
@@ -130,7 +129,7 @@ export type AppApi = ReturnType<typeof createAppApi>;
  */
 export function exposeIpcApi() {
   // Dynamic import to avoid importing contextBridge in main process
-  const { contextBridge } = require("electron");
+  const { contextBridge } = require('electron');
   const app = createAppApi();
-  contextBridge.exposeInMainWorld("app", app);
+  contextBridge.exposeInMainWorld('app', app);
 }

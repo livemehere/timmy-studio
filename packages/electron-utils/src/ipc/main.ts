@@ -1,9 +1,5 @@
-import {
-  ipcMain,
-  type IpcMainInvokeEvent,
-  type WebContents,
-} from "electron";
-import type { IpcInvokeChannels, IpcSendChannels } from "./types";
+import { ipcMain, type IpcMainInvokeEvent, type WebContents } from 'electron';
+import type { IpcInvokeChannels, IpcSendChannels } from './types';
 
 type ExtractPayload<T> = T extends { payload: infer P } ? P : never;
 
@@ -28,12 +24,14 @@ export const ipc = {
     channel: K,
     handler: (
       event: IpcMainInvokeEvent,
-      ...args: ExtractPayload<IpcInvokeChannels[K]> extends readonly [...infer P]
+      ...args: ExtractPayload<IpcInvokeChannels[K]> extends readonly [
+        ...infer P,
+      ]
         ? P
         : never
     ) =>
-      | IpcInvokeChannels[K]["response"]
-      | Promise<IpcInvokeChannels[K]["response"]>
+      | IpcInvokeChannels[K]['response']
+      | Promise<IpcInvokeChannels[K]['response']>
   ) {
     ipcMain.handle(channel as string, handler as any);
   },

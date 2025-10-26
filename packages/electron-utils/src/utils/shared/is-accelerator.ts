@@ -10,7 +10,7 @@ const keyCodes: RegExp =
  * - 나머지는 모디파이어여야 합니다.
  */
 export default function validateAccelerator(str: string): boolean {
-  const parts = str.split("+");
+  const parts = str.split('+');
   let keyFound = false;
 
   return parts.every((val, index) => {

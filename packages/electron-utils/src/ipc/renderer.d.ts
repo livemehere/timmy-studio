@@ -5,7 +5,7 @@
  * /// <reference types="@timmy-studio/electron-utils/ipc/renderer" />
  */
 
-import type { AppApi } from "./preload";
+import type { AppApi } from './preload';
 
 declare global {
   interface Window {

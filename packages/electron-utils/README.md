@@ -37,8 +37,8 @@ This structure allows for future expansion with additional features like:
 In your `vite.config.ts`:
 
 ```typescript
-import { defineConfig } from "vite";
-import { electron } from "@timmy-studio/electron-utils/vite";
+import { defineConfig } from 'vite';
+import { electron } from '@timmy-studio/electron-utils/vite';
 
 export default defineConfig({
   plugins: [
@@ -72,7 +72,7 @@ import {
   // Environment checks
   isDev,
   isPackaged,
-} from "@timmy-studio/electron-utils";
+} from '@timmy-studio/electron-utils';
 
 // In your main process
 const mainWindow = new BrowserWindow({
@@ -88,42 +88,42 @@ setupDevTools(mainWindow); // F5: reload, F12: toggle DevTools
 await loadWindowUrl(mainWindow);
 
 // Get various paths
-const configPath = getAppDataPath("config.json");
-const logPath = getLogsPath("app.log");
-const tempFile = getTempPath("cache", "data.json");
-const iconPath = getResourcePath("assets", "icon.png");
+const configPath = getAppDataPath('config.json');
+const logPath = getLogsPath('app.log');
+const tempFile = getTempPath('cache', 'data.json');
+const iconPath = getResourcePath('assets', 'icon.png');
 
 // Environment checks
 if (isDev()) {
-  console.log("Running in development mode");
+  console.log('Running in development mode');
 }
 
 if (isPackaged()) {
-  console.log("Running as packaged app");
+  console.log('Running as packaged app');
 }
 ```
 
 ### Type-Safe IPC in Main Process
 
 ```typescript
-import { ipc } from "@timmy-studio/electron-utils/ipc/main";
+import { ipc } from '@timmy-studio/electron-utils/ipc/main';
 
 // Type-safe IPC handlers - parameters and return types are inferred
-ipc.handle("add", (_event, a, b) => {
+ipc.handle('add', (_event, a, b) => {
   return a + b;
 });
 
-ipc.handle("multiply", (_event, a, b) => {
+ipc.handle('multiply', (_event, a, b) => {
   return a * b;
 });
 
 // Cancellable handler for long-running tasks
-ipc.handleCancellable("longTask", async (_event, ctx, duration) => {
+ipc.handleCancellable('longTask', async (_event, ctx, duration) => {
   return new Promise<string>((resolve, reject) => {
     const interval = setInterval(() => {
       if (ctx.isCancelled()) {
         clearInterval(interval);
-        reject(new Error("Task was cancelled"));
+        reject(new Error('Task was cancelled'));
         return;
       }
       // ... task logic
@@ -136,13 +136,13 @@ ipc.handleCancellable("longTask", async (_event, ctx, duration) => {
 });
 
 // Send messages to renderer
-ipc.send(win.webContents, "ping", new Date().toISOString());
+ipc.send(win.webContents, 'ping', new Date().toISOString());
 ```
 
 ### Preload Script
 
 ```typescript
-import { exposeIpcApi } from "@timmy-studio/electron-utils/ipc/preload";
+import { exposeIpcApi } from '@timmy-studio/electron-utils/ipc/preload';
 
 // Expose type-safe IPC API to renderer
 exposeIpcApi();
@@ -156,12 +156,12 @@ Add this to your renderer TypeScript files or `custom.d.ts`:
 /// <reference types="@timmy-studio/electron-utils/ipc/renderer" />
 
 // Now you can use window.app with full type safety
-const result = await window.app.invoke("add", 1, 2);
+const result = await window.app.invoke('add', 1, 2);
 console.log(result); // 3
 
 // Subscribe to messages from main process
-const unsubscribe = window.app.on("ping", (timestamp) => {
-  console.log("Ping received:", timestamp);
+const unsubscribe = window.app.on('ping', (timestamp) => {
+  console.log('Ping received:', timestamp);
 });
 
 // Cancel subscription when needed
@@ -169,8 +169,8 @@ unsubscribe();
 
 // Batch invoke for multiple requests
 const results = await window.app.batchInvoke([
-  { channel: "add", args: [1, 2] },
-  { channel: "multiply", args: [3, 4] },
+  { channel: 'add', args: [1, 2] },
+  { channel: 'multiply', args: [3, 4] },
 ]);
 ```
 

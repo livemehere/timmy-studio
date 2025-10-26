@@ -40,6 +40,7 @@ pnpm dev
 ```
 
 This command:
+
 - First builds `@timmy-studio/electron-utils` (initial build)
 - Then runs all dev tasks in **parallel** with Turborepo's TUI
 - Opens an interactive terminal UI with separate panels for each task
@@ -61,11 +62,13 @@ When you run `pnpm dev`, Turborepo will show you an interactive terminal with:
 #### Example Development Flow
 
 1. **Start watch mode:**
+
    ```bash
    pnpm dev
    ```
 
    You'll see the TUI with two panels:
+
    ```
    ┌─ @timmy-studio/electron-utils:dev ─────┐
    │ CLI tsup v8.5.0                         │
@@ -195,6 +198,7 @@ turbo run dev --parallel --no-ui
 ```
 
 Or set in `turbo.json`:
+
 ```json
 {
   "ui": "stream"
