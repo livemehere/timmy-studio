@@ -8,16 +8,18 @@ import {
 const config: Configuration = {
   appId: 'com.livemehere.timmy-studio',
   productName: 'Timmy Studio',
-  directories: {
-    output: 'dist',
-  },
   files: ['dist'],
+  directories: {
+    output: 'release/${version}',
+  },
   mac: {
     target: ['dmg'],
+    identity: null,
   },
   win: {
     target: ['nsis'],
   },
+  artifactName: '${productName}-${version}-${os}-${arch}.${ext}',
 };
 
 build({
