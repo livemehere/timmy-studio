@@ -23,6 +23,9 @@ importers:
       '@tanstack/react-query-devtools':
         specifier: ^5.90.2
         version: 5.90.2(@tanstack/react-query@5.90.5(react@19.2.0))(react@19.2.0)
+      electron-log:
+        specifier: ^5.4.3
+        version: 5.4.3
       react:
         specifier: ^19.2.0
         version: 19.2.0
@@ -1197,6 +1200,10 @@ packages:
     resolution: {integrity: sha512-cD1kz5g2sgPTMFHjLxfMjUK5JABq3//J4jPswi93tOPFz6btzXYtK5NrDt717NRbukCUDOrrvmYVOWERlqoiXA==, tarball: https://registry.npmjs.org/electron-builder/-/electron-builder-26.0.12.tgz}
     engines: {node: '>=14.0.0'}
     hasBin: true
+
+  electron-log@5.4.3:
+    resolution: {integrity: sha512-sOUsM3LjZdugatazSQ/XTyNcw8dfvH1SYhXWiJyfYodAAKOZdHs0txPiLDXFzOZbhXgAgshQkshH2ccq0feyLQ==, tarball: https://registry.npmjs.org/electron-log/-/electron-log-5.4.3.tgz}
+    engines: {node: '>= 14'}
 
   electron-publish@26.0.11:
     resolution: {integrity: sha512-a8QRH0rAPIWH9WyyS5LbNvW9Ark6qe63/LqDB7vu2JXYpi0Gma5Q60Dh4tmTqhOBQt0xsrzD8qE7C+D7j+B24A==, tarball: https://registry.npmjs.org/electron-publish/-/electron-publish-26.0.11.tgz}
@@ -3834,6 +3841,8 @@ snapshots:
       - bluebird
       - electron-builder-squirrel-windows
       - supports-color
+
+  electron-log@5.4.3: {}
 
   electron-publish@26.0.11:
     dependencies:

@@ -5,9 +5,10 @@ import {
   Platform,
 } from 'electron-builder';
 
+/**TODO: 이거 vite plugin 속성 읽어서 하도록 수정하기 */
 const config: Configuration = {
-  appId: 'com.livemehere.timmy-studio',
-  productName: 'Timmy Studio',
+  appId: 'com.livemehere.timmy-desktop',
+  // productName: 'Timmy Studio', // package.json의 name 필드 사용
   files: ['dist'],
   directories: {
     output: 'release/${version}',

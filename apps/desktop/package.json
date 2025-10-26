@@ -1,8 +1,10 @@
 {
-  "name": "desktop",
+  "name": "timmy-studio",
   "private": true,
   "version": "1.0.0",
   "main": "dist/main.js",
+  "author": "livemehere",
+  "description": "Desktop app with useful utilities",
   "scripts": {
     "dev": "pnpm electron-dev",
     "preview": "pnpm electron-preview",
@@ -12,6 +14,7 @@
   "dependencies": {
     "@tanstack/react-query": "^5.90.5",
     "@tanstack/react-query-devtools": "^5.90.2",
+    "electron-log": "^5.4.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

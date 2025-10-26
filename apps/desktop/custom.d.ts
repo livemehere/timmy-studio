@@ -9,7 +9,6 @@ declare module '@timmy-studio/electron-utils/ipc' {
       response: {
         isDev: boolean;
         isPackaged: boolean;
-        isPreview: boolean;
         version: string;
       };
     };
