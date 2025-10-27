@@ -1,18 +1,20 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type UserConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
 import { electron } from '@timmy-studio/electron-utils/vite';
 import tailwindcss from '@tailwindcss/vite';
 
+const resolve: UserConfig['resolve'] = {
+  alias: {
+    '@renderer': path.resolve(__dirname, 'renderer/src'),
+    '@main': path.resolve(__dirname, 'main'),
+    '@preload': path.resolve(__dirname, 'preload'),
+  },
+};
+
 export default defineConfig({
   /** 공통으로 merge 되는 설정 */
-  resolve: {
-    alias: {
-      '@renderer': path.resolve(__dirname, 'renderer/src'),
-      '@main': path.resolve(__dirname, 'main'),
-      '@preload': path.resolve(__dirname, 'preload'),
-    },
-  },
+  resolve,
   plugins: [
     tailwindcss(),
     react({
@@ -21,8 +23,12 @@ export default defineConfig({
       },
     }),
     electron({
-      main: {},
-      preload: {},
+      main: {
+        resolve,
+      },
+      preload: {
+        resolve,
+      },
       package: {
         appId: 'com.livemehere.timmy-studio',
         icon: './icons/icon.png',
