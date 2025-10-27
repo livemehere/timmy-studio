@@ -18,8 +18,7 @@ export type ElectronPackageOptions = {
 interface ElectronOptions {
   main: Record<string, unknown>;
   preload: Record<string, unknown>;
-  renderer: UserConfig;
-  packge: ElectronPackageOptions;
+  package: ElectronPackageOptions;
 }
 
 export function electron(options: ElectronOptions): Plugin[] {
@@ -87,10 +86,11 @@ export function electron(options: ElectronOptions): Plugin[] {
   return [
     {
       name: 'vite-plugin-electron-renderer',
+      enforce: 'pre',
       config(config, { command }) {
+        const { plugins, ...restConfig } = config;
         sharedConfig = {
-          ...config,
-          plugins: [], // plugin 은 중첩되면 안됨.
+          ...restConfig,
           build: {
             emptyOutDir: true,
           },
@@ -103,10 +103,7 @@ export function electron(options: ElectronOptions): Plugin[] {
             outDir: path.join(outDir, 'renderer'),
           },
         };
-        return mergeConfig(
-          mergeConfig(sharedConfig, rendererBaseConfig),
-          options.renderer
-        );
+        return mergeConfig(config, rendererBaseConfig);
       },
       configureServer(server) {
         devServer = server;
@@ -124,7 +121,7 @@ export function electron(options: ElectronOptions): Plugin[] {
     {
       name: 'vite-plugin-electron',
       //@ts-ignore
-      _options: options.packge, // cli/package.ts 에서 사용하기 위한, 참조값 전달
+      _options: options.package, // cli/package.ts 에서 사용하기 위한, 참조값 전달
       async buildStart() {
         rmSync(outDir, { recursive: true, force: true });
         await buildBundle(
