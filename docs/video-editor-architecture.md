@@ -2040,6 +2040,469 @@ class ThumbnailGenerator {
 - 스크린 리더 호환
 - 고대비 모드
 
+## 18. React 통합 및 구현 가이드
+
+### 18.1 React + PixiJS 통합 패턴
+
+#### 핵심 원칙
+- **React**: UI 상태 관리, 타임라인, 속성 패널 등
+- **PixiJS**: Canvas 렌더링만 담당 (React 외부에서 실행)
+- **분리된 관심사**: React가 PixiJS를 직접 조작하지 않고, 상태 변경만 알림
+
+#### PixiJS Application 생명주기 관리
+
+**마운트 시점**:
+- `useRef`로 Canvas DOM 참조 저장
+- `useEffect`에서 PixiJS Application 초기화 (마운트 시 한 번만)
+- 전역 FactoryManager 인스턴스 생성
+
+**언마운트 시점**:
+- `useEffect` cleanup에서 PixiJS Application destroy
+- FactoryManager.clearAll() 호출하여 모든 인스턴스 정리
+
+**주의사항**:
+- PixiJS Application은 컴포넌트 재렌더링과 무관하게 유지
+- `useMemo`나 `useRef`로 PixiJS 인스턴스 보호
+- React Strict Mode에서 이중 마운트 대비
+
+### 18.2 상태 관리 전략
+
+#### Zustand 사용 시 구조
+
+**스토어 분리**:
+- `useProjectStore`: Project, Timeline, Track, Clip, Asset (순수 JSON)
+- `useEditorStore`: currentTime, selectedClips, playbackState 등
+- `useHistoryStore`: Undo/Redo 스택
+- `useExportStore`: 내보내기 진행상황
+
+**불변성 유지**:
+- Immer 통합으로 간편한 상태 업데이트
+- 항상 새 객체 반환으로 React 리렌더링 트리거
+
+**선택적 구독**:
+- 컴포넌트가 필요한 상태만 구독
+- `shallow` 비교로 불필요한 리렌더링 방지
+
+#### 상태 변경 플로우
+
+1. **사용자 액션** (예: 클립 이동)
+2. **Zustand action 호출** → JSON 상태 업데이트
+3. **React 컴포넌트 리렌더링** (key 기반으로 최소화)
+4. **PixiJS 동기화**: 변경된 상태를 감지하여 PixiJS 업데이트
+
+### 18.3 PixiJS와 React 동기화
+
+#### 동기화 시점
+
+**상태 → PixiJS 방향**:
+- `useEffect`에서 특정 상태 구독
+- 상태 변경 시 PixiJS 객체 업데이트
+- 예: `currentTime` 변경 → PixiRenderer.renderFrame() 호출
+
+**PixiJS → 상태 방향**:
+- PixiJS 이벤트 리스너에서 Zustand action 호출
+- 예: Sprite 드래그 종료 → Transform 상태 업데이트
+
+#### 동기화 최적화
+
+**Debounce/Throttle**:
+- `currentTime` 변경 시 매 프레임 렌더링은 throttle 적용
+- 타임라인 스크롤 시 debounce로 렌더링 횟수 제한
+
+**Dirty Checking**:
+- 상태가 실제로 변경되었을 때만 PixiJS 업데이트
+- 깊은 비교 대신 ID 기반 변경 감지
+
+### 18.4 컴포넌트 설계
+
+#### 컴포넌트 계층 구조
+
+```
+App
+├── EditorLayout
+│   ├── PreviewPanel
+│   │   └── PixiPreview (PixiJS Application)
+│   ├── TimelinePanel
+│   │   ├── TimelineRuler
+│   │   ├── TimelineTracks
+│   │   │   └── TimelineTrack (key={track.id})
+│   │   │       └── TimelineClip (key={clip.id})
+│   │   └── TimelinePlayhead
+│   ├── InspectorPanel
+│   │   ├── TransformPanel
+│   │   ├── EffectPanel
+│   │   └── AnimationPanel
+│   └── AssetPanel
+│       └── AssetItem (key={asset.id})
+```
+
+#### 컴포넌트별 책임
+
+**PixiPreview**:
+- PixiJS Application 생명주기 관리
+- Canvas DOM 제공
+- currentTime 변경 감지하여 렌더링
+- 재생/일시정지 제어
+
+**TimelinePanel**:
+- 타임라인 UI 렌더링
+- 클립 드래그 앤 드롭
+- 스냅 기능
+- 스크롤/줌 제어
+
+**InspectorPanel**:
+- 선택된 클립의 속성 표시/수정
+- Transform, Effect, Animation 편집
+- 변경사항을 Zustand로 전달
+
+**AssetPanel**:
+- Asset 목록 표시
+- 파일 드래그 앤 드롭으로 Asset 추가
+- 썸네일 표시
+
+### 18.5 성능 최적화 기법
+
+#### React 리렌더링 최적화
+
+**Key 기반 리스트**:
+- Track, Clip, Asset 모두 `key={item.id}` 사용
+- ID가 변하지 않으면 컴포넌트 재사용
+
+**React.memo 적용**:
+- Timeline, Inspector 등 무거운 컴포넌트에 적용
+- Props shallow 비교로 불필요한 리렌더링 방지
+- 필요시 custom comparison 함수
+
+**useMemo/useCallback**:
+- 계산 비용이 큰 값은 useMemo
+- 자식에게 전달하는 함수는 useCallback
+- 의존성 배열 정확히 관리
+
+**가상 스크롤**:
+- 타임라인에 수백 개 클립이 있을 경우
+- react-window 또는 react-virtuoso 사용
+- 보이는 영역만 렌더링
+
+#### PixiJS 렌더링 최적화
+
+**조건부 렌더링**:
+- 재생 중일 때만 requestAnimationFrame
+- 일시정지 시에는 상태 변경 시에만 렌더링
+
+**Sprite 재사용**:
+- FactoryManager로 이미 생성된 Sprite 재사용
+- 매번 새로 생성하지 않음
+
+**Container Culling**:
+- 타임라인에서 보이지 않는 클립은 렌더링 스킵
+- 현재 시간 범위만 체크
+
+**Texture Atlas**:
+- 여러 이미지를 하나의 텍스처로 합치기
+- draw call 감소
+
+#### 메모리 관리
+
+**Cleanup 철저히**:
+- 컴포넌트 언마운트 시 PixiJS 객체 destroy
+- EventListener 제거
+- Interval/Timeout 정리
+
+**Asset 언로드**:
+- 타임라인에서 제거된 Asset은 일정 시간 후 언로드
+- 메모리 임계값 초과 시 자동 정리
+
+**IndexedDB 활용**:
+- 큰 파일은 메모리에 로드하지 않고 필요할 때만
+- 썸네일, 프록시 등은 IndexedDB 저장
+
+### 18.6 타입 안정성
+
+#### TypeScript 활용
+
+**엄격한 타입**:
+- Project, Timeline 등 모든 데이터 구조 인터페이스 정의
+- `strict: true` 설정
+- `any` 사용 최소화
+
+**제네릭 팩토리**:
+- Factory 인터페이스에 제네릭 적용
+- 타입 안정성 보장
+
+**Zustand 타입**:
+- Store별 타입 정의
+- Action의 매개변수 타입 명확히
+
+### 18.7 에러 처리
+
+#### 에러 경계 설정
+
+**React Error Boundary**:
+- PixiPreview 컴포넌트를 Error Boundary로 감싸기
+- 렌더링 에러 발생 시 폴백 UI 표시
+
+**MediaBunny 에러**:
+- WebCodecs 지원하지 않는 브라우저 감지
+- Fallback 메시지 표시 또는 FFmpeg 사용
+
+**Asset 로딩 에러**:
+- 파일 로드 실패 시 재시도 로직
+- 사용자에게 명확한 에러 메시지
+
+### 18.8 단계별 구현 순서
+
+#### Phase 1: 기본 구조 (1-2주)
+
+1. **프로젝트 셋업**:
+   - Vite + React + TypeScript
+   - Zustand 설치 및 기본 스토어 생성
+   - 폴더 구조 생성 (섹션 10 참고)
+
+2. **타입 정의**:
+   - `shared/types/project.types.ts`에 모든 인터페이스 작성
+   - Project, Timeline, Track, Clip, Asset 등
+
+3. **기본 UI 레이아웃**:
+   - EditorLayout 컴포넌트
+   - PreviewPanel, TimelinePanel 빈 컴포넌트
+   - Tailwind CSS 설정
+
+4. **상태 관리 기본**:
+   - useProjectStore 생성
+   - 더미 프로젝트 데이터 로드
+   - JSON 저장/불러오기 기능
+
+#### Phase 2: PixiJS 통합 (1-2주)
+
+1. **PixiPreview 컴포넌트**:
+   - useRef로 Canvas 참조
+   - useEffect에서 PixiJS Application 초기화
+   - currentTime 변경 감지
+
+2. **Factory 패턴**:
+   - FactoryManager 싱글톤 구현
+   - AssetFactory 구현
+   - VideoAssetInstance, ImageAssetInstance 구현
+
+3. **PixiRenderer 구현**:
+   - renderFrame 메서드
+   - Track Container 관리
+   - 기본 Sprite 렌더링
+
+4. **동기화 테스트**:
+   - currentTime 슬라이더로 프레임 이동 테스트
+   - 상태 변경 시 PixiJS 업데이트 확인
+
+#### Phase 3: 타임라인 UI (2-3주)
+
+1. **TimelineRuler**:
+   - 시간 눈금 표시
+   - 마우스 클릭으로 currentTime 이동
+
+2. **TimelineTrack/Clip**:
+   - Track 컴포넌트 렌더링
+   - Clip 컴포넌트 (key={clip.id})
+   - 드래그 앤 드롭 구현
+   - 크기 조절 (trim)
+
+3. **Snapping**:
+   - TimelineSnapping 유틸 구현
+   - 드래그 시 자동 정렬
+
+4. **재생 제어**:
+   - 재생/일시정지 버튼
+   - requestAnimationFrame으로 currentTime 업데이트
+   - 미리보기 FPS 제한 (throttle)
+
+#### Phase 4: Asset 관리 (1주)
+
+1. **AssetPanel**:
+   - Asset 목록 표시
+   - 파일 드래그 앤 드롭
+
+2. **MediaBunny 메타데이터**:
+   - MediaBunnyAssetLoader 구현
+   - 비디오/이미지 메타데이터 추출
+
+3. **썸네일 생성**:
+   - ThumbnailGenerator 구현
+   - Canvas로 썸네일 추출
+
+4. **프록시 생성 (옵션)**:
+   - 4K 영상 → 720p 프록시 변환
+
+#### Phase 5: Transform & Effects (2-3주)
+
+1. **Transform 적용**:
+   - PixiRenderer에서 Transform 적용
+   - InspectorPanel에서 슬라이더로 수정
+   - 실시간 미리보기
+
+2. **PixiJS 필터**:
+   - 기본 필터 (Blur, ColorMatrix 등)
+   - 필터 체인 적용
+
+3. **커스텀 필터**:
+   - ChromaKeyFilter 구현
+   - WebGL Shader 작성
+
+4. **애니메이션 키프레임**:
+   - Keyframe 편집 UI
+   - 보간 로직 구현
+   - Easing 함수
+
+#### Phase 6: 오디오 (1-2주)
+
+1. **AudioAssetInstance**:
+   - Web Audio API 통합
+   - AudioContext, SourceNode 관리
+
+2. **오디오 Waveform**:
+   - WaveformGenerator 구현
+   - Canvas로 파형 표시
+
+3. **오디오 믹싱**:
+   - 여러 트랙 믹싱 로직
+   - Volume, Pan 조절
+
+#### Phase 7: 내보내기 (2주)
+
+1. **MediaBunny 통합**:
+   - MediaBunnyExportPipeline 구현
+   - CanvasSource 설정
+
+2. **프레임별 렌더링**:
+   - 전체 타임라인 순회
+   - 프레임 캡처 및 인코딩
+
+3. **진행상황 UI**:
+   - Progress Bar
+   - 취소 기능
+
+4. **Export 설정**:
+   - 코덱, 비트레이트 선택 UI
+
+#### Phase 8: 최적화 & 마무리 (2-3주)
+
+1. **성능 프로파일링**:
+   - React DevTools Profiler
+   - Chrome Performance 탭
+
+2. **최적화 적용**:
+   - React.memo 적용
+   - 가상 스크롤 (필요 시)
+   - PixiJS 최적화
+
+3. **Auto-save**:
+   - AutoSaveManager 구현
+   - IndexedDB 저장
+
+4. **Undo/Redo**:
+   - HistoryManager 구현
+   - 키보드 단축키 (Cmd+Z)
+
+5. **에러 처리**:
+   - Error Boundary
+   - 사용자 친화적 에러 메시지
+
+### 18.9 개발 팁
+
+#### 디버깅
+
+**React DevTools**:
+- Component 렌더링 횟수 확인
+- Props 변경 추적
+
+**PixiJS Inspector**:
+- Chrome Extension: PixiJS DevTools
+- Stage 계층 구조 확인
+
+**Performance Monitor**:
+- 섹션 15.10의 PerformanceMonitor 구현
+- FPS, 메모리 실시간 모니터링
+
+#### 테스트
+
+**단위 테스트**:
+- 순수 함수 (시간 계산, 보간 등) 테스트
+- Vitest 사용
+
+**통합 테스트**:
+- Zustand store 액션 테스트
+- Factory 생성/삭제 테스트
+
+**E2E 테스트 (옵션)**:
+- Playwright로 주요 워크플로우 테스트
+- 프로젝트 생성 → 클립 추가 → 내보내기
+
+#### 코드 품질
+
+**ESLint/Prettier**:
+- 일관된 코드 스타일
+- React Hooks 규칙 강제
+
+**Git 커밋 전략**:
+- 기능 단위로 작은 커밋
+- Conventional Commits 형식
+
+**문서화**:
+- JSDoc으로 함수 설명
+- README에 개발 가이드
+
+### 18.10 주의사항 및 함정
+
+#### React + PixiJS 통합 시
+
+**❌ 피해야 할 것**:
+- React 컴포넌트에서 PixiJS 객체 직접 생성/조작 (렌더링 때마다 재생성됨)
+- PixiJS 이벤트 핸들러에서 setState 남발 (무한 루프)
+- Sprite를 React state에 저장 (직렬화 불가능)
+
+**✅ 해야 할 것**:
+- PixiJS는 useRef로 관리, 상태는 Zustand에만
+- PixiJS → React 동기화는 debounce/throttle 적용
+- 팩토리 패턴으로 인스턴스 재사용
+
+#### 성능 최적화 시
+
+**❌ 조기 최적화 금지**:
+- 먼저 동작하게 만들고, 프로파일링 후 최적화
+- 모든 컴포넌트에 React.memo 적용하지 말 것
+
+**✅ 측정 기반 최적화**:
+- React DevTools Profiler로 측정
+- 병목 지점만 최적화
+
+#### 메모리 관리
+
+**❌ 메모리 누수**:
+- PixiJS 객체 destroy 누락
+- EventListener 제거 누락
+- Interval/Timeout cleanup 누락
+
+**✅ Cleanup 철저히**:
+- useEffect cleanup 함수 작성
+- 컴포넌트 언마운트 시 모든 리소스 정리
+
+### 18.11 학습 리소스
+
+**PixiJS**:
+- 공식 문서: https://pixijs.com/
+- Examples: https://pixijs.com/examples
+- 튜토리얼: PixiJS Playground
+
+**MediaBunny**:
+- 공식 문서: https://mediabunny.dev/
+- GitHub: 예제 코드 참고
+
+**Zustand**:
+- 공식 문서: https://zustand-demo.pmnd.rs/
+- Immer 통합 가이드
+
+**React + Canvas 통합**:
+- react-konva (참고용, 패턴 학습)
+- react-three-fiber (참고용, 3D지만 패턴 유사)
+
 ---
 
 이 구조는 확장 가능하고 유지보수가 용이하도록 설계되었습니다. 각 단계를 점진적으로 구현하면서 필요에 따라 조정할 수 있습니다.
