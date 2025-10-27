@@ -15,12 +15,16 @@
   "dependencies": {
     "@tanstack/react-query": "^5.90.5",
     "@tanstack/react-query-devtools": "^5.90.2",
+    "clsx": "^2.1.1",
     "electron-log": "^5.4.3",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss": "^4.1.16"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
+    "@tailwindcss/vite": "^4.1.16",
     "@timmy-studio/electron-utils": "workspace:*",
     "@types/node": "^24.6.0",
     "@types/react": "^19.2.2",
