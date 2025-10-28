@@ -51,10 +51,10 @@ export function electron(options: ElectronOptions): Plugin[] {
         },
         watch: isServe ? {} : undefined,
       },
-      ssr: {
-        // workspace 패키지들을 번들에 포함 (externalize 하지 않음)
-        noExternal: [/^@timmy-studio\//],
-      },
+      // ssr: {
+      //   // workspace 패키지들을 번들에 포함 (externalize 하지 않음)
+      //   noExternal: [/^@timmy-studio\//],
+      // },
       plugins: [
         {
           name: 'on-ended',
