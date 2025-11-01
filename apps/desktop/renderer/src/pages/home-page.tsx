@@ -1,10 +1,6 @@
-import { AppInfo } from '@renderer/components/AppInfo';
-import { Suspense, useEffect, useState } from 'react';
-import { getPublicPath } from '@timmy-studio/electron-utils/utils/renderer';
-import { Tooltip } from 'radix-ui';
-import { AnimatePresence, motion } from 'motion/react';
 import { css } from '@emotion/react';
-import { Link } from 'react-router';
+import { DecorativeBox } from '@renderer/components/DecorativeBox';
+import { useEffect, useState } from 'react';
 
 export default function HomePage() {
   const [open, setOpen] = useState(true);
@@ -15,51 +11,10 @@ export default function HomePage() {
   }, []);
   return (
     <div style={{ padding: '20px' }}>
-      <h1 className="text-4xl font-bold text-red-400">IPC Examples</h1>
-      <img src={getPublicPath('/vite.svg')} alt="" />
-      <section style={{ marginBottom: '20px' }}>
-        <h2
-          className="text-2xl font-bold"
-          css={css`
-            app-region: drag;
-          `}
-        >
-          Basic Invoke
-        </h2>
-        <Tooltip.Provider delayDuration={0}>
-          <Tooltip.Root open={open} onOpenChange={setOpen}>
-            <Tooltip.Trigger asChild>
-              <div className="bg-blue-800 p-2 text-white rounded inline-block mt-2">
-                App Info
-              </div>
-            </Tooltip.Trigger>
-            <AnimatePresence>
-              {open && (
-                <Tooltip.Portal forceMount>
-                  <Tooltip.Content side="bottom" align="start" asChild>
-                    <motion.div
-                      className="bg-neutral-800 p-4 rounded shadow-lg text-white"
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10, scale: 0 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <Suspense fallback={<div>Loading App Info...</div>}>
-                        <AppInfo />
-                      </Suspense>
-                    </motion.div>
-                  </Tooltip.Content>
-                </Tooltip.Portal>
-              )}
-            </AnimatePresence>
-          </Tooltip.Root>
-        </Tooltip.Provider>
-        <ul>
-          <li>
-            <Link to="/sub/sample">Go to Sub Sample Page</Link>
-          </li>
-        </ul>
-      </section>
+      <h1>Home Page</h1>
+      <div className="w-16 h-16">
+        <DecorativeBox>hello</DecorativeBox>
+      </div>
     </div>
   );
 }
