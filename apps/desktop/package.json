@@ -13,6 +13,7 @@
     "prepackage": "pnpm run build"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
     "@tanstack/react-query": "^5.90.5",
     "@tanstack/react-query-devtools": "^5.90.2",
     "clsx": "^2.1.1",
