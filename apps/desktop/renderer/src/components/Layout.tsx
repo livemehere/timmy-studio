@@ -1,11 +1,16 @@
 import { css } from '@emotion/react';
-import { Outlet } from 'react-router';
+import { Outlet, useNavigate } from 'react-router';
 import { Suspense } from 'react';
 import { Spinner } from './UI/Spinner';
 import { Docks } from './UI/Docks';
-import { DOCKS } from '@renderer/configs/dock';
+import { createDockItems } from '@renderer/configs/dock';
 
 export default function Layout() {
+  const navigate = useNavigate();
+  const docks = createDockItems({
+    navigate,
+  });
+
   return (
     <>
       <header
@@ -27,7 +32,7 @@ export default function Layout() {
           <Outlet />
         </Suspense>
         <div className="fixed bottom-2 left-1/2 -translate-x-1/2 m-2">
-          <Docks items={DOCKS} />
+          <Docks items={docks} />
         </div>
       </main>
     </>
