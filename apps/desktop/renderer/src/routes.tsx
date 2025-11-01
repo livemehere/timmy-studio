@@ -1,5 +1,6 @@
 import { lazy } from 'react';
 import { createHashRouter, RouterProvider } from 'react-router';
+import ErrorPage from './pages/ErrorPage';
 
 const Layout = lazy(() => import('@renderer/components/Layout'));
 const HomePage = lazy(() => import('@renderer/pages/HomePage'));
@@ -9,6 +10,7 @@ const VideoEditorPage = lazy(() => import('@renderer/pages/VideoEditor'));
 const router = createHashRouter([
   {
     path: '/',
+    errorElement: <ErrorPage />,
     children: [
       {
         element: <Layout />,
