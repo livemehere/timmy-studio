@@ -2,7 +2,7 @@ import { lazy } from 'react';
 import { createHashRouter, RouterProvider } from 'react-router';
 
 const Layout = lazy(() => import('@renderer/components/Layout'));
-const HomePage = lazy(() => import('@renderer/pages/home-page'));
+const HomePage = lazy(() => import('@renderer/pages/HomePage'));
 
 const router = createHashRouter([
   {

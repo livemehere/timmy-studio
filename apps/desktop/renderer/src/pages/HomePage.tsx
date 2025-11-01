@@ -1,4 +1,3 @@
-import { Spinner } from '@renderer/components/UI/Spinner';
 export default function HomePage() {
   return (
     <div style={{ padding: '20px' }}>

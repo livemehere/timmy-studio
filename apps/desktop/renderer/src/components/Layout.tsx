@@ -2,6 +2,8 @@ import { css } from '@emotion/react';
 import { Outlet } from 'react-router';
 import { Suspense } from 'react';
 import { Spinner } from './UI/Spinner';
+import { Docks } from './UI/Docks';
+import { House, Clapperboard } from 'lucide-react';
 
 export default function Layout() {
   return (
@@ -24,6 +26,24 @@ export default function Layout() {
         >
           <Outlet />
         </Suspense>
+        <div className="fixed bottom-2 left-1/2 -translate-x-1/2 m-2">
+          <Docks
+            items={[
+              {
+                id: 'home',
+                label: 'Home',
+                icon: <House size={18} />,
+                onClick: () => alert('Home clicked'),
+              },
+              {
+                id: 'settings',
+                label: 'Settings',
+                icon: <Clapperboard size={18} />,
+                onClick: () => alert('Settings clicked'),
+              },
+            ]}
+          />
+        </div>
       </main>
     </>
   );
