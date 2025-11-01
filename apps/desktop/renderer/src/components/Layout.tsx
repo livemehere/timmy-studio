@@ -1,17 +1,17 @@
 import { css } from '@emotion/react';
 import { Outlet } from 'react-router';
-import { patterns } from '@renderer/utils/svg-patterns';
+import { DecorativeBox } from './DecorativeBox';
 
 export default function Layout() {
   return (
     <>
       <header
-        className="h-[64px]"
+        className="h-9"
         css={css`
-          background-image: url('${patterns.grid('#9C92AC', 0.4)}');
+          app-region: drag;
         `}
       >
-        header
+        <DecorativeBox />
       </header>
       <main>
         <Outlet />
