@@ -1,11 +1,11 @@
 import { lazy } from 'react';
 import { createHashRouter, RouterProvider } from 'react-router';
-import ErrorPage from './pages/ErrorPage';
+import ErrorPage from './pages/error';
 
 const Layout = lazy(() => import('@renderer/components/Layout'));
-const HomePage = lazy(() => import('@renderer/pages/HomePage'));
-const SettingsPage = lazy(() => import('@renderer/pages/SettingsPage'));
-const VideoEditorPage = lazy(() => import('@renderer/pages/VideoEditor'));
+const HomePage = lazy(() => import('@renderer/pages'));
+const SettingsPage = lazy(() => import('@renderer/pages/settings'));
+const VideoEditorPage = lazy(() => import('@renderer/pages/video-editor'));
 
 const router = createHashRouter([
   {
