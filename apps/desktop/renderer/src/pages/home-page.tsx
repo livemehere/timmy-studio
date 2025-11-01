@@ -3,8 +3,10 @@ import { Suspense, useEffect, useState } from 'react';
 import { getPublicPath } from '@timmy-studio/electron-utils/utils/renderer';
 import { Tooltip } from 'radix-ui';
 import { AnimatePresence, motion } from 'motion/react';
+import { css } from '@emotion/react';
+import { Link } from 'react-router';
 
-export function HomePage() {
+export default function HomePage() {
   const [open, setOpen] = useState(true);
 
   useEffect(() => {
@@ -16,7 +18,14 @@ export function HomePage() {
       <h1 className="text-4xl font-bold text-red-400">IPC Examples</h1>
       <img src={getPublicPath('/vite.svg')} alt="" />
       <section style={{ marginBottom: '20px' }}>
-        <h2 className="text-2xl font-bold">Basic Invoke</h2>
+        <h2
+          className="text-2xl font-bold"
+          css={css`
+            app-region: drag;
+          `}
+        >
+          Basic Invoke
+        </h2>
         <Tooltip.Provider delayDuration={0}>
           <Tooltip.Root open={open} onOpenChange={setOpen}>
             <Tooltip.Trigger asChild>
@@ -45,6 +54,11 @@ export function HomePage() {
             </AnimatePresence>
           </Tooltip.Root>
         </Tooltip.Provider>
+        <ul>
+          <li>
+            <Link to="/sub/sample">Go to Sub Sample Page</Link>
+          </li>
+        </ul>
       </section>
     </div>
   );

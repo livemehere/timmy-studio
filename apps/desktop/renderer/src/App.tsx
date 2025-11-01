@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { HomePage } from './pages/home-page';
 import { Suspense } from 'react';
+import { AppRoutes } from './routes';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,7 +17,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <ReactQueryDevtools initialIsOpen={false} />
       <Suspense fallback={<div>Loading...</div>}>
-        <HomePage />
+        <AppRoutes />
       </Suspense>
     </QueryClientProvider>
   );
