@@ -2,5 +2,9 @@
 
 html,
 body {
-  @apply bg-neutral-950 text-white;
+  @apply bg-neutral-950 text-white h-screen w-screen;
+}
+
+#root {
+  @apply h-full w-full flex flex-col;
 }

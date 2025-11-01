@@ -1,6 +1,11 @@
 import { css } from '@emotion/react';
 
 const patternCss = css`
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--accent-color);
   background-image: repeating-linear-gradient(
     315deg,
@@ -26,7 +31,6 @@ export function DecorativeBox({
 }) {
   return (
     <div
-      className="w-full h-full flex items-center justify-center"
       style={
         {
           '--accent-color': color,
