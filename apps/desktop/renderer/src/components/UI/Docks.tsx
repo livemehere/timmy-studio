@@ -1,14 +1,12 @@
 import {
   AnimatePresence,
-  clamp,
   motion,
   MotionValue,
   useMotionValue,
-  useMotionValueEvent,
   useSpring,
   useTransform,
 } from 'motion/react';
-import { use, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 interface IDockItemProps {
   id: string;
@@ -23,41 +21,10 @@ interface IDockItemProps {
   maximumSize: number;
 }
 
-export function Docks({
-  items,
-  distance = 200,
-  baseSize = 40,
-  maximumSize = 55,
-}: {
-  items: Pick<IDockItemProps, 'id' | 'label' | 'icon' | 'onClick'>[];
-  distance?: number;
-  baseSize?: number;
-  maximumSize?: number;
-}) {
-  const mouseX = useMotionValue(Infinity);
-  return (
-    <motion.div
-      className="flex items-end gap-2 p-2 bg-neutral-900 rounded-lg border border-neutral-700/20"
-      onPointerMove={(e) => {
-        mouseX.set(e.clientX);
-      }}
-      onPointerLeave={() => {
-        mouseX.set(Infinity);
-      }}
-    >
-      {items.map((item) => (
-        <DockItem
-          key={item.id}
-          {...item}
-          mouseX={mouseX}
-          distance={distance}
-          baseSize={baseSize}
-          maximumSize={maximumSize}
-        />
-      ))}
-    </motion.div>
-  );
-}
+export type TDockItem = Pick<
+  IDockItemProps,
+  'id' | 'label' | 'icon' | 'onClick'
+>;
 
 function DockItem({
   id,
@@ -113,6 +80,42 @@ function DockItem({
           </motion.span>
         )}
       </AnimatePresence>
+    </motion.div>
+  );
+}
+
+export function Docks({
+  items,
+  distance = 200,
+  baseSize = 40,
+  maximumSize = 55,
+}: {
+  items: TDockItem[];
+  distance?: number;
+  baseSize?: number;
+  maximumSize?: number;
+}) {
+  const mouseX = useMotionValue(Infinity);
+  return (
+    <motion.div
+      className="flex items-end gap-2 p-2 bg-neutral-900 rounded-lg border border-neutral-700/20"
+      onPointerMove={(e) => {
+        mouseX.set(e.clientX);
+      }}
+      onPointerLeave={() => {
+        mouseX.set(Infinity);
+      }}
+    >
+      {items.map((item) => (
+        <DockItem
+          key={item.id}
+          {...item}
+          mouseX={mouseX}
+          distance={distance}
+          baseSize={baseSize}
+          maximumSize={maximumSize}
+        />
+      ))}
     </motion.div>
   );
 }

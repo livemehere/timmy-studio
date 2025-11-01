@@ -3,6 +3,8 @@ import { createHashRouter, RouterProvider } from 'react-router';
 
 const Layout = lazy(() => import('@renderer/components/Layout'));
 const HomePage = lazy(() => import('@renderer/pages/HomePage'));
+const SettingsPage = lazy(() => import('@renderer/pages/SettingsPage'));
+const VideoEditorPage = lazy(() => import('@renderer/pages/VideoEditor'));
 
 const router = createHashRouter([
   {
@@ -14,6 +16,14 @@ const router = createHashRouter([
           {
             index: true,
             element: <HomePage />,
+          },
+          {
+            path: 'settings',
+            element: <SettingsPage />,
+          },
+          {
+            path: 'video-editor',
+            element: <VideoEditorPage />,
           },
         ],
       },
