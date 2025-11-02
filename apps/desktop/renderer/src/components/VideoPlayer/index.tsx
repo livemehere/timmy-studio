@@ -1,11 +1,4 @@
-import {
-  Application,
-  BlurFilter,
-  Container,
-  Sprite,
-  Texture,
-  VideoSource,
-} from 'pixi.js';
+import { Application, BlurFilter, Sprite, Texture } from 'pixi.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 export function VideoPlayer({ src }: { src?: string }) {
@@ -14,9 +7,6 @@ export function VideoPlayer({ src }: { src?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const app = useMemo<Application>(() => new Application(), []);
   const [sprite, setSprite] = useState<Sprite | null>(null);
-  const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(
-    null
-  );
 
   const initApp = async () => {
     if (!ref.current || !canvasRef.current) return;
@@ -26,25 +16,18 @@ export function VideoPlayer({ src }: { src?: string }) {
     });
   };
 
-  const loadVideo = async () => {
-    console.log('loadVideo src:', src);
-    if (!src) return;
-
-    /* cleanup previous video */
-    if (videoElement) {
-      videoElement.pause();
-      videoElement.onerror = null;
-      videoElement.oncanplay = null;
-      videoElement.remove();
-      setVideoElement(null);
-    }
-
-    /* cleanup previous sprite */
+  const cleanup = () => {
     if (sprite) {
       app.stage.removeChild(sprite);
       sprite.destroy(true);
       setSprite(null);
     }
+  };
+
+  const loadVideo = async () => {
+    console.log('loadVideo src:', src);
+    if (!src) return;
+    cleanup();
 
     try {
       /* video element */
@@ -62,20 +45,13 @@ export function VideoPlayer({ src }: { src?: string }) {
       await new Promise<void>((resolve, reject) => {
         video.oncanplay = () => {
           resolve();
+          video.onerror = null;
         };
         video.onerror = (e) => {
           console.error('video error event:', e);
-          console.log(video);
           reject();
         };
-        // 이미 canplay 상태라면 즉시 resolve
-        // if (video.readyState >= video.HAVE_FUTURE_DATA) {
-        //   resolve();
-        // }
       });
-
-      /* set video element after it's ready */
-      setVideoElement(video);
 
       /* texture from video */
       const texture = Texture.from(video);
@@ -86,7 +62,6 @@ export function VideoPlayer({ src }: { src?: string }) {
       sprite.height = app.renderer.height;
       app.stage.addChild(sprite);
       setSprite(sprite);
-      console.log('sprite added', sprite);
 
       /* filter */
       const blurFilter = new BlurFilter();
@@ -108,10 +83,11 @@ export function VideoPlayer({ src }: { src?: string }) {
 
   useEffect(() => {
     loadVideo();
-    return () => {
-      console.log('cleanup video player');
-    };
   }, [src]);
+
+  const videoElement = useMemo(() => {
+    return sprite?.texture.source.resource as unknown as HTMLVideoElement;
+  }, [sprite]);
 
   return (
     <div ref={parentRef}>
@@ -119,9 +95,7 @@ export function VideoPlayer({ src }: { src?: string }) {
       <button onClick={() => videoElement?.pause()}>Pause</button>
       <button
         onClick={() => {
-          if (sprite) {
-            app.stage.removeChild(sprite);
-          }
+          cleanup();
         }}
       >
         remove
