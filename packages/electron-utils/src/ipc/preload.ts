@@ -123,7 +123,7 @@ export type AppApi = ReturnType<typeof createAppApi> & {
  *
  * @example
  * ```typescript
- * // In preload script:
+ * In preload script:
  * import { exposeIpcApi } from '@timmy-studio/electron-utils/ipc';
  *
  * exposeIpcApi();
