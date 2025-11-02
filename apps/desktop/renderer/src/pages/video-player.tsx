@@ -3,7 +3,9 @@ import { useState } from 'react';
 import { VideoPlayer } from '@renderer/components/VideoPlayer';
 
 export default function VideoPlayerPage() {
-  const [path, setPath] = useState<string | undefined>(undefined);
+  const [path, setPath] = useState<string | undefined>(
+    'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'
+  );
 
   return (
     <div className="p-4">
@@ -21,7 +23,7 @@ export default function VideoPlayerPage() {
         }}
       />
       <hr />
-      {path && <VideoPlayer src={path} />}
+      <VideoPlayer src={path} />
     </div>
   );
 }
