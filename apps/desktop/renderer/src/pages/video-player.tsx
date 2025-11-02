@@ -1,11 +1,9 @@
 import { toSourcePath } from '@timmy-studio/electron-utils/utils/renderer';
-import { useEffect, useState } from 'react';
-import { Application } from '@pixi/react';
+import { useState } from 'react';
 import { VideoPlayer } from '@renderer/components/VideoPlayer';
 
 export default function VideoPlayerPage() {
   const [path, setPath] = useState<string | undefined>(undefined);
-  const [error, setError] = useState<string | undefined>(undefined);
 
   return (
     <div className="p-4">
