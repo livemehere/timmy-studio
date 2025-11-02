@@ -36,7 +36,7 @@ export function electron(options: ElectronOptions): Plugin[] {
     const watcher = await viteBuild({
       configFile: false, // 이걸 false 로 안하면, vite.config.ts 를 자동으로 불러와서, 무한루프에 빠진다.
       build: {
-        emptyOutDir: true,
+        emptyOutDir: !isServe,
         minify: !isServe, // 최소한의 난독화인데, TODO: 암호화나, 난독화 추가하기
         ssr: true, // true 로 하면, node 관련 모듈을 externalize 하여, node 환경(타겟) 으로 빌드하는 효과를 낸다.
         target: 'es2022',

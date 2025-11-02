@@ -7,7 +7,6 @@ import {
 } from '@timmy-studio/electron-utils/utils/main';
 import { ipc } from '@timmy-studio/electron-utils/ipc/main';
 import { createWindow, setupTray } from './setup-utils';
-import fs from 'fs';
 
 log.initialize();
 log.info('App starting...');

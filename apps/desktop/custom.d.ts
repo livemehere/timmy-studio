@@ -12,6 +12,10 @@ declare module '@timmy-studio/electron-utils/ipc' {
         version: string;
       };
     };
+    getFilePath: {
+      payload: [file: File];
+      response: string;
+    };
   }
 
   interface IpcSendChannels {}

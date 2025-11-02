@@ -113,7 +113,9 @@ export function createAppApi() {
 /**
  * Type of the app API created by createAppApi
  */
-export type AppApi = ReturnType<typeof createAppApi>;
+export type AppApi = ReturnType<typeof createAppApi> & {
+  getPathForFile: (file: File) => string;
+};
 
 /**
  * Expose the IPC API to the renderer process
@@ -129,7 +131,10 @@ export type AppApi = ReturnType<typeof createAppApi>;
  */
 export function exposeIpcApi() {
   // Dynamic import to avoid importing contextBridge in main process
-  const { contextBridge } = require('electron');
+  const { contextBridge, webUtils } = require('electron');
   const app = createAppApi();
-  contextBridge.exposeInMainWorld('app', app);
+  contextBridge.exposeInMainWorld('app', {
+    ...app,
+    getPathForFile: (file: File) => webUtils.getPathForFile(file),
+  });
 }
