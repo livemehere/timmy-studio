@@ -63,14 +63,18 @@ function DockItem({
       onHoverEnd={() => setIsHovered(false)}
       whileHover={{
         background: '#d2d2d2',
-        transition: {
-          duration: 1,
+      }}
+      transition={{
+        background: {
+          duration: 0.3,
+          ease: 'easeInOut',
         },
       }}
-      className="flex flex-col items-center justify-center border border-neutral-600 rounded-lg cursor-pointer bg-neutral-950"
+      className="flex flex-col items-center justify-center border border-neutral-600 rounded-lg cursor-pointer"
       style={{
         width: size,
         height: size,
+        background: '#0a0a0a', // bg-neutral-950 equivalent
       }}
     >
       {icon}
