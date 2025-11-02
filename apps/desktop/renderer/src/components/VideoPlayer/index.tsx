@@ -18,17 +18,26 @@ export function VideoPlayer({ src }: { src: string }) {
       const videoElement = document.createElement('video');
       videoElement.src = src;
       videoElement.crossOrigin = 'anonymous';
-      videoElement.autoplay = true;
       videoElement.loop = true;
       videoElement.muted = true;
+      videoElement.playsInline = true;
 
-      // 비디오 메타데이터 로드 대기
+      // 비디오가 재생 가능한 상태가 될 때까지 대기
       await new Promise<void>((resolve, reject) => {
-        videoElement.onloadedmetadata = () => resolve();
+        videoElement.oncanplaythrough = () => {
+          // 비디오 재생 시작
+          videoElement
+            .play()
+            .then(() => resolve())
+            .catch(reject);
+        };
         videoElement.onerror = () => reject(new Error('Failed to load video'));
       });
 
-      // Texture 생성
+      // 첫 프레임이 렌더링될 때까지 잠시 대기
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Texture 생성 (비디오가 재생 중일 때)
       const texture = Texture.from(videoElement);
       setTexture(texture);
       setError(undefined);
