@@ -30,9 +30,20 @@ export function VideoPlayer({ src }: { src?: string }) {
     console.log('loadVideo src:', src);
     if (!src) return;
 
+    /* cleanup previous video */
+    if (videoElement) {
+      videoElement.pause();
+      videoElement.onerror = null;
+      videoElement.oncanplay = null;
+      videoElement.remove();
+      setVideoElement(null);
+    }
+
+    /* cleanup previous sprite */
     if (sprite) {
       app.stage.removeChild(sprite);
       sprite.destroy(true);
+      setSprite(null);
     }
 
     try {
@@ -41,7 +52,6 @@ export function VideoPlayer({ src }: { src?: string }) {
       video.src = src;
       video.crossOrigin = 'anonymous';
       video.preload = 'auto';
-      setVideoElement(video);
 
       /* init */
       video.currentTime = 0;
@@ -63,6 +73,9 @@ export function VideoPlayer({ src }: { src?: string }) {
         //   resolve();
         // }
       });
+
+      /* set video element after it's ready */
+      setVideoElement(video);
 
       /* texture from video */
       const texture = Texture.from(video);
