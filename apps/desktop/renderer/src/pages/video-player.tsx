@@ -44,7 +44,7 @@ export default function VideoPlayerPage() {
             const file = e.target.files[0];
             if (!file) return;
             const filePath = window.app.getPathForFile(file);
-            setPath(`source:${filePath}`);
+            setPath(`source://open/?path=${encodeURIComponent(filePath)}`);
           }
         }}
       />

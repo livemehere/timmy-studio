@@ -8,7 +8,6 @@ import {
 import { ipc } from '@timmy-studio/electron-utils/ipc/main';
 import { createWindow, setupTray } from './setup-utils';
 import fs from 'node:fs';
-import { parseRange } from './utils/byte-range';
 import mime from 'mime-types';
 import { Readable } from 'node:stream';
 
@@ -18,12 +17,11 @@ protocol.registerSchemesAsPrivileged([
   {
     scheme: 'source',
     privileges: {
-      standard: false,
-      secure: true,
       bypassCSP: true,
-      supportFetchAPI: true,
+      secure: true,
       stream: true,
-      corsEnabled: true,
+      standard: true,
+      supportFetchAPI: true,
     },
   },
 ]);
@@ -35,82 +33,71 @@ app.whenReady().then(async () => {
   });
   setupTray();
 
-  protocol.handle('source', (req) => {
-    console.log('====================');
-    const url = new URL(req.url);
-    const filePath = decodeURIComponent(url.pathname);
-    const range = req.headers.get('range');
-    const parsedRange = range ? parseRange(range) : null;
-    const stat = fs.statSync(filePath);
-    const totalSize = stat.size;
-    const contentType = mime.lookup(filePath) || 'application/octet-stream';
-    console.log('filePath', filePath);
-    console.log(req.headers);
-    console.log('totalSize', totalSize);
-
+  protocol.handle('source', async (req) => {
     try {
-      let start = parsedRange?.start || 0;
-      let end = parsedRange?.end || totalSize - 1;
-      const contentLength = end - start + 1;
+      const url = new URL(req.url);
+      const filePath = decodeURIComponent(url.searchParams.get('path') || '');
 
-      const stream = fs.createReadStream(filePath, {
+      // 파일 존재 확인
+      if (!fs.existsSync(filePath)) {
+        return new Response('File not found', { status: 404 });
+      }
+
+      console.log('req', req);
+      console.log('filePath', filePath);
+
+      const stat = fs.statSync(filePath);
+      const total = stat.size;
+
+      const range = req.headers.get('range');
+      let start = 0;
+      let end = total - 1;
+
+      if (range) {
+        const m = /bytes=(\d+)-(\d*)/.exec(range);
+        if (m) {
+          start = parseInt(m[1], 10);
+          if (m[2]) {
+            end = Math.min(parseInt(m[2], 10), total - 1);
+          }
+        }
+      }
+
+      const chunkSize = end - start + 1;
+      const contentType = mime.lookup(filePath) || 'application/octet-stream';
+
+      // NodeJS Stream을 Web ReadableStream으로 변환
+      const nodeStream = fs.createReadStream(filePath, {
         start,
         end,
-        // highWaterMark: 1024 * 1024,
+        highWaterMark: 1024 * 1024,
       });
 
-      stream.on('data', (chunk) => {
+      nodeStream.on('data', (chunk) => {
         console.log('stream data chunk', chunk.length);
       });
 
-      stream.on('end', () => {
+      nodeStream.on('end', () => {
         console.log('stream end');
       });
 
-      /** 간단 버전, 자체 백프레셔 처리 */
-      const webStream = Readable.toWeb(
-        stream
-      ) as unknown as ReadableStream<Uint8Array>;
+      nodeStream.on('error', (err) => {
+        console.error('stream error', err);
+      });
 
-      /**  직접 처리, 백프레셔 문제되면 추가 처리 필요 */
-      // const webStream = new ReadableStream({
-      //   start(controller) {
-      //     stream.pause();
-      //     stream.on('data', (chunk) => {
-      //       controller.enqueue(chunk);
-      //       console.log('progress', controller.desiredSize);
-      //       if (controller.desiredSize && controller.desiredSize <= 0) {
-      //         stream.pause();
-      //         console.log('stream pause');
-      //       }
-      //     });
-      //     stream.once('end', () => {
-      //       controller.close();
-      //     });
-      //     stream.once('error', (err) => {
-      //       controller.error(err);
-      //       console.error('stream error', err);
-      //     });
-      //   },
-      //   pull() {
-      //     console.log('stream resume from pull');
-      //     if (stream.isPaused()) {
-      //       stream.resume();
-      //     }
-      //   },
-      //   cancel() {
-      //     stream.destroy();
-      //   },
-      // });
+      const webStream = Readable.toWeb(
+        nodeStream
+      ) as ReadableStream<Uint8Array>;
 
       const headers: Record<string, string> = {
         'Content-Type': contentType,
-        'Content-Length': contentLength.toString(),
         'Accept-Ranges': 'bytes',
+        'Content-Length': String(chunkSize),
+        'Cache-Control': 'public, max-age=3600',
       };
 
       if (range) {
-        headers['Content-Range'] = `bytes ${start}-${end}/${totalSize}`;
+        headers['Content-Range'] = `bytes ${start}-${end}/${total}`;
         return new Response(webStream, {
           status: 206,
           headers,
@@ -122,8 +109,8 @@ app.whenReady().then(async () => {
         headers,
       });
     } catch (error) {
-      console.error('Read file error', error);
-      return new Response('Read file error', { status: 500 });
+      console.error('Media service error:', error);
+      return new Response('Internal server error', { status: 500 });
     }
   });
 
