@@ -48,15 +48,15 @@ app.whenReady().then(async () => {
     console.log(req.headers);
     console.log('totalSize', totalSize);
 
-    if (parsedRange) {
-      const { start, end } = parsedRange;
-      const calculatedEnd = end === 0 ? totalSize - 1 : end;
-      const contentLength = calculatedEnd - start + 1;
+    try {
+      let start = parsedRange?.start || 0;
+      let end = parsedRange?.end || totalSize - 1;
+      const contentLength = end - start + 1;
 
       const stream = fs.createReadStream(filePath, {
         start,
-        end: calculatedEnd,
-        highWaterMark: 1024 * 1024,
+        end,
+        // highWaterMark: 1024 * 1024,
       });
 
       stream.on('data', (chunk) => {
@@ -68,53 +68,62 @@ app.whenReady().then(async () => {
       });
 
       /** 간단 버전, 자체 백프레셔 처리 */
-      // const webStream = Readable.toWeb(
-      //   stream
-      // ) as unknown as ReadableStream<Uint8Array>;
+      const webStream = Readable.toWeb(
+        stream
+      ) as unknown as ReadableStream<Uint8Array>;
 
       /**  직접 처리, 백프레셔 문제되면 추가 처리 필요 */
-      const webStream = new ReadableStream({
-        start(controller) {
-          stream.pause();
-          stream.on('data', (chunk) => {
-            controller.enqueue(chunk);
-            console.log('progress', controller.desiredSize);
-            if (controller.desiredSize && controller.desiredSize <= 0) {
-              stream.pause();
-              console.log('stream pause');
-            }
-          });
-          stream.once('end', () => {
-            controller.close();
-          });
-          stream.once('error', (err) => {
-            controller.error(err);
-            console.error('stream error', err);
-          });
-        },
-        pull() {
-          console.log('stream resume from pull');
-          if (stream.isPaused()) {
-            stream.resume();
-          }
-        },
-        cancel() {
-          stream.destroy();
-        },
-      });
+      // const webStream = new ReadableStream({
+      //   start(controller) {
+      //     stream.pause();
+      //     stream.on('data', (chunk) => {
+      //       controller.enqueue(chunk);
+      //       console.log('progress', controller.desiredSize);
+      //       if (controller.desiredSize && controller.desiredSize <= 0) {
+      //         stream.pause();
+      //         console.log('stream pause');
+      //       }
+      //     });
+      //     stream.once('end', () => {
+      //       controller.close();
+      //     });
+      //     stream.once('error', (err) => {
+      //       controller.error(err);
+      //       console.error('stream error', err);
+      //     });
+      //   },
+      //   pull() {
+      //     console.log('stream resume from pull');
+      //     if (stream.isPaused()) {
+      //       stream.resume();
+      //     }
+      //   },
+      //   cancel() {
+      //     stream.destroy();
+      //   },
+      // });
+
+      const headers: Record<string, string> = {
+        'Content-Type': contentType,
+        'Content-Length': contentLength.toString(),
+        'Accept-Ranges': 'bytes',
+      };
+
+      if (range) {
+        headers['Content-Range'] = `bytes ${start}-${end}/${totalSize}`;
+        return new Response(webStream, {
+          status: 206,
+          headers,
+        });
+      }
 
       return new Response(webStream, {
-        status: 206,
-        headers: {
-          'Content-Type': contentType,
-          'Content-Length': contentLength.toString(),
-          'Content-Range': `bytes ${start}-${calculatedEnd}/${totalSize}`,
-          'Accept-Ranges': 'bytes',
-        },
+        status: 200,
+        headers,
       });
-    } else {
-      console.log('No range header provided');
-      throw new Error('Range header is required');
+    } catch (error) {
+      console.error('Read file error', error);
+      return new Response('Read file error', { status: 500 });
     }
   });
 
