@@ -1,6 +1,5 @@
 import {
   Application,
-  Assets,
   BlurFilter,
   Container,
   Sprite,
@@ -30,21 +29,35 @@ export function VideoPlayer({ src }: { src?: string }) {
   const loadVideo = async () => {
     if (!src) return;
     try {
-      /* texture */
-      const texture = await Assets.load<Texture>(src, {
-        onProgress: (progress) => {
-          console.log('video load progress:', progress);
-        },
-      });
-
-      /* soure */
-      const video = texture.source.resource as HTMLVideoElement;
+      /* video element */
+      const video = document.createElement('video');
+      video.src = src;
+      video.crossOrigin = 'anonymous';
+      video.preload = 'auto';
       setVideoElement(video);
 
       /* init */
       video.currentTime = 0;
       video.pause();
       video.muted = false;
+
+      /* wait for video to be ready */
+      await new Promise<void>((resolve, reject) => {
+        video.oncanplay = () => {
+          resolve();
+        };
+        video.onerror = (err) => {
+          console.error('video load error:', err);
+          reject(err);
+        };
+        // 이미 canplay 상태라면 즉시 resolve
+        // if (video.readyState >= video.HAVE_FUTURE_DATA) {
+        //   resolve();
+        // }
+      });
+
+      /* texture from video */
+      const texture = Texture.from(video);
 
       /* sprite */
       const sprite = new Sprite(texture);
@@ -74,6 +87,12 @@ export function VideoPlayer({ src }: { src?: string }) {
 
   useEffect(() => {
     loadVideo();
+    return () => {
+      if (sprite) {
+        app.stage.removeChild(sprite);
+        sprite.destroy(true);
+      }
+    };
   }, [src]);
 
   return (

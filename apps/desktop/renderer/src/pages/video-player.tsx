@@ -4,7 +4,7 @@ import { VideoPlayer } from '@renderer/components/VideoPlayer';
 
 export default function VideoPlayerPage() {
   const [path, setPath] = useState<string | undefined>(
-    'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'
+    'source://open?path=%2FUsers%2Fdeveloper%2FDownloads%2F305657_small.mp4'
   );
 
   return (
