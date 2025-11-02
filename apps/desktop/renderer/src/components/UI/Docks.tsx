@@ -62,7 +62,7 @@ function DockItem({
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
       whileHover={{
-        background: '#d2d2d2',
+        background: '#292929',
       }}
       transition={{
         background: {
