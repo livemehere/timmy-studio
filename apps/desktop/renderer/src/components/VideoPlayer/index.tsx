@@ -1,4 +1,4 @@
-import { Application, BlurFilter, Sprite, Texture } from 'pixi.js';
+import { Application, BlurFilter, NoiseFilter, Sprite, Texture } from 'pixi.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 export function VideoPlayer({ src }: { src?: string }) {
@@ -64,14 +64,7 @@ export function VideoPlayer({ src }: { src?: string }) {
       setSprite(sprite);
 
       /* filter */
-      const blurFilter = new BlurFilter();
-      sprite.filters = [blurFilter];
-
-      let cnt = 0;
-      app.ticker.add(() => {
-        cnt += 0.005;
-        blurFilter.strength = Math.sin(cnt) * 10;
-      });
+      sprite.filters = [new NoiseFilter({ noise: 0.5 })];
     } catch (err) {
       console.error('Failed to load video texture:', err);
     }
