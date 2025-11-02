@@ -61,6 +61,12 @@ function DockItem({
       onClick={onClick}
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
+      whileHover={{
+        background: '#d2d2d2',
+        transition: {
+          duration: 1,
+        },
+      }}
       className="flex flex-col items-center justify-center border border-neutral-600 rounded-lg cursor-pointer bg-neutral-950"
       style={{
         width: size,
@@ -70,14 +76,14 @@ function DockItem({
       {icon}
       <AnimatePresence>
         {isHovered && (
-          <motion.span
+          <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             className="absolute bottom-full mb-2 px-2 py-1 bg-neutral-900 text-white text-xs rounded border border-neutral-700 whitespace-nowrap"
           >
             {label}
-          </motion.span>
+          </motion.div>
         )}
       </AnimatePresence>
     </motion.div>

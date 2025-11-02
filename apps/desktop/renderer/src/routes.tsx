@@ -4,8 +4,9 @@ import ErrorPage from './pages/error';
 
 const Layout = lazy(() => import('@renderer/components/Layout'));
 const HomePage = lazy(() => import('@renderer/pages'));
-const SettingsPage = lazy(() => import('@renderer/pages/settings'));
+const VideoPlayerPage = lazy(() => import('@renderer/pages/video-player'));
 const VideoEditorPage = lazy(() => import('@renderer/pages/video-editor'));
+const SettingsPage = lazy(() => import('@renderer/pages/settings'));
 
 const router = createHashRouter([
   {
@@ -20,12 +21,16 @@ const router = createHashRouter([
             element: <HomePage />,
           },
           {
-            path: 'settings',
-            element: <SettingsPage />,
+            path: 'video-player',
+            element: <VideoPlayerPage />,
           },
           {
             path: 'video-editor',
             element: <VideoEditorPage />,
+          },
+          {
+            path: 'settings',
+            element: <SettingsPage />,
           },
         ],
       },
