@@ -8,6 +8,9 @@ import {
 import { ipc } from '@timmy-studio/electron-utils/ipc/main';
 import { createWindow, setupTray } from './setup-utils';
 import fs from 'node:fs';
+import { parseRange } from './utils/byte-range';
+import mime from 'mime-types';
+import { Readable } from 'node:stream';
 
 log.initialize();
 log.info('App starting...');
@@ -15,12 +18,12 @@ protocol.registerSchemesAsPrivileged([
   {
     scheme: 'source',
     privileges: {
-      // standard: true,
-      // secure: true,
+      standard: false,
+      secure: true,
       bypassCSP: true,
-      // supportFetchAPI: true,
-      // stream: true,
-      // corsEnabled: true,
+      supportFetchAPI: true,
+      stream: true,
+      corsEnabled: true,
     },
   },
 ]);
@@ -33,33 +36,67 @@ app.whenReady().then(async () => {
   setupTray();
 
   protocol.handle('source', (req) => {
-    console.log(req);
     console.log('====================');
     const url = new URL(req.url);
     const filePath = decodeURIComponent(url.pathname);
     const range = req.headers.get('range');
+    const parsedRange = range ? parseRange(range) : null;
     const stat = fs.statSync(filePath);
-    console.log('stat', stat);
+    const totalSize = stat.size;
+    const contentType = mime.lookup(filePath) || 'application/octet-stream';
+    console.log('filePath', filePath);
+    console.log(req.headers);
+    console.log('totalSize', totalSize);
 
-    if (range) {
-      // byte-range 요청 처리 로직 추가 필요
-      console.log('한번에 요청 처리', filePath);
-      // 전체 파일 응답 처리 로직 추가 필요
-      const stream = fs.createReadStream(filePath);
+    if (parsedRange) {
+      const { start, end } = parsedRange;
+      const calculatedEnd = end === 0 ? totalSize - 1 : end;
+      const contentLength = calculatedEnd - start + 1;
+
+      const stream = fs.createReadStream(filePath, {
+        start,
+        end: calculatedEnd,
+        highWaterMark: 1024 * 1024,
+      });
+
+      stream.on('data', (chunk) => {
+        console.log('stream data chunk', chunk.length);
+      });
+
+      stream.on('end', () => {
+        console.log('stream end');
+      });
+
+      /** 간단 버전, 자체 백프레셔 처리 */
+      // const webStream = Readable.toWeb(
+      //   stream
+      // ) as unknown as ReadableStream<Uint8Array>;
+
+      /**  직접 처리, 백프레셔 문제되면 추가 처리 필요 */
       const webStream = new ReadableStream({
         start(controller) {
+          stream.pause();
           stream.on('data', (chunk) => {
             controller.enqueue(chunk);
-            console.log('enqueue chunk', chunk.length);
+            console.log('progress', controller.desiredSize);
+            if (controller.desiredSize && controller.desiredSize <= 0) {
+              stream.pause();
+              console.log('stream pause');
+            }
           });
-          stream.on('end', () => {
+          stream.once('end', () => {
             controller.close();
-            console.log('stream end');
           });
-          stream.on('error', (err) => {
+          stream.once('error', (err) => {
             controller.error(err);
             console.error('stream error', err);
           });
+        },
+        pull() {
+          console.log('stream resume from pull');
+          if (stream.isPaused()) {
+            stream.resume();
+          }
         },
         cancel() {
           stream.destroy();
@@ -67,13 +104,16 @@ app.whenReady().then(async () => {
       });
 
       return new Response(webStream, {
-        status: 200,
+        status: 206,
         headers: {
-          'Content-Type': 'video/quicktime',
-          'Content-Length': stat.size.toString(),
+          'Content-Type': contentType,
+          'Content-Length': contentLength.toString(),
+          'Content-Range': `bytes ${start}-${calculatedEnd}/${totalSize}`,
+          'Accept-Ranges': 'bytes',
         },
       });
     } else {
+      console.log('No range header provided');
       throw new Error('Range header is required');
     }
   });
