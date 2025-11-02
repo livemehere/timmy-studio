@@ -22,6 +22,10 @@ interface ElectronOptions {
 }
 
 export function electron(options: ElectronOptions): Plugin[] {
+  // vitest 실행 시 플러그인 비활성화
+  const isTest =
+    process.env.VITEST === 'true' || process.env.NODE_ENV === 'test';
+
   const rootPath = process.cwd();
   const outDir = path.join(rootPath, 'dist');
 
@@ -84,6 +88,7 @@ export function electron(options: ElectronOptions): Plugin[] {
       name: 'vite-plugin-electron-renderer',
       enforce: 'pre',
       config(config, { command }) {
+        if (isTest) return config; // vitest 실행 시 패스
         isServe = command === 'serve';
         const rendererBaseConfig: UserConfig = {
           base: './', // 상대경로로 설정하지 않으면, 프로덕션 빌드 후 index.html 을 열었을 때 리소스를 못찾는 문제가 발생함.
@@ -95,6 +100,8 @@ export function electron(options: ElectronOptions): Plugin[] {
         return mergeConfig(rendererBaseConfig, config);
       },
       configureServer(server) {
+        if (isTest) return; // vitest 실행 시 패스
+
         devServer = server;
         server.httpServer?.on('close', () => {
           console.log(`♻️ electron 을 재시작 합니다.`);
@@ -112,6 +119,8 @@ export function electron(options: ElectronOptions): Plugin[] {
       //@ts-ignore
       _options: options.package, // cli/package.ts 에서 사용하기 위한, 참조값 전달
       async buildStart() {
+        if (isTest) return; // vitest 실행 시 패스
+
         rmSync(outDir, { recursive: true, force: true });
         await buildBundle(
           'main',
