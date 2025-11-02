@@ -27,7 +27,14 @@ export function VideoPlayer({ src }: { src?: string }) {
   };
 
   const loadVideo = async () => {
+    console.log('loadVideo src:', src);
     if (!src) return;
+
+    if (sprite) {
+      app.stage.removeChild(sprite);
+      sprite.destroy(true);
+    }
+
     try {
       /* video element */
       const video = document.createElement('video');
@@ -46,9 +53,10 @@ export function VideoPlayer({ src }: { src?: string }) {
         video.oncanplay = () => {
           resolve();
         };
-        video.onerror = (err) => {
-          console.error('video load error:', err);
-          reject(err);
+        video.onerror = (e) => {
+          console.error('video error event:', e);
+          console.log(video);
+          reject();
         };
         // 이미 canplay 상태라면 즉시 resolve
         // if (video.readyState >= video.HAVE_FUTURE_DATA) {
@@ -88,10 +96,7 @@ export function VideoPlayer({ src }: { src?: string }) {
   useEffect(() => {
     loadVideo();
     return () => {
-      if (sprite) {
-        app.stage.removeChild(sprite);
-        sprite.destroy(true);
-      }
+      console.log('cleanup video player');
     };
   }, [src]);
 
@@ -99,6 +104,15 @@ export function VideoPlayer({ src }: { src?: string }) {
     <div ref={parentRef}>
       <button onClick={() => videoElement?.play()}>Play</button>
       <button onClick={() => videoElement?.pause()}>Pause</button>
+      <button
+        onClick={() => {
+          if (sprite) {
+            app.stage.removeChild(sprite);
+          }
+        }}
+      >
+        remove
+      </button>
       <div ref={ref} className="h-[500px]">
         <canvas ref={canvasRef}></canvas>
       </div>
