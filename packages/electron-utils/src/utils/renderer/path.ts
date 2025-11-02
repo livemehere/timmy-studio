@@ -10,3 +10,11 @@ export function getPublicPath(path: string) {
   }
   return path;
 }
+
+/**
+ * @param filePath - os 파일 시스템의 경로
+ * @returns - source://open?path= 스킴을 사용하는 경로
+ */
+export function toSourcePath(filePath: string): string {
+  return `source://open?path=${encodeURIComponent(filePath)}`;
+}

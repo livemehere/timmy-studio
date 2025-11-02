@@ -1,3 +1,4 @@
+import { toSourcePath } from '@timmy-studio/electron-utils/utils/renderer';
 import { useEffect, useState } from 'react';
 
 export default function VideoPlayerPage() {
@@ -44,7 +45,7 @@ export default function VideoPlayerPage() {
             const file = e.target.files[0];
             if (!file) return;
             const filePath = window.app.getPathForFile(file);
-            setPath(`source://open/?path=${encodeURIComponent(filePath)}`);
+            setPath(toSourcePath(filePath));
           }
         }}
       />

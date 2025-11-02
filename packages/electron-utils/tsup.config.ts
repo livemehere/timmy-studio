@@ -28,6 +28,6 @@ export default defineConfig({
   clean: true,
   splitting: false,
   treeshake: true,
-  external: ['electron', 'vite', 'electron-builder'],
   outDir: 'dist',
+  // noExternal: ['mime-types'],
 });
