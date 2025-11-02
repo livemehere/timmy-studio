@@ -18,8 +18,7 @@ export function VideoPlayer({ src }: { src: string }) {
       const videoElement = document.createElement('video');
       videoElement.src = src;
       videoElement.crossOrigin = 'anonymous';
-      videoElement.loop = true;
-      videoElement.muted = true;
+      videoElement.muted = false;
       videoElement.playsInline = true;
 
       // 비디오가 재생 가능한 상태가 될 때까지 대기
@@ -38,8 +37,8 @@ export function VideoPlayer({ src }: { src: string }) {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Texture 생성 (비디오가 재생 중일 때)
-      const texture = Texture.from(videoElement);
-      setTexture(texture);
+      const t = Texture.from(videoElement);
+      setTexture(t);
       setError(undefined);
     } catch (err) {
       console.error('Failed to load video texture:', err);
