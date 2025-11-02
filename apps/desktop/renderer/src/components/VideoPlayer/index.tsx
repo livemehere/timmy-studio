@@ -36,11 +36,6 @@ export function VideoPlayer({ src }: { src?: string }) {
       video.crossOrigin = 'anonymous';
       video.preload = 'auto';
 
-      /* init */
-      video.currentTime = 0;
-      video.pause();
-      video.muted = false;
-
       /* wait for video to be ready */
       await new Promise<void>((resolve, reject) => {
         video.oncanplay = () => {
@@ -62,6 +57,11 @@ export function VideoPlayer({ src }: { src?: string }) {
       sprite.height = app.renderer.height;
       app.stage.addChild(sprite);
       setSprite(sprite);
+
+      /* video controls */
+      video.currentTime = 0;
+      video.pause();
+      video.muted = false;
 
       /* filter */
       sprite.filters = [new NoiseFilter({ noise: 0.5 })];
