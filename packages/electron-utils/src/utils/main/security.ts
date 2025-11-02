@@ -9,7 +9,8 @@ export function setupSessionSecurity(): void {
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src * 'unsafe-inline' data: blob:;",
+          "default-src * 'unsafe-inline' 'unsafe-eval';" +
+            "script-src * 'unsafe-inline' 'unsafe-eval' data: blob:;",
         ],
       },
     });
