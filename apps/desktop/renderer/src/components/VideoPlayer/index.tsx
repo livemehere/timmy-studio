@@ -1,5 +1,7 @@
 import { Application, BlurFilter, NoiseFilter, Sprite, Texture } from 'pixi.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { interval, switchMap } from 'rxjs';
+import { Input, ALL_FORMATS, UrlSource, VideoSampleSink } from 'mediabunny';
 
 export function VideoPlayer({ src }: { src?: string }) {
   const parentRef = useRef<HTMLDivElement>(null);
@@ -7,6 +9,13 @@ export function VideoPlayer({ src }: { src?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const app = useMemo<Application>(() => new Application(), []);
   const [sprite, setSprite] = useState<Sprite | null>(null);
+
+  // ---
+  const previewRef = useRef<HTMLCanvasElement>(null);
+  const [maxFrame, setMaxFrame] = useState(0);
+  const [currentFrame, setCurrentFrame] = useState(0);
+  const [sink, setSink] = useState<VideoSampleSink | null>(null);
+  const [fps, setFps] = useState(0);
 
   const initApp = async () => {
     if (!ref.current || !canvasRef.current) return;
@@ -22,6 +31,32 @@ export function VideoPlayer({ src }: { src?: string }) {
       sprite.destroy(true);
       setSprite(null);
     }
+  };
+
+  const handleExtractFrame = async () => {
+    // const output = app.renderer.extract.pixels(app.stage);
+
+    // const byte = output.pixels.length;
+    // const formatMb = (byte / (1024 * 1024)).toFixed(2);
+    // console.log(`${formatMb}MB`);
+
+    const sub = interval(4)
+      .pipe(
+        switchMap((v) => {
+          console.time('extract frame');
+          const output = app.renderer.extract.canvas(app.stage);
+          console.timeEnd('extract frame');
+          // output.style.width = '100%';
+          // output.style.height = 'auto';
+          // const preview = document.getElementById(
+          //   'preview'
+          // ) as HTMLUListElement;
+          // preview.appendChild(output as HTMLCanvasElement);
+
+          return [];
+        })
+      )
+      .subscribe();
   };
 
   const loadVideo = async () => {
@@ -41,6 +76,7 @@ export function VideoPlayer({ src }: { src?: string }) {
         video.oncanplay = () => {
           resolve();
           video.onerror = null;
+          console.log('videoEl duration:', video.duration);
         };
         video.onerror = (e) => {
           console.error('video error event:', e);
@@ -65,10 +101,47 @@ export function VideoPlayer({ src }: { src?: string }) {
 
       /* filter */
       sprite.filters = [new NoiseFilter({ noise: 0.5 })];
+
+      /* --- media bunny */
+      const input = new Input({
+        formats: ALL_FORMATS,
+        source: new UrlSource(src),
+      });
+      console.log(input);
+      const duration = await input.computeDuration();
+      const videoTrack = await input.getPrimaryVideoTrack();
+      if (!videoTrack) throw new Error('No video track found');
+      const packetStats = await videoTrack.computePacketStats();
+      const totalFrames = packetStats.packetCount;
+      const fps = packetStats.averagePacketRate;
+      setFps(fps);
+      console.log('total frames:', totalFrames);
+      console.log('fps:', fps);
+      console.log('video duration:', duration);
+      setMaxFrame(totalFrames);
+
+      const sink = new VideoSampleSink(videoTrack);
+      setSink(sink);
     } catch (err) {
       console.error('Failed to load video texture:', err);
     }
   };
+
+  const frameIdxToTimestamp = (frameIdx: number, fps: number) => {
+    return frameIdx / fps;
+  };
+
+  useEffect(() => {
+    if (!sink) return;
+    const timestamp = frameIdxToTimestamp(currentFrame, fps);
+    sink.getSample(timestamp).then(async (sample) => {
+      const videoFrame = sample?.toVideoFrame();
+      if (!videoFrame) return;
+      const newTexture = Texture.from(videoFrame);
+      console.log(videoFrame);
+      sprite!.texture = newTexture;
+    });
+  }, [currentFrame, sink, maxFrame, fps]);
 
   useEffect(() => {
     initApp();
@@ -93,8 +166,24 @@ export function VideoPlayer({ src }: { src?: string }) {
       >
         remove
       </button>
+      <input
+        className="w-full"
+        type="range"
+        min={0}
+        max={maxFrame}
+        step={1}
+        value={currentFrame}
+        onChange={(e) => setCurrentFrame(Number(e.target.value))}
+      />
+      <div>current frame: {currentFrame}</div>
       <div ref={ref} className="h-[500px]">
         <canvas ref={canvasRef}></canvas>
+      </div>
+      <hr />
+      <div>frames</div>
+      <div>
+        <button onClick={handleExtractFrame}>extract frame</button>
+        <div id="preview" className="grid grid-cols-6"></div>
       </div>
     </div>
   );

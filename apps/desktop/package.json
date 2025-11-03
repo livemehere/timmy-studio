@@ -21,6 +21,7 @@
     "clsx": "^2.1.1",
     "electron-log": "^5.4.3",
     "lucide-react": "^0.552.0",
+    "mediabunny": "^1.24.3",
     "mime-types": "^3.0.1",
     "motion": "^12.23.24",
     "pixi.js": "^8.14.0",
