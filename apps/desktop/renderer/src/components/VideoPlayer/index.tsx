@@ -1,7 +1,8 @@
 import { Application, BlurFilter, NoiseFilter, Sprite, Texture } from 'pixi.js';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { interval, switchMap } from 'rxjs';
 import { Input, ALL_FORMATS, UrlSource, CanvasSink } from 'mediabunny';
+import { throttle } from 'lodash-es';
 
 export function VideoPlayer({ src }: { src?: string }) {
   const parentRef = useRef<HTMLDivElement>(null);
@@ -137,16 +138,29 @@ export function VideoPlayer({ src }: { src?: string }) {
     return frameIdx / fps;
   };
 
+  const seekToFrame = useCallback(
+    async (frame: number) => {
+      console.log('called seekToFrame:', frame);
+      if (!sink) return;
+      const timestamp = frameIdxToTimestamp(frame, fps);
+      sink
+        .getCanvas(timestamp)
+        .then(async (sample) => {
+          const canvas = sample?.canvas;
+          if (!canvas) return;
+          const newTexture = Texture.from(canvas);
+          console.log(frame, canvas);
+          sprite!.texture = newTexture;
+        })
+        .catch((err) => {
+          console.error('Error getting canvas from sink:', err);
+        });
+    },
+    [sink, sprite, fps]
+  );
+
   useEffect(() => {
-    if (!sink) return;
-    const timestamp = frameIdxToTimestamp(currentFrame, fps);
-    sink.getCanvas(timestamp).then(async (sample) => {
-      const canvas = sample?.canvas;
-      if (!canvas) return;
-      const newTexture = Texture.from(canvas);
-      console.log(canvas);
-      sprite!.texture = newTexture;
-    });
+    seekToFrame(currentFrame);
   }, [currentFrame, sink, maxFrame, fps]);
 
   useEffect(() => {
