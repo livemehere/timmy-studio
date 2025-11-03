@@ -1,7 +1,7 @@
 import { Application, BlurFilter, NoiseFilter, Sprite, Texture } from 'pixi.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { interval, switchMap } from 'rxjs';
-import { Input, ALL_FORMATS, UrlSource, VideoSampleSink } from 'mediabunny';
+import { Input, ALL_FORMATS, UrlSource, CanvasSink } from 'mediabunny';
 
 export function VideoPlayer({ src }: { src?: string }) {
   const parentRef = useRef<HTMLDivElement>(null);
@@ -14,7 +14,7 @@ export function VideoPlayer({ src }: { src?: string }) {
   const previewRef = useRef<HTMLCanvasElement>(null);
   const [maxFrame, setMaxFrame] = useState(0);
   const [currentFrame, setCurrentFrame] = useState(0);
-  const [sink, setSink] = useState<VideoSampleSink | null>(null);
+  const [sink, setSink] = useState<CanvasSink | null>(null);
   const [fps, setFps] = useState(0);
 
   const initApp = async () => {
@@ -100,7 +100,7 @@ export function VideoPlayer({ src }: { src?: string }) {
       video.muted = false;
 
       /* filter */
-      sprite.filters = [new NoiseFilter({ noise: 0.5 })];
+      // sprite.filters = [new NoiseFilter({ noise: 0.5 })];
 
       /* --- media bunny */
       const input = new Input({
@@ -120,7 +120,13 @@ export function VideoPlayer({ src }: { src?: string }) {
       console.log('video duration:', duration);
       setMaxFrame(totalFrames);
 
-      const sink = new VideoSampleSink(videoTrack);
+      const sink = new CanvasSink(videoTrack, {
+        width: 120,
+        poolSize: 20,
+        // height: 720,
+        // fit:true,
+        alpha: false,
+      });
       setSink(sink);
     } catch (err) {
       console.error('Failed to load video texture:', err);
@@ -134,11 +140,11 @@ export function VideoPlayer({ src }: { src?: string }) {
   useEffect(() => {
     if (!sink) return;
     const timestamp = frameIdxToTimestamp(currentFrame, fps);
-    sink.getSample(timestamp).then(async (sample) => {
-      const videoFrame = sample?.toVideoFrame();
-      if (!videoFrame) return;
-      const newTexture = Texture.from(videoFrame);
-      console.log(videoFrame);
+    sink.getCanvas(timestamp).then(async (sample) => {
+      const canvas = sample?.canvas;
+      if (!canvas) return;
+      const newTexture = Texture.from(canvas);
+      console.log(canvas);
       sprite!.texture = newTexture;
     });
   }, [currentFrame, sink, maxFrame, fps]);
