@@ -14,6 +14,10 @@ log.initialize();
 log.info('App starting...');
 protocol.registerSchemesAsPrivileged([SOURCE_SCHEME]);
 
+// app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder');
+// app.commandLine.appendSwitch('enable-accelerated-video-decode');
+// app.commandLine.appendSwitch('ignore-gpu-blocklist'); // Optional, but can help in some cases
+
 app.whenReady().then(async () => {
   setupSessionSecurity();
   debug({
