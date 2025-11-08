@@ -6,27 +6,23 @@ const StudioContext = createContext<Studio | null>(null);
 
 export function StudioProvider({
   children,
-  project,
-  onChangeProject,
+  initialProject,
 }: {
   children: React.ReactNode;
-  project: IProject;
-  onChangeProject: (project: IProject) => void;
+  initialProject: IProject;
 }) {
   const studioRef = useRef<Studio | null>(null);
   if (!studioRef.current) {
-    const studio = new Studio({ project });
+    const studio = new Studio({ project: initialProject });
     studioRef.current = studio;
-    studio.project$.subscribe((newProject) => {
-      onChangeProject(newProject);
-    });
   }
 
   useEffect(() => {
+    studioRef.current = new Studio({ project: initialProject });
     return () => {
       studioRef.current?.destroy();
     };
-  }, []);
+  }, [initialProject]);
 
   return (
     <StudioContext.Provider value={studioRef.current}>

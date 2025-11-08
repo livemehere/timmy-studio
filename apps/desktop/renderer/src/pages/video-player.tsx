@@ -5,6 +5,7 @@ import { uid } from 'uid';
 import { StudioProvider } from '@renderer/lib/studio/StudioProvider';
 import { PreviewRenderer } from '@renderer/lib/studio/components/PreviewRenderer';
 import { Updater } from '@renderer/lib/studio/components/Updater';
+import { produce } from 'immer';
 
 export default function VideoPlayerPage() {
   const [path, setPath] = useState<string>(
@@ -37,10 +38,21 @@ export default function VideoPlayerPage() {
   });
 
   return (
-    <StudioProvider project={project} onChangeProject={setProject}>
+    <StudioProvider initialProject={project}>
       <div>
         <PreviewRenderer />
         <Updater />
+        <button
+          onClick={() => {
+            setProject(
+              produce((draft) => {
+                draft.settings.width = 100000;
+              })
+            );
+          }}
+        >
+          reset
+        </button>
       </div>
     </StudioProvider>
   );
