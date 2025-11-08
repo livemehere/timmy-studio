@@ -16,22 +16,21 @@ export function StudioProvider({
   if (!studioRef.current) {
     const studio = new Studio({ project: initialProject });
     studioRef.current = studio;
-
-    console.log('[StudioProvider] created studio');
+    console.log('[StudioProvider] created');
   }
 
   useEffect(() => {
-    console.log('project changed', initialProject);
     if (studioRef.current && studioRef.current.initialized) {
       studioRef.current.project$.next(initialProject);
-      console.log('[StudioProvider] updating project');
+      console.log('[StudioProvider] update poject');
     }
   }, [initialProject]);
 
   useEffect(() => {
+    studioRef.current!.initialized = true;
     return () => {
       studioRef.current?.destroy();
-      console.log('[StudioProvider] destroying studio');
+      console.log('[StudioProvider] destroy');
     };
   }, []);
 

@@ -10,7 +10,7 @@ export function Updater() {
         onClick={() =>
           studio.project$.next(
             produce(studio.project$.value, (draft) => {
-              draft.settings.width += 100;
+              draft.name += '!';
             })
           )
         }

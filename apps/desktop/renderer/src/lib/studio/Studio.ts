@@ -8,7 +8,6 @@ export class Studio {
 
   constructor(props: { project: IProject }) {
     this.project$ = new BehaviorSubject<IProject>(props.project);
-    this.initialized = true;
   }
 
   destroy() {
