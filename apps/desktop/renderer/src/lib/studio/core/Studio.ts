@@ -6,6 +6,7 @@ import type { IProject } from '../types';
 import { PIXI_LABELS } from '@renderer/lib/studio/constants';
 import { VideoTrack } from '@renderer/lib/studio/core/tracks/VideoTrack';
 import { Timer } from '@renderer/lib/studio/core/Timer';
+import { ImageAsset } from '@renderer/lib/studio/core/assets/ImageAsset';
 
 export class Studio {
   initialized = false;
@@ -18,6 +19,8 @@ export class Studio {
 
   private sceneContainer: Container;
 
+  // Asset management
+  private static assetMap: Map<string, ImageAsset> = new Map();
   private static idMap: Map<string, any> = new Map();
 
   static getById<T>(id: string): T | undefined {
@@ -28,17 +31,42 @@ export class Studio {
     Studio.idMap.delete(id);
   }
 
+  static getAsset(assetId: string): ImageAsset | undefined {
+    return Studio.assetMap.get(assetId);
+  }
+
+  static registerAsset(asset: ImageAsset): void {
+    Studio.assetMap.set(asset.id, asset);
+  }
+
+  static removeAsset(assetId: string): void {
+    const asset = Studio.assetMap.get(assetId);
+    if (asset) {
+      asset.destroy();
+      Studio.assetMap.delete(assetId);
+    }
+  }
+
+  static clearAssets(): void {
+    Studio.assetMap.forEach((asset) => asset.destroy());
+    Studio.assetMap.clear();
+  }
+
   constructor(props: { project: IProject }) {
     this.project$ = new BehaviorSubject<IProject>(props.project);
     this.timer = new Timer(props.project.settings.duration);
     this.app = new Application();
     this.sceneContainer = new Container();
+
+    // Initialize assets
+    this.instantiateAssets(props.project.assets);
   }
 
   destroy() {
     this.project$.complete();
     this.timer.destroy();
     this.destroyRenderer();
+    Studio.clearAssets();
   }
 
   destroyRenderer() {
@@ -82,6 +110,25 @@ export class Studio {
       this.timer.setDuration(project.settings.duration);
       this.rebuildScene(project);
     });
+  }
+
+  private instantiateAssets(assets: IProject['assets']) {
+    // Clear existing assets
+    Studio.clearAssets();
+
+    // Create and register new assets
+    assets.forEach((assetProps) => {
+      if (assetProps.type === 'image') {
+        const asset = new ImageAsset(assetProps);
+        Studio.registerAsset(asset);
+
+        // Preload the asset
+        asset.preload();
+      }
+      // TODO: Handle audio and video assets
+    });
+
+    console.log('[Studio] Assets instantiated:', assets.length);
   }
 
   private instantiateVideoTracks() {

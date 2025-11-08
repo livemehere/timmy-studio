@@ -1,9 +1,10 @@
 import type { IVideoClip, IVideoTrack } from '@renderer/lib/studio/types';
 import { ShapeClip } from '@renderer/lib/studio/core/clips/ShapeClip';
 import { TextClip } from '@renderer/lib/studio/core/clips/TextClip';
+import { ImageClip } from '@renderer/lib/studio/core/clips/ImageClip';
 import { Container } from 'pixi.js';
 
-type VideoClip = ShapeClip | TextClip;
+type VideoClip = ShapeClip | TextClip | ImageClip;
 
 export class VideoTrack implements IVideoTrack {
   type: 'video' = 'video';
@@ -64,6 +65,9 @@ export class VideoTrack implements IVideoTrack {
       }
       if (props.type === 'text') {
         return new TextClip(props);
+      }
+      if (props.type === 'image') {
+        return new ImageClip(props);
       }
       throw new Error(`Unsupported clip type: ${props.type}`);
     });

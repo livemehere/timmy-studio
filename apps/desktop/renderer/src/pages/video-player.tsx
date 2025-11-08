@@ -6,10 +6,77 @@ import { PreviewRenderer } from '@renderer/lib/studio/components/PreviewRenderer
 import { Updater } from '@renderer/lib/studio/components/Updater';
 
 function createInitialProject(): IProject {
+  const imageAsset1Id = uid(4); // 600x400
+  const imageAsset2Id = uid(4); // 400x400 square
+  const imageAsset3Id = uid(4); // 800x600
+  const imageAsset4Id = uid(4); // 300x500 portrait
+  const imageAsset5Id = uid(4); // 500x300 landscape
+
   return {
     id: uid(4),
     name: 'sample project',
-    assets: [],
+    assets: [
+      {
+        id: imageAsset1Id,
+        name: 'Landscape 600x400',
+        type: 'image',
+        filePath: 'https://placehold.co/600x400/1e90ff/ffffff?text=Image+1',
+        metadata: {
+          width: 600,
+          height: 400,
+          size: 0,
+          createdAt: new Date().toISOString(),
+        },
+      },
+      {
+        id: imageAsset2Id,
+        name: 'Square 400x400',
+        type: 'image',
+        filePath: 'https://placehold.co/400x400/ff6347/ffffff?text=Square',
+        metadata: {
+          width: 400,
+          height: 400,
+          size: 0,
+          createdAt: new Date().toISOString(),
+        },
+      },
+      {
+        id: imageAsset3Id,
+        name: 'Large 800x600',
+        type: 'image',
+        filePath: 'https://placehold.co/800x600/32cd32/ffffff?text=Large',
+        metadata: {
+          width: 800,
+          height: 600,
+          size: 0,
+          createdAt: new Date().toISOString(),
+        },
+      },
+      {
+        id: imageAsset4Id,
+        name: 'Portrait 300x500',
+        type: 'image',
+        filePath: 'https://placehold.co/300x500/ff1493/ffffff?text=Portrait',
+        metadata: {
+          width: 300,
+          height: 500,
+          size: 0,
+          createdAt: new Date().toISOString(),
+        },
+      },
+      {
+        id: imageAsset5Id,
+        name: 'Landscape 500x300',
+        type: 'image',
+        filePath: 'https://placehold.co/500x300/9370db/ffffff?text=Wide',
+        metadata: {
+          width: 500,
+          height: 300,
+          size: 0,
+          createdAt: new Date().toISOString(),
+        },
+      },
+    ],
     metadata: {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -360,6 +427,158 @@ function createInitialProject(): IProject {
                 radius: 15,
               },
               padding: [15, 30, 15, 30],
+            },
+          },
+          // Image: Landscape blue - left side (1-5s)
+          {
+            id: uid(4),
+            name: 'Landscape Blue',
+            type: 'image',
+            assetId: imageAsset1Id,
+            startTime: 1000,
+            endTime: 5000,
+            transforms: {
+              position: {
+                x: 400,
+                y: 400,
+              },
+              scaleX: 1.2,
+              scaleY: 1.2,
+              rotation: 0,
+              opacity: 0.9,
+            },
+          },
+          // Image: Square red - center (2-6s)
+          {
+            id: uid(4),
+            name: 'Square Red',
+            type: 'image',
+            assetId: imageAsset2Id,
+            startTime: 2000,
+            endTime: 6000,
+            transforms: {
+              position: {
+                x: 960,
+                y: 540,
+              },
+              scaleX: 1.5,
+              scaleY: 1.5,
+              rotation: Math.PI / 4,
+              opacity: 0.8,
+            },
+          },
+          // Image: Large green - background (1-7s)
+          {
+            id: uid(4),
+            name: 'Large Green Background',
+            type: 'image',
+            assetId: imageAsset3Id,
+            startTime: 1000,
+            endTime: 7000,
+            transforms: {
+              position: {
+                x: 960,
+                y: 540,
+              },
+              scaleX: 1.8,
+              scaleY: 1.8,
+              rotation: 0,
+              opacity: 0.2,
+            },
+          },
+          // Image: Portrait pink - right (3-7s)
+          {
+            id: uid(4),
+            name: 'Portrait Pink',
+            type: 'image',
+            assetId: imageAsset4Id,
+            startTime: 3000,
+            endTime: 7000,
+            transforms: {
+              position: {
+                x: 1500,
+                y: 600,
+              },
+              scaleX: 1.0,
+              scaleY: 1.0,
+              rotation: -Math.PI / 8,
+              opacity: 0.85,
+            },
+          },
+          // Image: Wide purple - top (4-8s)
+          {
+            id: uid(4),
+            name: 'Wide Purple',
+            type: 'image',
+            assetId: imageAsset5Id,
+            startTime: 4000,
+            endTime: 8000,
+            transforms: {
+              position: {
+                x: 800,
+                y: 200,
+              },
+              scaleX: 1.3,
+              scaleY: 1.3,
+              rotation: Math.PI / 12,
+              opacity: 0.9,
+            },
+          },
+          // Image: Small landscape - top right (5-9s)
+          {
+            id: uid(4),
+            name: 'Small Landscape',
+            type: 'image',
+            assetId: imageAsset1Id,
+            startTime: 5000,
+            endTime: 9000,
+            transforms: {
+              position: {
+                x: 1650,
+                y: 250,
+              },
+              scaleX: 0.6,
+              scaleY: 0.6,
+              rotation: -Math.PI / 6,
+              opacity: 0.75,
+            },
+          },
+          // Image: Rotated square - bottom left (6-10s)
+          {
+            id: uid(4),
+            name: 'Rotated Square',
+            type: 'image',
+            assetId: imageAsset2Id,
+            startTime: 6000,
+            endTime: 10000,
+            transforms: {
+              position: {
+                x: 300,
+                y: 850,
+              },
+              scaleX: 0.8,
+              scaleY: 0.8,
+              rotation: Math.PI / 3,
+              opacity: 0.7,
+            },
+          },
+          // Image: Large landscape overlay (7-10s)
+          {
+            id: uid(4),
+            name: 'Large Landscape Overlay',
+            type: 'image',
+            assetId: imageAsset3Id,
+            startTime: 7000,
+            endTime: 10000,
+            transforms: {
+              position: {
+                x: 1200,
+                y: 700,
+              },
+              scaleX: 1.0,
+              scaleY: 1.0,
+              rotation: Math.PI / 16,
+              opacity: 0.6,
             },
           },
         ],
