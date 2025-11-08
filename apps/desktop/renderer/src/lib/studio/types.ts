@@ -140,8 +140,11 @@ export interface IShapeData {
   width: number;
   height: number;
   color: number | string;
-  borderColor?: number | string;
-  borderWidth?: number;
+  radius?: number;
+  border?: {
+    color: number | string;
+    width: number;
+  };
 }
 
 // ============================================================================

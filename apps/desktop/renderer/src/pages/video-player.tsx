@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { IProject } from '@renderer/lib/studio/types';
 import { uid } from 'uid';
-import { StudioProvider } from '@renderer/lib/studio/StudioProvider';
+import { StudioProvider } from '@renderer/lib/studio/contexts/StudioProvider';
 import { PreviewRenderer } from '@renderer/lib/studio/components/PreviewRenderer';
 import { Updater } from '@renderer/lib/studio/components/Updater';
 
@@ -52,6 +52,10 @@ function createInitialProject(): IProject {
                 width: 200,
                 height: 150,
                 color: 'dodgerblue',
+                border: {
+                  width: 2,
+                  color: 'white',
+                },
               },
             },
           ],

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useStudio } from '../StudioProvider';
+import { useStudio } from '../contexts/StudioProvider';
 
 export function PreviewRenderer() {
   const studio = useStudio();

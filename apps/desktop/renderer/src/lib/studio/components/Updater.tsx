@@ -1,4 +1,4 @@
-import { useStudio } from '../StudioProvider';
+import { useStudio } from '../contexts/StudioProvider';
 import { produce } from 'immer';
 
 export function Updater() {

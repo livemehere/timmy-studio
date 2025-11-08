@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { useStudio } from '../StudioProvider';
+import { useStudio } from '../contexts/StudioProvider';
 import { distinctUntilChanged, map } from 'rxjs';
 
 export function useProjectSettings() {

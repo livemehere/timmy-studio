@@ -1,6 +1,6 @@
 import { createContext, useRef, useContext, useEffect } from 'react';
-import { Studio } from './Studio';
-import type { IProject } from './types';
+import { Studio } from '../core/Studio';
+import type { IProject } from '../types';
 
 const StudioContext = createContext<Studio | null>(null);
 
