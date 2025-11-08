@@ -4,6 +4,7 @@ import type { IProject } from '@renderer/lib/studio/types';
 import { uid } from 'uid';
 import { StudioProvider } from '@renderer/lib/studio/StudioProvider';
 import { PreviewRenderer } from '@renderer/lib/studio/components/PreviewRenderer';
+import { Updater } from '@renderer/lib/studio/components/Updater';
 
 export default function VideoPlayerPage() {
   const [path, setPath] = useState<string>(
@@ -39,6 +40,7 @@ export default function VideoPlayerPage() {
     <StudioProvider project={project} onChangeProject={setProject}>
       <div>
         <PreviewRenderer />
+        <Updater />
       </div>
     </StudioProvider>
   );
