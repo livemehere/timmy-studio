@@ -45,6 +45,10 @@ function createInitialProject(): IProject {
                 x: 100,
                 y: 100,
               },
+              scaleX: 1.5,
+              scaleY: 2,
+              rotation: Math.PI / 4,
+              opacity: 0.5,
             },
             shapeData: {
               shapeType: 'rectangle',

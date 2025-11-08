@@ -29,13 +29,9 @@ export class ShapeClip implements IShapeClip {
     this.shapeData = props.shapeData;
     this.transforms = props.transforms;
 
-    //todo: apply other transforms like scale, rotation, opacity, etc.
     this.container = new Container();
     this.container.label = `ShapeClip-${this.id}`;
-    this.container.position.set(
-      this.transforms.position.x,
-      this.transforms.position.y
-    );
+    this.applyTransforms();
 
     this.graphics = this.createShape();
     this.container.addChild(this.graphics);
@@ -67,9 +63,21 @@ export class ShapeClip implements IShapeClip {
     parent.addChild(this.container);
   }
 
+  private applyTransforms() {
+    const { position, scaleX, scaleY, opacity, rotation, anchorX, anchorY } =
+      this.transforms;
+    this.container.pivot.set(
+      anchorX ?? this.shapeData.width / 2,
+      anchorY ?? this.shapeData.height / 2
+    );
+    this.container.position.set(position.x, position.y);
+    this.container.scale.set(scaleX ?? 1, scaleY ?? 1);
+    this.container.rotation = rotation ?? 0;
+    this.container.alpha = opacity ?? 1;
+  }
+
   update(currentTime: number) {
-    // Update shape properties based on current time if needed
-    console.log('update shape clip at', currentTime);
+    this.applyTransforms();
   }
 
   show() {
