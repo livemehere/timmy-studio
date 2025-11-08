@@ -1,40 +1,44 @@
-import { createContext, useRef, useContext } from 'react';
-import { createStore, useStore, type ExtractState } from 'zustand';
+import { createContext, useRef, useContext, useEffect } from 'react';
+import { Studio } from './Studio';
+import type { IProject } from './types';
 
-export interface IStudioStore {}
+const StudioContext = createContext<Studio | null>(null);
 
-const createStudioStore = () => {
-  return createStore<IStudioStore>((set) => ({}));
-};
-
-export type TStudioStoreApi = ReturnType<typeof createStudioStore>;
-
-const StudioContext = createContext<TStudioStoreApi>(
-  null as unknown as TStudioStoreApi
-);
-
-export function StudioStoreProvider({
+export function StudioProvider({
   children,
+  project,
+  onChangeProject,
 }: {
   children: React.ReactNode;
+  project: IProject;
+  onChangeProject: (project: IProject) => void;
 }) {
-  const storeApiRef = useRef<TStudioStoreApi | null>(null);
-  if (!storeApiRef.current) {
-    storeApiRef.current = createStudioStore();
+  const studioRef = useRef<Studio | null>(null);
+  if (!studioRef.current) {
+    const studio = new Studio({ project });
+    studioRef.current = studio;
+    studio.project$.subscribe((newProject) => {
+      onChangeProject(newProject);
+    });
   }
+
+  useEffect(() => {
+    return () => {
+      studioRef.current?.destroy();
+    };
+  }, []);
+
   return (
-    <StudioContext.Provider value={storeApiRef.current}>
+    <StudioContext.Provider value={studioRef.current}>
       {children}
     </StudioContext.Provider>
   );
 }
 
-export function useStudioStore<T>(
-  selector: (state: ExtractState<TStudioStoreApi>) => T
-): T {
-  const store = useContext(StudioContext);
-  if (!store) {
+export function useStudio(): Studio {
+  const studio = useContext(StudioContext);
+  if (!studio) {
     throw new Error('useStudio must be used within a StudioProvider');
   }
-  return useStore(store, selector);
+  return studio;
 }
