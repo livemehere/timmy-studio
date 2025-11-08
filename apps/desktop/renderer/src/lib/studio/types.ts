@@ -1,19 +1,23 @@
+// ============================================================================
+// Project
+// ============================================================================
+
 export interface IProject {
-  id: string; // 고유 ID
-  name: string; // 프로젝트 이름
-  settings: IProjectSettings; // 프로젝트 설정
-  timeline: ITimeline; // 타임라인 데이터
-  assets: IAsset[]; // 사용된 에셋 목록
-  metadata: IProjectMetadata; // 메타데이터
+  id: string;
+  name: string;
+  settings: IProjectSettings;
+  metadata: IProjectMetadata;
+  timeline: ITimeline;
+  assets: IAsset[];
 }
 
 export interface IProjectSettings {
-  width: number; // 캔버스 너비 (예: 1920)
-  height: number; // 캔버스 높이 (예: 1080)
-  frameRate: number; // FPS (예: 30, 60)
-  sampleRate: number; // 오디오 샘플레이트 (예: 44100)
-  duration: number; // 총 길이 (밀리초)
-  backgroundColor: string; // 배경색
+  width: number;
+  height: number;
+  frameRate: number;
+  sampleRate: number;
+  duration: number;
+  backgroundColor: string;
 }
 
 export interface IProjectMetadata {
@@ -23,72 +27,196 @@ export interface IProjectMetadata {
   description?: string;
 }
 
+// ============================================================================
+// Timeline
+// ============================================================================
+
 export interface ITimeline {
-  tracks: ITrack[]; // 트랙 배열 (레이어 개념)
-  duration: number; // 총 길이 (ms)
-  currentTime: number; // 현재 재생 위치 (ms)
+  tracks: ITrack[];
 }
 
-export interface ITrack {
+// ============================================================================
+// Track
+// ============================================================================
+
+export interface IBaseTrack {
   id: string;
   name: string;
-  type: 'video' | 'audio' | 'text' | 'image'; // 트랙 타입
-  clips: IClip[]; // 클립 배열
-  enabled: boolean; // 활성화 여부
-  locked: boolean; // 잠금 여부
-  volume?: number; // 오디오 볼륨 (0-1)
-  opacity?: number; // 비디오 투명도 (0-1)
-  zIndex: number; // 렌더링 순서
+  enabled: boolean;
+  locked: boolean;
+  zIndex: number;
 }
 
-export interface IClip {
-  id: string;
-  assetId: string; // Asset 참조
-  trackId: string; // 소속 트랙
-  startTime: number; // 타임라인 상 시작 시간 (밀리초)
-  endTime: number; // 타임라인 상 종료 시간 (밀리초)
-  trimStart: number; // 원본에서 잘린 시작 지점
-  trimEnd: number; // 원본에서 잘린 종료 지점
-  effects: IEffect[]; // 적용된 효과들
-  transforms: ITransform; // 변형 정보
-  animations: IAnimation[]; // 애니메이션 키프레임
+export interface IVideoTrack extends IBaseTrack {
+  type: 'video';
+  clips: IVideoClip[];
+  opacity: number; // 0-1
 }
+
+export interface IAudioTrack extends IBaseTrack {
+  type: 'audio';
+  clips: IAudioClip[];
+  volume: number; // 0-3
+}
+
+export type ITrack = IVideoTrack | IAudioTrack;
+
+// ============================================================================
+// Clip
+// ============================================================================
+
+export interface IBaseClip {
+  id: string;
+  name: string;
+  startTime: number;
+  endTime: number;
+  effects?: IEffect[];
+  animations?: IAnimation[];
+}
+
+// Video Track Clips
+
+export interface IVideoClipBase extends IBaseClip {
+  transforms: ITransform;
+}
+
+export interface IVideoMediaClip extends IVideoClipBase {
+  type: 'video';
+  assetId: string;
+  trimStart: number;
+  trimEnd: number;
+}
+
+export interface IImageClip extends IVideoClipBase {
+  type: 'image';
+  assetId: string;
+}
+
+export interface IShapeClip extends IVideoClipBase {
+  type: 'shape';
+  shapeData: IShapeData;
+}
+
+export interface ITextClip extends IVideoClipBase {
+  type: 'text';
+  textData: ITextData;
+}
+
+export type IVideoClip = IVideoMediaClip | IImageClip | IShapeClip | ITextClip;
+
+// Audio Track Clips
+
+export interface IAudioClip extends IBaseClip {
+  type: 'audio';
+  assetId: string;
+  trimStart: number;
+  trimEnd: number;
+  volume: number; // 0-1
+}
+
+// ============================================================================
+// Transform
+// ============================================================================
 
 export interface ITransform {
-  x: number; // X 위치
-  y: number; // Y 위치
-  scaleX: number; // X 스케일
-  scaleY: number; // Y 스케일
-  rotation: number; // 회전 (radian)
-  opacity: number; // 투명도 (0-1)
-  anchorX: number; // 앵커 포인트 X (0-1)
-  anchorY: number; // 앵커 포인트 Y (0-1)
+  position: {
+    x: number;
+    y: number;
+  };
+  scaleX?: number;
+  scaleY?: number;
+  rotation?: number; // radian
+  opacity?: number; // 0-1
+  anchorX?: number; // 0-1
+  anchorY?: number; // 0-1
 }
 
-export interface IAsset {
-  id: string;
-  type: 'video' | 'audio' | 'image' | 'text';
-  name: string;
-  filePath: string; // 원본 파일 경로
-  metadata: IAssetMetadata;
-  thumbnail?: string; // 썸네일 경로 or base64
+// ============================================================================
+// Shape Data
+// ============================================================================
+
+export interface IShapeData {
+  shapeType: 'rectangle' | 'circle' | 'polygon';
+  width: number;
+  height: number;
+  color: number | string;
+  borderColor?: number | string;
+  borderWidth?: number;
 }
+
+// ============================================================================
+// Text Data
+// ============================================================================
+
+export interface ITextData {
+  content: string;
+  fontSize: number;
+  fontFamily: string;
+  color: number | string;
+  align: 'left' | 'center' | 'right';
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  shadow?: {
+    color: number | string;
+    offsetX: number;
+    offsetY: number;
+    blur: number;
+  };
+  background?: number | string;
+  border?: {
+    color: number | string;
+    width: number;
+    radius?: number;
+  };
+  padding?: number | [number, number] | [number, number, number, number];
+}
+
+// ============================================================================
+// Asset
+// ============================================================================
+
+export interface IBaseAsset {
+  id: string;
+  name: string;
+  filePath: string;
+  metadata: IAssetMetadata;
+  thumbnail?: string;
+}
+
+export interface IVideoAsset extends IBaseAsset {
+  type: 'video';
+}
+
+export interface IAudioAsset extends IBaseAsset {
+  type: 'audio';
+}
+
+export interface IImageAsset extends IBaseAsset {
+  type: 'image';
+}
+
+export type IAsset = IVideoAsset | IAudioAsset | IImageAsset;
 
 export interface IAssetMetadata {
-  duration?: number; // 미디어 길이 (밀리초)
-  width?: number; // 비디오/이미지 너비
-  height?: number; // 비디오/이미지 높이
-  frameRate?: number; // 비디오 FPS
-  codec?: string; // 코덱 정보
-  size: number; // 파일 크기 (bytes)
+  duration?: number;
+  width?: number;
+  height?: number;
+  frameRate?: number;
+  codec?: string;
+  size: number;
   createdAt: string;
 }
+
+// ============================================================================
+// Effect
+// ============================================================================
 
 export interface IEffect {
   id: string;
   type: EffectType;
   enabled: boolean;
-  parameters: Record<string, any>; // 효과별 파라미터
+  parameters: Record<string, unknown>;
 }
 
 export type EffectType =
@@ -97,10 +225,14 @@ export type EffectType =
   | 'contrast'
   | 'saturation'
   | 'hue'
-  | 'chromaKey' // 크로마키
+  | 'chromaKey'
   | 'mask'
   | 'transition'
   | 'custom';
+
+// ============================================================================
+// Animation
+// ============================================================================
 
 export interface IAnimation {
   id: string;
@@ -109,8 +241,8 @@ export interface IAnimation {
 }
 
 export interface IKeyframe {
-  time: number; // 밀리초
-  value: number | string | object; // 속성 값
+  time: number;
+  value: number | string | object;
   easing: EasingFunction;
 }
 
