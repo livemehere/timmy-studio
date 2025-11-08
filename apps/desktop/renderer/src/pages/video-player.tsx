@@ -21,7 +21,7 @@ function createInitialProject(): IProject {
       height: 1080,
       frameRate: 30,
       sampleRate: 44100,
-      duration: 1000 * 60 * 1,
+      duration: 1000 * 10,
       backgroundColor: '#000000',
     },
     tracks: [
@@ -39,7 +39,7 @@ function createInitialProject(): IProject {
             name: 'Rectangle',
             type: 'shape',
             startTime: 0,
-            endTime: 5000,
+            endTime: 3000,
             transforms: {
               position: {
                 x: 100,
