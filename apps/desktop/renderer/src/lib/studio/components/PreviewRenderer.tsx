@@ -1,16 +1,26 @@
-import { useEffect } from 'react';
-import { useProjectSettings } from '../hooks/useProjectSettings';
+import { useEffect, useRef } from 'react';
+import { useStudio } from '../StudioProvider';
 
 export function PreviewRenderer() {
-  const settings = useProjectSettings();
+  const studio = useStudio();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     console.log('preview render');
   });
 
+  useEffect(() => {
+    studio.initRenderer({
+      canvas: canvasRef.current!,
+    });
+
+    return () => {
+      studio.destroyRenderer();
+    };
+  }, []);
+
   return (
-    <div>
-      <div>settings.width: {settings.width}</div>
-      <div>settings.height: {settings.height}</div>
+    <div className="w-full h-[500px] border border-gray-300">
+      <canvas ref={canvasRef} className="w-full h-full"></canvas>
     </div>
   );
 }
