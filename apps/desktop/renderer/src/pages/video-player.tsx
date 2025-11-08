@@ -25,17 +25,46 @@ function createInitialProject(): IProject {
       backgroundColor: '#000000',
     },
     timeline: {
-      currentTime: 0,
-      duration: 1000 * 60 * 1,
-      tracks: [],
+      tracks: [
+        {
+          id: uid(4),
+          name: 'Video Track 1',
+          type: 'video',
+          enabled: true,
+          locked: false,
+          zIndex: 0,
+          opacity: 1,
+          clips: [
+            {
+              id: uid(4),
+              name: 'Rectangle',
+              type: 'shape',
+              startTime: 0,
+              endTime: 5000,
+              transforms: {
+                position: {
+                  x: 100,
+                  y: 100,
+                },
+              },
+              shapeData: {
+                shapeType: 'rectangle',
+                width: 200,
+                height: 150,
+                color: 'dodgerblue',
+              },
+            },
+          ],
+        },
+      ],
     },
   };
 }
 
 export default function VideoPlayerPage() {
-  const [path, setPath] = useState<string>(
-    'source://open?path=%2FUsers%2Fdeveloper%2FDownloads%2Fgood-2.mp4'
-  );
+  // const [path, setPath] = useState<string>(
+  //   'source://open?path=%2FUsers%2Fdeveloper%2FDownloads%2Fgood-2.mp4'
+  // );
 
   const [project, setProject] = useState<IProject>(() =>
     createInitialProject()
