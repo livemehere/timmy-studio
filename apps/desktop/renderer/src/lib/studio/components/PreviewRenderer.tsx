@@ -6,7 +6,7 @@ export function PreviewRenderer() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    console.log('preview render');
+    console.log('[PreviewRenderer] RENDER');
   });
 
   useEffect(() => {

@@ -7,7 +7,7 @@ export interface IProject {
   name: string;
   settings: IProjectSettings;
   metadata: IProjectMetadata;
-  timeline: ITimeline;
+  tracks: ITrack[];
   assets: IAsset[];
 }
 
@@ -30,10 +30,6 @@ export interface IProjectMetadata {
 // ============================================================================
 // Timeline
 // ============================================================================
-
-export interface ITimeline {
-  tracks: ITrack[];
-}
 
 // ============================================================================
 // Track

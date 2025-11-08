@@ -1,18 +1,31 @@
 import isEqual from 'fast-deep-equal';
-import { Application, Graphics, Container } from 'pixi.js';
+import { Application, Container } from 'pixi.js';
 import { BehaviorSubject } from 'rxjs';
 import { distinctUntilChanged } from 'rxjs/operators';
-import type { IProject, IVideoClip, IShapeClip } from '../types';
-import { CREATE_PIXI_LABEL, PIXI_LABELS } from '@renderer/lib/studio/constants';
+import type { IProject } from '../types';
+import { PIXI_LABELS } from '@renderer/lib/studio/constants';
+import { VideoTrack } from '@renderer/lib/studio/core/tracks/VideoTrack';
 
 export class Studio {
   initialized = false;
 
   project$: BehaviorSubject<IProject>;
+  currentTime$: BehaviorSubject<number> = new BehaviorSubject(0);
+
   app: Application;
+  videoTracks: VideoTrack[] = [];
 
   private sceneContainer: Container;
-  private pixiMap: Map<string, Container> = new Map();
+
+  private static idMap: Map<string, any> = new Map();
+
+  static getById<T>(id: string): T | undefined {
+    return Studio.idMap.get(id);
+  }
+
+  static removeById(id: string) {
+    Studio.idMap.delete(id);
+  }
 
   constructor(props: { project: IProject }) {
     this.project$ = new BehaviorSubject<IProject>(props.project);
@@ -23,6 +36,14 @@ export class Studio {
   destroy() {
     this.project$.complete();
     this.destroyRenderer();
+  }
+
+  destroyRenderer() {
+    if (this.app.stage !== null) {
+      this.app.destroy(true);
+      this.sceneContainer.destroy(true);
+      console.log('[Studio] pixi destroyed');
+    }
   }
 
   async initRenderer({ canvas }: { canvas: HTMLCanvasElement }) {
@@ -48,18 +69,9 @@ export class Studio {
     this.app.stage.addChild(this.sceneContainer);
 
     this.subscribeToProject();
-    this.startDrawLoop();
+    this.instantiateVideoTracks();
+    this.startUpdateLoop();
   }
-
-  destroyRenderer() {
-    if (this.app.stage !== null) {
-      this.app.destroy(true);
-      this.sceneContainer.destroy(true);
-      console.log('[Studio] pixi destroyed');
-    }
-  }
-
-  private startDrawLoop() {}
 
   private subscribeToProject() {
     this.project$.pipe(distinctUntilChanged(isEqual)).subscribe((project) => {
@@ -68,59 +80,33 @@ export class Studio {
     });
   }
 
-  private rebuildScene(project: IProject) {
-    this.sceneContainer.removeChildren();
-    this.pixiMap.clear();
-
-    project.timeline.tracks.forEach((track) => {
-      const trackContainer = new Container();
-      trackContainer.label = CREATE_PIXI_LABEL.track(track.id);
-      this.sceneContainer.addChild(trackContainer);
-      this.pixiMap.set(track.id, trackContainer);
-
-      if (track.type === 'video') {
-        // Video 트랙의 opacity 적용은 나중에 Container에 적용 가능
-        track.clips.forEach((clip) => {
-          this.createVideoClipObject(trackContainer, clip);
-        });
-      }
-      // Audio 트랙은 별도 처리 (나중에 구현)
+  private instantiateVideoTracks() {
+    this.videoTracks = this.project$.value.tracks
+      .filter((t) => t.type === 'video')
+      .map((props) => new VideoTrack(props));
+    this.videoTracks.forEach((track) => {
+      track.add(this.sceneContainer);
     });
   }
 
-  private createVideoClipObject(
-    trackContainer: Container,
-    videoClip: IVideoClip
-  ) {
-    const clipContainer = new Container();
-    clipContainer.label = CREATE_PIXI_LABEL.clip(videoClip.id);
-    trackContainer.addChild(clipContainer);
-    this.pixiMap.set(videoClip.id, clipContainer);
-
-    switch (videoClip.type) {
-      case 'shape':
-        this.createShapeClipObject(clipContainer, videoClip);
-        break;
-      // TODO: 다른 비디오 클립 타입들에 대한 처리 추가 가능
-      default:
-        console.warn(`[Studio] Unsupported video clip type: ${videoClip.type}`);
-    }
+  private startUpdateLoop() {
+    this.app.ticker.add(() => {
+      this.videoTracks.forEach((track) => {
+        if (track.enabled) {
+          track.show();
+          track.update(this.currentTime$.value);
+        } else {
+          track.hide();
+        }
+      });
+    });
   }
 
-  private createShapeClipObject(
-    clipContainer: Container,
-    shapeClip: IShapeClip
-  ) {
-    const graphics = new Graphics();
-    clipContainer.addChild(graphics);
+  private rebuildScene(newProject: IProject) {
+    // FIXME: 인스턴스화 한 videoTracks 내부에서처리 필요
+    this.sceneContainer.removeChildren();
+    Studio.idMap.clear();
 
-    const { shapeData } = shapeClip;
-    graphics
-      .rect(0, 0, shapeData.width, shapeData.height)
-      .fill({ color: shapeData.color })
-      .stroke({
-        width: shapeData.border?.width || 0,
-        color: shapeData.border?.color || 0x000000,
-      });
+    // TODO: video, audio 각각 초기화
   }
 }

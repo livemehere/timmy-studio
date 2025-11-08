@@ -11,10 +11,7 @@ export function useProjectSettings() {
           map((project) => project.settings),
           distinctUntilChanged()
         )
-        .subscribe(() => {
-          cb();
-          console.log('called');
-        });
+        .subscribe(cb);
       return () => {
         subscription.unsubscribe();
       };

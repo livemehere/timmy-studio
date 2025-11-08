@@ -24,44 +24,42 @@ function createInitialProject(): IProject {
       duration: 1000 * 60 * 1,
       backgroundColor: '#000000',
     },
-    timeline: {
-      tracks: [
-        {
-          id: uid(4),
-          name: 'Video Track 1',
-          type: 'video',
-          enabled: true,
-          locked: false,
-          zIndex: 0,
-          opacity: 1,
-          clips: [
-            {
-              id: uid(4),
-              name: 'Rectangle',
-              type: 'shape',
-              startTime: 0,
-              endTime: 5000,
-              transforms: {
-                position: {
-                  x: 100,
-                  y: 100,
-                },
-              },
-              shapeData: {
-                shapeType: 'rectangle',
-                width: 200,
-                height: 150,
-                color: 'dodgerblue',
-                border: {
-                  width: 2,
-                  color: 'white',
-                },
+    tracks: [
+      {
+        id: uid(4),
+        name: 'Video Track 1',
+        type: 'video',
+        enabled: true,
+        locked: false,
+        zIndex: 0,
+        opacity: 1,
+        clips: [
+          {
+            id: uid(4),
+            name: 'Rectangle',
+            type: 'shape',
+            startTime: 0,
+            endTime: 5000,
+            transforms: {
+              position: {
+                x: 100,
+                y: 100,
               },
             },
-          ],
-        },
-      ],
-    },
+            shapeData: {
+              shapeType: 'rectangle',
+              width: 200,
+              height: 150,
+              color: 'dodgerblue',
+              border: {
+                width: 2,
+                color: 'white',
+              },
+            },
+          },
+        ],
+      },
+    ],
   };
 }
 

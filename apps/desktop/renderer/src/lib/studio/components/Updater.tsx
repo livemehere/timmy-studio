@@ -1,22 +1,29 @@
-import { useStudio } from '../contexts/StudioProvider';
-import { produce } from 'immer';
+import { useProjectSettings } from '@renderer/lib/studio/hooks/useProjectSettings';
+import { useEffect } from 'react';
+import { useCurrentTime } from '@renderer/lib/studio/hooks/useCurrentTime';
 
 export function Updater() {
-  const studio = useStudio();
+  const settings = useProjectSettings();
+  useEffect(() => {
+    console.log('[Updater] RENDER');
+  });
+
+  const [time, setTime] = useCurrentTime();
 
   return (
     <div>
-      <button
-        onClick={() =>
-          studio.project$.next(
-            produce(studio.project$.value, (draft) => {
-              draft.name += '!';
-            })
-          )
-        }
-      >
-        update width
-      </button>
+      <input
+        className="w-full p-2"
+        type="range"
+        min={0}
+        max={settings.duration}
+        step={100}
+        value={time}
+        onChange={(e) => {
+          setTime(Number(e.target.value));
+        }}
+      />
+      <div>current time : {time} ms</div>
     </div>
   );
 }
