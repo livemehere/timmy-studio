@@ -44,11 +44,14 @@ export default function VideoPlayerPage() {
         <Updater />
         <button
           onClick={() => {
-            setProject(
-              produce((draft) => {
-                draft.settings.width = 100000;
-              })
-            );
+            console.log('click');
+            setProject((prev) => ({
+              ...prev,
+              settings: {
+                ...prev.settings,
+                width: 10000,
+              },
+            }));
           }}
         >
           reset

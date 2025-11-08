@@ -1,9 +1,11 @@
-import { useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { useStudio } from '../StudioProvider';
 
 export function PreviewRenderer() {
   const settings = useProjectSettings();
-  console.log('preview render');
+  useEffect(() => {
+    console.log('preview render');
+  });
 
   return (
     <div>

@@ -12,17 +12,28 @@ export function StudioProvider({
   initialProject: IProject;
 }) {
   const studioRef = useRef<Studio | null>(null);
+
   if (!studioRef.current) {
     const studio = new Studio({ project: initialProject });
     studioRef.current = studio;
+
+    console.log('[StudioProvider] created studio');
   }
 
   useEffect(() => {
-    studioRef.current = new Studio({ project: initialProject });
+    console.log('project changed', initialProject);
+    if (studioRef.current && studioRef.current.initialized) {
+      studioRef.current.project$.next(initialProject);
+      console.log('[StudioProvider] updating project');
+    }
+  }, [initialProject]);
+
+  useEffect(() => {
     return () => {
       studioRef.current?.destroy();
+      console.log('[StudioProvider] destroying studio');
     };
-  }, [initialProject]);
+  }, []);
 
   return (
     <StudioContext.Provider value={studioRef.current}>
