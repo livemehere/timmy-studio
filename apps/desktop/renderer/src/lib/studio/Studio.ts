@@ -18,17 +18,31 @@ export class Studio {
     this.destroyRenderer();
   }
 
-  initRenderer({ canvas }: { canvas: HTMLCanvasElement }) {
+  async initRenderer({ canvas }: { canvas: HTMLCanvasElement }) {
+    if (this.app.stage == null) {
+      console.log('[Studio] init pixi application');
+      this.app = new Application();
+    }
+
     const project = this.project$.getValue();
-    this.app.init({
+    await this.app.init({
       canvas,
       width: project.settings.width,
       height: project.settings.height,
       background: project.settings.backgroundColor,
     });
+    this.initialized = true;
+    this.draw();
   }
 
   destroyRenderer() {
-    this.app.destroy();
+    if (this.app.stage !== null) {
+      this.app.destroy();
+      console.log('[Studio] pixi destroyed');
+    }
+  }
+
+  draw() {
+    console.log('draw frame');
   }
 }

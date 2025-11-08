@@ -4,6 +4,7 @@ import { useStudio } from '../StudioProvider';
 export function PreviewRenderer() {
   const studio = useStudio();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
   useEffect(() => {
     console.log('preview render');
   });
