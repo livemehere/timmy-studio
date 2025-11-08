@@ -11,7 +11,7 @@ export class Studio {
   initialized = false;
 
   project$: BehaviorSubject<IProject>;
-  timer: Timer = new Timer();
+  timer: Timer;
 
   app: Application;
   videoTracks: VideoTrack[] = [];
@@ -30,6 +30,7 @@ export class Studio {
 
   constructor(props: { project: IProject }) {
     this.project$ = new BehaviorSubject<IProject>(props.project);
+    this.timer = new Timer(props.project.settings.duration);
     this.app = new Application();
     this.sceneContainer = new Container();
   }
@@ -78,6 +79,7 @@ export class Studio {
   private subscribeToProject() {
     this.project$.pipe(distinctUntilChanged(isEqual)).subscribe((project) => {
       console.log('[Studio] project updated, rebuilding scene');
+      this.timer.setDuration(project.settings.duration);
       this.rebuildScene(project);
     });
   }

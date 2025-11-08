@@ -8,7 +8,7 @@ export function Updater() {
     console.log('[Updater] RENDER');
   });
 
-  const { time, seek } = useTimer();
+  const { time, seek, play, pause, resume, reset } = useTimer();
   return (
     <div>
       <input
@@ -23,6 +23,10 @@ export function Updater() {
         }}
       />
       <div>current time : {time} ms</div>
+      <button onClick={play}>Play</button>
+      <button onClick={pause}>Pause</button>
+      <button onClick={resume}>Resume</button>
+      <button onClick={reset}>Reset</button>
     </div>
   );
 }

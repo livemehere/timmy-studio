@@ -5,6 +5,11 @@ export class Timer {
   private isPlaying = false;
   private animationFrameId: number | null = null;
   private lastTimestamp: number | null = null;
+  private duration: number;
+
+  constructor(duration: number) {
+    this.duration = duration;
+  }
 
   get current() {
     return this.currentTime$.value;
@@ -12,6 +17,10 @@ export class Timer {
 
   get playing() {
     return this.isPlaying;
+  }
+
+  setDuration(duration: number) {
+    this.duration = duration;
   }
 
   subscribe(callback: (time: number) => void) {
@@ -60,8 +69,14 @@ export class Timer {
     const now = performance.now();
     if (this.lastTimestamp !== null) {
       const deltaTime = now - this.lastTimestamp;
-      const newTime = this.currentTime$.value + deltaTime;
+      const newTime = Math.min(this.currentTime$.value + deltaTime, this.duration);
       this.currentTime$.next(newTime);
+
+      // Auto-stop when reaching duration
+      if (newTime >= this.duration) {
+        this.pause();
+        return;
+      }
     }
 
     this.lastTimestamp = now;
