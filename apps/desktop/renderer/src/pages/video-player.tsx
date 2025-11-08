@@ -1,18 +1,12 @@
 import { useState } from 'react';
-import { VideoPlayer } from '@renderer/components/VideoPlayer';
 import type { IProject } from '@renderer/lib/studio/types';
 import { uid } from 'uid';
 import { StudioProvider } from '@renderer/lib/studio/StudioProvider';
 import { PreviewRenderer } from '@renderer/lib/studio/components/PreviewRenderer';
 import { Updater } from '@renderer/lib/studio/components/Updater';
-import { produce } from 'immer';
 
-export default function VideoPlayerPage() {
-  const [path, setPath] = useState<string>(
-    'source://open?path=%2FUsers%2Fdeveloper%2FDownloads%2Fgood-2.mp4'
-  );
-
-  const [project, setProject] = useState<IProject>({
+function createInitialProject(): IProject {
+  return {
     id: uid(4),
     name: 'sample project',
     assets: [],
@@ -35,7 +29,17 @@ export default function VideoPlayerPage() {
       duration: 1000 * 60 * 1,
       tracks: [],
     },
-  });
+  };
+}
+
+export default function VideoPlayerPage() {
+  const [path, setPath] = useState<string>(
+    'source://open?path=%2FUsers%2Fdeveloper%2FDownloads%2Fgood-2.mp4'
+  );
+
+  const [project, setProject] = useState<IProject>(() =>
+    createInitialProject()
+  );
 
   return (
     <StudioProvider initialProject={project}>
@@ -44,14 +48,7 @@ export default function VideoPlayerPage() {
         <Updater />
         <button
           onClick={() => {
-            console.log('click');
-            setProject((prev) => ({
-              ...prev,
-              settings: {
-                ...prev.settings,
-                width: 10000,
-              },
-            }));
+            setProject(() => createInitialProject());
           }}
         >
           reset
