@@ -5,12 +5,13 @@ import { distinctUntilChanged } from 'rxjs/operators';
 import type { IProject } from '../types';
 import { PIXI_LABELS } from '@renderer/lib/studio/constants';
 import { VideoTrack } from '@renderer/lib/studio/core/tracks/VideoTrack';
+import { Timer } from '@renderer/lib/studio/core/Timer';
 
 export class Studio {
   initialized = false;
 
   project$: BehaviorSubject<IProject>;
-  currentTime$: BehaviorSubject<number> = new BehaviorSubject(0);
+  timer: Timer = new Timer();
 
   app: Application;
   videoTracks: VideoTrack[] = [];
@@ -35,6 +36,7 @@ export class Studio {
 
   destroy() {
     this.project$.complete();
+    this.timer.destroy();
     this.destroyRenderer();
   }
 
@@ -94,7 +96,7 @@ export class Studio {
       this.videoTracks.forEach((track) => {
         if (track.enabled) {
           track.show();
-          track.update(this.currentTime$.value);
+          track.update(this.timer.current);
         } else {
           track.hide();
         }

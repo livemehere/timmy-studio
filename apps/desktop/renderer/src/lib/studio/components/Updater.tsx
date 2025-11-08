@@ -1,6 +1,6 @@
 import { useProjectSettings } from '@renderer/lib/studio/hooks/useProjectSettings';
 import { useEffect } from 'react';
-import { useCurrentTime } from '@renderer/lib/studio/hooks/useCurrentTime';
+import { useTimer } from '@renderer/lib/studio/hooks/useTimer';
 
 export function Updater() {
   const settings = useProjectSettings();
@@ -8,8 +8,7 @@ export function Updater() {
     console.log('[Updater] RENDER');
   });
 
-  const [time, setTime] = useCurrentTime();
-
+  const { time, seek } = useTimer();
   return (
     <div>
       <input
@@ -20,7 +19,7 @@ export function Updater() {
         step={100}
         value={time}
         onChange={(e) => {
-          setTime(Number(e.target.value));
+          seek(Number(e.target.value));
         }}
       />
       <div>current time : {time} ms</div>
