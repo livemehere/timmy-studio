@@ -3,6 +3,9 @@ import fs from 'node:fs';
 import mime from 'mime-types';
 import { Readable } from 'node:stream';
 
+/**
+ * app 의 'ready' 이벤트 전에 `protocol.registerSchemesAsPrivileged([SOURCE_SCHEME]);` 로 등록 필요
+ */
 export const SOURCE_SCHEME: CustomScheme = {
   scheme: 'source',
   privileges: {
@@ -14,6 +17,9 @@ export const SOURCE_SCHEME: CustomScheme = {
   },
 };
 
+/**
+ * app 의 'ready' 이벤트 이후에 호출
+ */
 export function handleSourceScheme() {
   protocol.handle('source', async (req) => {
     try {

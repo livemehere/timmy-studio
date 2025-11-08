@@ -160,7 +160,10 @@ export function VideoPlayer({ src }: { src?: string }) {
   );
 
   useEffect(() => {
-    seekToFrame(currentFrame);
+    if (videoElement) {
+      videoElement.currentTime = frameIdxToTimestamp(currentFrame, fps);
+    }
+    // seekToFrame(currentFrame);
   }, [currentFrame, sink, maxFrame, fps]);
 
   useEffect(() => {
