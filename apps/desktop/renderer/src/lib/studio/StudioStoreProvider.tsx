@@ -1,33 +1,29 @@
 import { createContext, useRef, useContext } from 'react';
 import { createStore, useStore, type ExtractState } from 'zustand';
 
-export interface IStudioStore {
-  cnt: number;
-  add: () => void;
-}
+export interface IStudioStore {}
 
 const createStudioStore = () => {
-  return createStore<IStudioStore>((set) => ({
-    cnt: 0,
-    add: () => set((state) => ({ cnt: state.cnt + 1 })),
-  }));
+  return createStore<IStudioStore>((set) => ({}));
 };
 
 export type TStudioStoreApi = ReturnType<typeof createStudioStore>;
 
-const StudioContext = createContext<TStudioStoreApi>({} as TStudioStoreApi);
+const StudioContext = createContext<TStudioStoreApi>(
+  null as unknown as TStudioStoreApi
+);
 
 export function StudioStoreProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const storeRef = useRef<TStudioStoreApi>({} as TStudioStoreApi);
-  if (!storeRef.current) {
-    storeRef.current = createStudioStore();
+  const storeApiRef = useRef<TStudioStoreApi | null>(null);
+  if (!storeApiRef.current) {
+    storeApiRef.current = createStudioStore();
   }
   return (
-    <StudioContext.Provider value={storeRef.current}>
+    <StudioContext.Provider value={storeApiRef.current}>
       {children}
     </StudioContext.Provider>
   );
