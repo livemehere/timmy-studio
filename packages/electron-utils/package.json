@@ -13,39 +13,45 @@
   "exports": {
     "./vite": {
       "types": "./dist/vite/index.d.ts",
+      "import": "./dist/vite/index.mjs",
       "require": "./dist/vite/index.js",
-      "import": "./dist/vite/index.mjs"
+      "default": "./dist/vite/index.js"
     },
     "./ipc": {
       "types": "./dist/ipc/index.d.ts"
     },
     "./ipc/main": {
       "types": "./dist/ipc/main.d.ts",
+      "import": "./dist/ipc/main.mjs",
       "require": "./dist/ipc/main.js",
-      "import": "./dist/ipc/main.mjs"
+      "default": "./dist/ipc/main.js"
     },
     "./ipc/preload": {
       "types": "./dist/ipc/preload.d.ts",
+      "import": "./dist/ipc/preload.mjs",
       "require": "./dist/ipc/preload.js",
-      "import": "./dist/ipc/preload.mjs"
+      "default": "./dist/ipc/preload.js"
     },
     "./ipc/renderer": {
       "types": "./dist/ipc/renderer.d.ts"
     },
     "./utils/shared": {
       "types": "./dist/utils/shared.d.ts",
+      "import": "./dist/utils/shared.mjs",
       "require": "./dist/utils/shared.js",
-      "import": "./dist/utils/shared.mjs"
+      "default": "./dist/utils/shared.js"
     },
     "./utils/main": {
       "types": "./dist/utils/main.d.ts",
+      "import": "./dist/utils/main.mjs",
       "require": "./dist/utils/main.js",
-      "import": "./dist/utils/main.mjs"
+      "default": "./dist/utils/main.js"
     },
     "./utils/renderer": {
       "types": "./dist/utils/renderer.d.ts",
+      "import": "./dist/utils/renderer.mjs",
       "require": "./dist/utils/renderer.js",
-      "import": "./dist/utils/renderer.mjs"
+      "default": "./dist/utils/renderer.js"
     }
   },
   "files": [
