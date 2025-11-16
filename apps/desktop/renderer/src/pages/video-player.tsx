@@ -82,6 +82,10 @@ function createInitialProject(): IProject {
             assetId: 'sample-video-asset',
             transforms: {
               position: { x: 0, y: 0 },
+              size: {
+                width: 540,
+                height: 960,
+              },
             },
           },
         ],

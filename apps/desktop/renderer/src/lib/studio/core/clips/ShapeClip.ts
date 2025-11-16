@@ -5,41 +5,24 @@ import type {
 } from '@renderer/lib/studio/types';
 import { Container, Graphics } from 'pixi.js';
 import type { Timer } from '@renderer/lib/studio/core/Timer';
+import { BaseVideoClip } from '@renderer/lib/studio/core/clips/BaseVideoClip';
 
-export class ShapeClip implements IShapeClip {
+export class ShapeClip extends BaseVideoClip implements IShapeClip {
   type: 'shape' = 'shape';
-  id: string;
-  name: string;
-
-  startTime: number;
-  endTime: number;
-
   shapeData: IShapeData;
-  transforms: ITransform;
 
-  private readonly container: Container;
-  private readonly graphics: Graphics;
+  private readonly shape: Graphics;
 
-  static getLabel(id: string) {
+  protected getLabel(id: string) {
     return `ShapeClip-${id}`;
   }
 
   constructor(props: IShapeClip) {
-    this.id = props.id;
-    this.name = props.name;
-
-    this.startTime = props.startTime;
-    this.endTime = props.endTime;
-
+    super(props);
     this.shapeData = props.shapeData;
-    this.transforms = props.transforms;
-
-    this.container = new Container();
-    this.container.label = ShapeClip.getLabel(this.id);
     this.applyTransforms();
-
-    this.graphics = this.createShape();
-    this.container.addChild(this.graphics);
+    this.shape = this.createShape();
+    this.container.addChild(this.shape);
   }
 
   private createShape() {
@@ -68,49 +51,7 @@ export class ShapeClip implements IShapeClip {
     parent.addChild(this.container);
   }
 
-  private updateTransforms(time: number) {
-    // TODO: Implement transform animations over time
-  }
-
-  private applyTransforms() {
-    const { position, scaleX, scaleY, opacity, rotation, anchorX, anchorY } =
-      this.transforms;
-    this.container.pivot.set(
-      anchorX ?? this.shapeData.width / 2,
-      anchorY ?? this.shapeData.height / 2
-    );
-    this.container.position.set(position.x, position.y);
-    this.container.scale.set(scaleX ?? 1, scaleY ?? 1);
-    this.container.rotation = rotation ?? 0;
-    this.container.alpha = opacity ?? 1;
-  }
-
-  tick(timer: Timer) {
-    const currentTime = timer.currentMs;
-    if (currentTime >= this.startTime && currentTime <= this.endTime) {
-      this.show();
-      this.update(timer);
-    } else {
-      this.hide();
-    }
-  }
-
-  private update(timer: Timer) {
-    this.updateTransforms(timer.currentMs);
+  protected update(timer: Timer) {
     this.applyTransforms();
-  }
-
-  private show() {
-    if (this.container.visible) return;
-    this.container.visible = true;
-  }
-
-  private hide() {
-    if (!this.container.visible) return;
-    this.container.visible = false;
-  }
-
-  destroy() {
-    this.container.destroy(true);
   }
 }

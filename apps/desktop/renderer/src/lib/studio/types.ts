@@ -123,9 +123,13 @@ export interface IAudioClip extends IBaseClip {
 // ============================================================================
 
 export interface ITransform {
-  position: {
+  position?: {
     x: number;
     y: number;
+  };
+  size?: {
+    width: number;
+    height: number;
   };
   scaleX?: number;
   scaleY?: number;
