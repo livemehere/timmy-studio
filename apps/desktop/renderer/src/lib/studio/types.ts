@@ -87,8 +87,8 @@ export interface IVideoClipBase extends IBaseClip {
 export interface IVideoMediaClip extends IVideoClipBase {
   type: 'video';
   assetId: string;
-  trimStart: number;
-  trimEnd: number;
+  trimStart?: number;
+  trimEnd?: number;
 }
 
 export interface IImageClip extends IVideoClipBase {
@@ -193,6 +193,7 @@ export interface IBaseAsset {
 
 export interface IVideoAsset extends IBaseAsset {
   type: 'video';
+  proxyFilePath?: string;
 }
 
 export interface IAudioAsset extends IBaseAsset {

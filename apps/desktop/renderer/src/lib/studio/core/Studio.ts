@@ -3,6 +3,7 @@ import type { IProject, IStudio } from '../types';
 import { Timer } from '@renderer/lib/studio/core/Timer';
 import { Renderer } from '@renderer/lib/studio/core/Renderer';
 import { AudioManager } from '@renderer/lib/studio/core/AudioManager';
+import { AssetManager } from '@renderer/lib/studio/core/AssetManager';
 
 export class Studio implements IStudio {
   private project$: BehaviorSubject<IProject>;
@@ -10,6 +11,7 @@ export class Studio implements IStudio {
   readonly timer: Timer;
   readonly renderer: Renderer;
   readonly audioManager: AudioManager;
+  readonly assetManager: AssetManager;
 
   get settings() {
     return this.project$.value.settings;
@@ -42,8 +44,13 @@ export class Studio implements IStudio {
       console.log('[Studio] project updated', newProject);
     });
 
+    this.assetManager = new AssetManager(project.assets);
     this.timer = new Timer(this.settings.duration);
-    this.renderer = new Renderer(this.videoTrackData, this.timer);
+    this.renderer = new Renderer(
+      this.videoTrackData,
+      this.timer,
+      this.assetManager
+    );
     this.audioManager = new AudioManager();
   }
 

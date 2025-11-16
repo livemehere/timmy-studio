@@ -1,17 +1,18 @@
 import type { IVideoClip, IVideoTrack } from '@renderer/lib/studio/types';
 import { ShapeClip } from '@renderer/lib/studio/core/clips/ShapeClip';
 import { Container } from 'pixi.js';
-
-type VideoClip = ShapeClip;
+import { VideoClip } from '../clips/VideoClip';
+import type { AssetManager } from '@renderer/lib/studio/core/AssetManager';
 
 export class VideoTrack implements IVideoTrack {
   type: 'video' = 'video';
   id: string;
   name: string;
   locked: boolean;
-  clips: VideoClip[];
+  clips: (ShapeClip | VideoClip)[];
 
   private container: Container;
+  private readonly assetManager: AssetManager;
 
   static getLabel(id: string) {
     return `VideoTrack-${id}`;
@@ -41,7 +42,9 @@ export class VideoTrack implements IVideoTrack {
     this.container.zIndex = value;
   }
 
-  constructor(data: IVideoTrack) {
+  constructor(data: IVideoTrack, assetManager: AssetManager) {
+    this.assetManager = assetManager;
+
     this.container = new Container();
     this.container.label = VideoTrack.getLabel(data.id);
 
@@ -66,6 +69,8 @@ export class VideoTrack implements IVideoTrack {
     return clips.map((props) => {
       if (props.type === 'shape') {
         return new ShapeClip(props);
+      } else if (props.type === 'video') {
+        return new VideoClip(props, this.assetManager);
       }
       throw new Error(`Unsupported clip type: ${props.type}`);
     });

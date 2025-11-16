@@ -2,6 +2,7 @@ import { Application, Container } from 'pixi.js';
 import { VideoTrack } from '@renderer/lib/studio/core/tracks/VideoTrack';
 import type { IVideoTrack } from '@renderer/lib/studio/types';
 import type { Timer } from '@renderer/lib/studio/core/Timer';
+import type { AssetManager } from '@renderer/lib/studio/core/AssetManager';
 
 export class Renderer {
   private app: Application;
@@ -9,21 +10,27 @@ export class Renderer {
   private tracks: VideoTrack[] = [];
 
   private readonly timer: Timer;
+  private readonly assetManager: AssetManager;
 
   static readonly LABELS = {
     SCENE_CONTAINER: 'SCENE_CONTAINER',
   };
 
-  constructor(trackData: IVideoTrack[], timer: Timer) {
+  constructor(
+    trackData: IVideoTrack[],
+    timer: Timer,
+    assetManager: AssetManager
+  ) {
     console.log('[Renderer] new Renderer()');
     this.timer = timer;
+    this.assetManager = assetManager;
     this.app = new Application();
     this.sceneContainer = new Container();
     this.sceneContainer.label = Renderer.LABELS.SCENE_CONTAINER;
     this.app.stage.addChild(this.sceneContainer);
 
     this.tracks = trackData.map((data) => {
-      const track = new VideoTrack(data);
+      const track = new VideoTrack(data, this.assetManager);
       track.appendTo(this.sceneContainer);
       return track;
     });
