@@ -57,21 +57,19 @@ export class Renderer {
     /* Renderer 는 PreviewRenderer, Studio 에서 중복 호출 될 수 있음으로 */
     if (!this.app || !this.app.stage) return;
     console.log('[Renderer] destroy()');
-    this.app.destroy(true, {
-      children: true,
-      texture: true,
-      textureSource: true,
-    });
+    this.app.destroy(true);
+    this.app = null as unknown as Application;
+    this.sceneContainer = null as unknown as Container;
+    this.tracks = [];
   }
 
   private startLoop() {
     console.log('[Renderer] startLoop()');
     this.app.ticker.add(() => {
-      const currentTime = this.timer.current;
       this.tracks.forEach((track) => {
         if (track.enabled) {
           track.show();
-          track.update(currentTime);
+          track.update(this.timer);
         } else {
           track.hide();
         }

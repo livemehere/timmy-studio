@@ -1,6 +1,7 @@
 import type { ITransform, IVideoAsset, IVideoMediaClip } from '../../types';
-import { Container, Graphics, Assets, Sprite, Texture } from 'pixi.js';
+import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { AssetManager } from '@renderer/lib/studio/core/AssetManager';
+import type { Timer } from '@renderer/lib/studio/core/Timer';
 
 export class VideoClip implements IVideoMediaClip {
   type: 'video' = 'video';
@@ -20,6 +21,8 @@ export class VideoClip implements IVideoMediaClip {
   private readonly container: Container;
 
   private placeholder?: Graphics;
+  private originVideoEl?: HTMLVideoElement;
+  private proxyVideoEl?: HTMLVideoElement;
 
   static getLabel(id: string) {
     return `VideoClip-${id}`;
@@ -72,15 +75,18 @@ export class VideoClip implements IVideoMediaClip {
     videoEl.preload = 'auto';
     videoEl.autoplay = false;
 
-    const texture = Texture.from(videoEl);
-    const sprite = new Sprite(texture);
-    this.container.addChild(sprite);
+    videoEl.oncanplay = () => {
+      const texture = Texture.from(videoEl);
+      const sprite = new Sprite(texture);
+      this.container.addChild(sprite);
 
-    if (this.placeholder) {
-      this.container.removeChild(this.placeholder);
-      this.placeholder.destroy();
-      this.placeholder = undefined;
-    }
+      if (this.placeholder) {
+        this.container.removeChild(this.placeholder);
+        this.placeholder.destroy();
+        this.placeholder = undefined;
+      }
+    };
+    this.originVideoEl = videoEl;
   }
 
   appendTo(parent: Container) {
@@ -102,9 +108,13 @@ export class VideoClip implements IVideoMediaClip {
     this.container.alpha = opacity ?? 1;
   }
 
-  update(_currentTime: number) {
-    // TODO: 비디오 재생 시간 계산 및 업데이트
-    // TODO: transform 애니메이션 처리
+  update(timer: Timer) {
+    if (timer.playing) {
+      this.originVideoEl?.play();
+    } else {
+      this.originVideoEl?.pause();
+      this.originVideoEl!.currentTime = timer.current / 1000;
+    }
     this.applyTransforms();
   }
 
@@ -116,5 +126,9 @@ export class VideoClip implements IVideoMediaClip {
   hide() {
     if (!this.container.visible) return;
     this.container.visible = false;
+  }
+
+  destroy() {
+    this.container.destroy(true);
   }
 }

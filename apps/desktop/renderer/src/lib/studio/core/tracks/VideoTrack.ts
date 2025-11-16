@@ -3,6 +3,7 @@ import { ShapeClip } from '@renderer/lib/studio/core/clips/ShapeClip';
 import { Container } from 'pixi.js';
 import { VideoClip } from '../clips/VideoClip';
 import type { AssetManager } from '@renderer/lib/studio/core/AssetManager';
+import type { Timer } from '@renderer/lib/studio/core/Timer';
 
 export class VideoTrack implements IVideoTrack {
   type: 'video' = 'video';
@@ -86,12 +87,13 @@ export class VideoTrack implements IVideoTrack {
     this.container.visible = false;
   }
 
-  update(currentTime: number) {
+  update(timer: Timer) {
     let visibleItemCnt = 0;
+    const currentTime = timer.current;
     this.clips.forEach((clip) => {
       if (currentTime >= clip.startTime && currentTime <= clip.endTime) {
         clip.show();
-        clip.update(currentTime);
+        clip.update(timer);
         visibleItemCnt++;
       } else {
         clip.hide();

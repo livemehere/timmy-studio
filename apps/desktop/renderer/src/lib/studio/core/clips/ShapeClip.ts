@@ -4,6 +4,7 @@ import type {
   ITransform,
 } from '@renderer/lib/studio/types';
 import { Container, Graphics } from 'pixi.js';
+import type { Timer } from '@renderer/lib/studio/core/Timer';
 
 export class ShapeClip implements IShapeClip {
   type: 'shape' = 'shape';
@@ -84,8 +85,8 @@ export class ShapeClip implements IShapeClip {
     this.container.alpha = opacity ?? 1;
   }
 
-  update(currentTime: number) {
-    this.updateTransforms(currentTime);
+  update(timer: Timer) {
+    this.updateTransforms(timer.current);
     this.applyTransforms();
   }
 
@@ -97,5 +98,9 @@ export class ShapeClip implements IShapeClip {
   hide() {
     if (!this.container.visible) return;
     this.container.visible = false;
+  }
+
+  destroy() {
+    this.container.destroy(true);
   }
 }
