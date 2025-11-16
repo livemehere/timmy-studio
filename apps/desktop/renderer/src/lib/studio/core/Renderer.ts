@@ -66,14 +66,7 @@ export class Renderer {
   private startLoop() {
     console.log('[Renderer] startLoop()');
     this.app.ticker.add(() => {
-      this.tracks.forEach((track) => {
-        if (track.enabled) {
-          track.show();
-          track.update(this.timer);
-        } else {
-          track.hide();
-        }
-      });
+      this.tracks.forEach((track) => track.tick(this.timer));
     });
   }
 }

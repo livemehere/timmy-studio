@@ -85,17 +85,27 @@ export class ShapeClip implements IShapeClip {
     this.container.alpha = opacity ?? 1;
   }
 
-  update(timer: Timer) {
-    this.updateTransforms(timer.current);
+  tick(timer: Timer) {
+    const currentTime = timer.currentMs;
+    if (currentTime >= this.startTime && currentTime <= this.endTime) {
+      this.show();
+      this.update(timer);
+    } else {
+      this.hide();
+    }
+  }
+
+  private update(timer: Timer) {
+    this.updateTransforms(timer.currentMs);
     this.applyTransforms();
   }
 
-  show() {
+  private show() {
     if (this.container.visible) return;
     this.container.visible = true;
   }
 
-  hide() {
+  private hide() {
     if (!this.container.visible) return;
     this.container.visible = false;
   }

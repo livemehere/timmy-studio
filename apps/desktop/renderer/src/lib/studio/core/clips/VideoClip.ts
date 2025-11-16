@@ -2,6 +2,7 @@ import type { ITransform, IVideoAsset, IVideoMediaClip } from '../../types';
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { AssetManager } from '@renderer/lib/studio/core/AssetManager';
 import type { Timer } from '@renderer/lib/studio/core/Timer';
+import { msToSec } from '@renderer/lib/studio/utils/time';
 
 export class VideoClip implements IVideoMediaClip {
   type: 'video' = 'video';
@@ -108,22 +109,45 @@ export class VideoClip implements IVideoMediaClip {
     this.container.alpha = opacity ?? 1;
   }
 
-  update(timer: Timer) {
-    if (timer.playing) {
-      this.originVideoEl?.play();
+  tick(timer: Timer) {
+    const currentTime = timer.currentMs;
+    if (currentTime >= this.startTime && currentTime <= this.endTime) {
+      this.show();
+      this.update(timer);
     } else {
-      this.originVideoEl?.pause();
-      this.originVideoEl!.currentTime = timer.current / 1000;
+      this.hide();
+    }
+  }
+
+  update(timer: Timer) {
+    if (timer.isPlaying) {
+      if (this.originVideoEl?.paused) {
+        this.originVideoEl.currentTime = msToSec(timer.currentMs, 2);
+        this.originVideoEl.play();
+        console.log(
+          `[VideoClip] ${this.name} play at`,
+          this.originVideoEl.currentTime
+        );
+      }
+    } else {
+      if (!this.originVideoEl?.paused) {
+        this.originVideoEl?.pause();
+      }
+      const seekTime = msToSec(timer.currentMs, 2);
+      if (seekTime !== this.originVideoEl?.currentTime) {
+        this.originVideoEl!.currentTime = seekTime;
+        console.log(`[VideoClip] ${this.name} seek to`, seekTime);
+      }
     }
     this.applyTransforms();
   }
 
-  show() {
+  private show() {
     if (this.container.visible) return;
     this.container.visible = true;
   }
 
-  hide() {
+  private hide() {
     if (!this.container.visible) return;
     this.container.visible = false;
   }

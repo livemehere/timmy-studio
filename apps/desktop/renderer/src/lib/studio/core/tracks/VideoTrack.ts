@@ -77,28 +77,26 @@ export class VideoTrack implements IVideoTrack {
     });
   }
 
-  show() {
+  tick(timer: Timer) {
+    if (this.enabled) {
+      this.show();
+      this.update(timer);
+    } else {
+      this.hide();
+    }
+  }
+
+  private show() {
     if (this.container.visible) return;
     this.container.visible = true;
   }
 
-  hide() {
+  private hide() {
     if (!this.container.visible) return;
     this.container.visible = false;
   }
 
-  update(timer: Timer) {
-    let visibleItemCnt = 0;
-    const currentTime = timer.current;
-    this.clips.forEach((clip) => {
-      if (currentTime >= clip.startTime && currentTime <= clip.endTime) {
-        clip.show();
-        clip.update(timer);
-        visibleItemCnt++;
-      } else {
-        clip.hide();
-      }
-    });
-    console.log(`[VideoTrack] ${this.id} visible clips: ${visibleItemCnt}`);
+  private update(timer: Timer) {
+    this.clips.forEach((clip) => clip.tick(timer));
   }
 }

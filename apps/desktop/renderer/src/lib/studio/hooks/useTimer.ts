@@ -7,14 +7,14 @@ export function useTimer() {
     (cb) => {
       return studio.timer.subscribe(cb);
     },
-    () => studio.timer.current
+    () => studio.timer.currentMs
   );
 
   const isPlaying = useSyncExternalStore(
     (cb) => {
       return studio.timer.subscribe(() => cb());
     },
-    () => studio.timer.playing
+    () => studio.timer.isPlaying
   );
 
   return {
