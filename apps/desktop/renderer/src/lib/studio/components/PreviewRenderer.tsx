@@ -6,16 +6,10 @@ export function PreviewRenderer() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    console.log('[PreviewRenderer] RENDER');
-  });
-
-  useEffect(() => {
-    studio.initRenderer({
-      canvas: canvasRef.current!,
-    });
-
+    const { width, height, backgroundColor } = studio.settings;
+    studio.renderer.init(canvasRef.current!, width, height, backgroundColor);
     return () => {
-      studio.destroyRenderer();
+      studio.renderer.destroy();
     };
   }, []);
 

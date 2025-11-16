@@ -1,13 +1,8 @@
 import { useProjectSettings } from '@renderer/lib/studio/hooks/useProjectSettings';
-import { useEffect } from 'react';
 import { useTimer } from '@renderer/lib/studio/hooks/useTimer';
 
 export function Updater() {
   const settings = useProjectSettings();
-  useEffect(() => {
-    console.log('[Updater] RENDER');
-  });
-
   const { time, seek, play, pause, resume, reset } = useTimer();
   return (
     <div>

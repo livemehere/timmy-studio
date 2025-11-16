@@ -8,6 +8,7 @@ export class Timer {
   private duration: number;
 
   constructor(duration: number) {
+    console.log(`[Timer] new Timer(${duration})`);
     this.duration = duration;
   }
 
@@ -69,7 +70,10 @@ export class Timer {
     const now = performance.now();
     if (this.lastTimestamp !== null) {
       const deltaTime = now - this.lastTimestamp;
-      const newTime = Math.min(this.currentTime$.value + deltaTime, this.duration);
+      const newTime = Math.min(
+        this.currentTime$.value + deltaTime,
+        this.duration
+      );
       this.currentTime$.next(newTime);
 
       // Auto-stop when reaching duration
@@ -84,6 +88,7 @@ export class Timer {
   };
 
   destroy() {
+    console.log('[Timer] destroyed');
     this.pause();
     this.currentTime$.complete();
   }

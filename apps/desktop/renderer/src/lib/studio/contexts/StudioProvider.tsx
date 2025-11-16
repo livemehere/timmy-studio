@@ -15,8 +15,7 @@ export function StudioProvider({
   const initRef = useRef<boolean>(false);
 
   if (!studioRef.current) {
-    studioRef.current = new Studio();
-    studioRef.current.updateProject(initialProject);
+    studioRef.current = new Studio(initialProject);
   }
 
   useEffect(() => {

@@ -11,7 +11,11 @@ export class VideoTrack implements IVideoTrack {
   locked: boolean;
   clips: VideoClip[];
 
-  private container: Container = new Container();
+  private container: Container;
+
+  static getLabel(id: string) {
+    return `VideoTrack-${id}`;
+  }
 
   get enabled() {
     return this.container.visible;
@@ -37,22 +41,24 @@ export class VideoTrack implements IVideoTrack {
     this.container.zIndex = value;
   }
 
-  constructor(props: IVideoTrack) {
-    this.id = props.id;
-    this.locked = props.locked;
-    this.name = props.name;
+  constructor(data: IVideoTrack) {
+    this.container = new Container();
+    this.container.label = VideoTrack.getLabel(data.id);
 
-    this.enabled = props.enabled;
-    this.opacity = props.opacity;
-    this.zIndex = props.zIndex;
+    this.id = data.id;
+    this.locked = data.locked;
+    this.name = data.name;
+    this.enabled = data.enabled;
+    this.opacity = data.opacity;
+    this.zIndex = data.zIndex;
 
-    this.clips = this.instantiateClips(props.clips);
+    this.clips = this.instantiateClips(data.clips);
     this.clips.forEach((clip) => {
-      clip.add(this.container);
+      clip.appendTo(this.container);
     });
   }
 
-  add(parent: Container) {
+  appendTo(parent: Container) {
     parent.addChild(this.container);
   }
 

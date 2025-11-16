@@ -1,116 +1,62 @@
-import isEqual from 'fast-deep-equal';
-import { Application, Container } from 'pixi.js';
-import { BehaviorSubject } from 'rxjs';
-import { distinctUntilChanged } from 'rxjs/operators';
-import type { IProject } from '../types';
-import { PIXI_LABELS } from '@renderer/lib/studio/constants';
-import { VideoTrack } from '@renderer/lib/studio/core/tracks/VideoTrack';
+import { BehaviorSubject, distinctUntilChanged, map, skip } from 'rxjs';
+import type { IProject, IStudio } from '../types';
 import { Timer } from '@renderer/lib/studio/core/Timer';
+import { Renderer } from '@renderer/lib/studio/core/Renderer';
+import { AudioManager } from '@renderer/lib/studio/core/AudioManager';
 
-export class Studio {
-  initialized = false;
+export class Studio implements IStudio {
+  private project$: BehaviorSubject<IProject>;
 
-  project$: BehaviorSubject<IProject>;
-  timer: Timer;
+  readonly timer: Timer;
+  readonly renderer: Renderer;
+  readonly audioManager: AudioManager;
 
-  app: Application;
-  videoTracks: VideoTrack[] = [];
-
-  private sceneContainer: Container;
-
-  private static idMap: Map<string, any> = new Map();
-
-  static getById<T>(id: string): T | undefined {
-    return Studio.idMap.get(id);
+  get settings() {
+    return this.project$.value.settings;
   }
 
-  static removeById(id: string) {
-    Studio.idMap.delete(id);
+  subscribeSettings(callback: (settings: IProject['settings']) => void) {
+    const subscription = this.project$
+      .pipe(
+        map((project) => project.settings),
+        distinctUntilChanged()
+      )
+      .subscribe((settings) => {
+        callback(settings);
+      });
+    return () => {
+      subscription.unsubscribe();
+    };
   }
 
-  constructor(props: { project: IProject }) {
-    this.project$ = new BehaviorSubject<IProject>(props.project);
-    this.timer = new Timer(props.project.settings.duration);
-    this.app = new Application();
-    this.sceneContainer = new Container();
+  get videoTrackData() {
+    return this.project$.value.tracks.filter((track) => track.type === 'video');
+  }
+
+  constructor(project: IProject) {
+    console.log('[Studio] new Studio()');
+    this.project$ = new BehaviorSubject<IProject>(project);
+    /* 생성자로 인한 방출 무시 1회 */
+    this.project$.pipe(skip(1)).subscribe((newProject) => {
+      // TODO: 전체 업데이트
+      console.log('[Studio] project updated', newProject);
+    });
+
+    this.timer = new Timer(this.settings.duration);
+    this.renderer = new Renderer(this.videoTrackData, this.timer);
+    this.audioManager = new AudioManager();
+  }
+
+  updateProject(project: IProject) {
+    console.log('[Studio] updateProject()');
+    this.project$.next(project);
   }
 
   destroy() {
+    console.log('[Studio] destroyed');
     this.project$.complete();
     this.timer.destroy();
-    this.destroyRenderer();
-  }
-
-  destroyRenderer() {
-    if (this.app.stage !== null) {
-      this.app.destroy(true);
-      this.sceneContainer.destroy(true);
-      console.log('[Studio] pixi destroyed');
-    }
-  }
-
-  async initRenderer({ canvas }: { canvas: HTMLCanvasElement }) {
-    if (this.app.stage == null) {
-      console.log('[Studio] init pixi application');
-      this.app = new Application();
-    }
-
-    const project = this.project$.getValue();
-    await this.app.init({
-      canvas,
-      width: project.settings.width,
-      height: project.settings.height,
-      background: project.settings.backgroundColor,
-    });
-
-    if (this.sceneContainer.destroyed) {
-      console.log('[Studio] recreate scene container');
-      this.sceneContainer = new Container();
-    }
-
-    this.sceneContainer.label = PIXI_LABELS.SCENE_CONTAINER;
-    this.app.stage.addChild(this.sceneContainer);
-
-    this.subscribeToProject();
-    this.instantiateVideoTracks();
-    this.startUpdateLoop();
-  }
-
-  private subscribeToProject() {
-    this.project$.pipe(distinctUntilChanged(isEqual)).subscribe((project) => {
-      console.log('[Studio] project updated, rebuilding scene');
-      this.timer.setDuration(project.settings.duration);
-      this.rebuildScene(project);
-    });
-  }
-
-  private instantiateVideoTracks() {
-    this.videoTracks = this.project$.value.tracks
-      .filter((t) => t.type === 'video')
-      .map((props) => new VideoTrack(props));
-    this.videoTracks.forEach((track) => {
-      track.add(this.sceneContainer);
-    });
-  }
-
-  private startUpdateLoop() {
-    this.app.ticker.add(() => {
-      this.videoTracks.forEach((track) => {
-        if (track.enabled) {
-          track.show();
-          track.update(this.timer.current);
-        } else {
-          track.hide();
-        }
-      });
-    });
-  }
-
-  private rebuildScene(newProject: IProject) {
-    // FIXME: 인스턴스화 한 videoTracks 내부에서처리 필요
-    this.sceneContainer.removeChildren();
-    Studio.idMap.clear();
-
-    // TODO: video, audio 각각 초기화
+    this.renderer.destroy();
+    this.audioManager.destroy();
   }
 }

@@ -19,6 +19,10 @@ export class ShapeClip implements IShapeClip {
   private readonly container: Container;
   private readonly graphics: Graphics;
 
+  static getLabel(id: string) {
+    return `ShapeClip-${id}`;
+  }
+
   constructor(props: IShapeClip) {
     this.id = props.id;
     this.name = props.name;
@@ -30,7 +34,7 @@ export class ShapeClip implements IShapeClip {
     this.transforms = props.transforms;
 
     this.container = new Container();
-    this.container.label = `ShapeClip-${this.id}`;
+    this.container.label = ShapeClip.getLabel(this.id);
     this.applyTransforms();
 
     this.graphics = this.createShape();
@@ -59,7 +63,7 @@ export class ShapeClip implements IShapeClip {
     return graphics;
   }
 
-  add(parent: Container) {
+  appendTo(parent: Container) {
     parent.addChild(this.container);
   }
 
