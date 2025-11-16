@@ -15,6 +15,8 @@ function createInitialProject(): IProject {
         name: 'Sample Video',
         type: 'video',
         filePath:
+          'source://open?path=%2FUsers%2Fdeveloper%2FDownloads%2Ftarget.MOV',
+        proxyFilePath:
           'source://open?path=%2FUsers%2Fdeveloper%2FDownloads%2Fgood-2.mp4',
         metadata: {
           size: 1000,
@@ -33,7 +35,7 @@ function createInitialProject(): IProject {
       height: 1080,
       frameRate: 30,
       sampleRate: 44100,
-      duration: 1000 * 10,
+      duration: 1000 * 60,
       backgroundColor: '#000000',
     },
     tracks: [
@@ -78,7 +80,7 @@ function createInitialProject(): IProject {
             name: 'Video1',
             type: 'video',
             startTime: 0,
-            endTime: 5000,
+            endTime: 60000,
             assetId: 'sample-video-asset',
             transforms: {
               position: { x: 0, y: 0 },

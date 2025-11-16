@@ -40,7 +40,7 @@ export abstract class BaseVideoClip implements IVideoClipBase {
     parent.addChild(this.container);
   }
 
-  protected tick(timer: Timer) {
+  tick(timer: Timer) {
     const currentTime = timer.currentMs;
     if (currentTime >= this.startTime && currentTime <= this.endTime) {
       this.show();

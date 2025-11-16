@@ -1,9 +1,5 @@
-import type {
-  IShapeClip,
-  IShapeData,
-  ITransform,
-} from '@renderer/lib/studio/types';
-import { Container, Graphics } from 'pixi.js';
+import type { IShapeClip, IShapeData } from '@renderer/lib/studio/types';
+import { Graphics } from 'pixi.js';
 import type { Timer } from '@renderer/lib/studio/core/Timer';
 import { BaseVideoClip } from '@renderer/lib/studio/core/clips/BaseVideoClip';
 
@@ -45,10 +41,6 @@ export class ShapeClip extends BaseVideoClip implements IShapeClip {
     }
 
     return graphics;
-  }
-
-  appendTo(parent: Container) {
-    parent.addChild(this.container);
   }
 
   protected update(timer: Timer) {
