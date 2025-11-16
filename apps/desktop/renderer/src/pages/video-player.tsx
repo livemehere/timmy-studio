@@ -42,13 +42,13 @@ function createInitialProject(): IProject {
             endTime: 3000,
             transforms: {
               position: {
-                x: 100,
+                x: 300,
                 y: 100,
               },
-              scaleX: 1.5,
-              scaleY: 2,
-              rotation: Math.PI / 4,
-              opacity: 0.5,
+              scaleX: 1,
+              scaleY: 1,
+              rotation: 0,
+              opacity: 1,
             },
             shapeData: {
               shapeType: 'rectangle',

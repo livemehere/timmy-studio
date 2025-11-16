@@ -82,13 +82,16 @@ export class VideoTrack implements IVideoTrack {
   }
 
   update(currentTime: number) {
+    let visibleItemCnt = 0;
     this.clips.forEach((clip) => {
       if (currentTime >= clip.startTime && currentTime <= clip.endTime) {
         clip.show();
         clip.update(currentTime);
+        visibleItemCnt++;
       } else {
         clip.hide();
       }
     });
+    console.log(`[VideoTrack] ${this.id} visible clips: ${visibleItemCnt}`);
   }
 }
