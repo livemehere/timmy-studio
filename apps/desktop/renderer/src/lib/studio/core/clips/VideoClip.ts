@@ -1,5 +1,5 @@
-import type { ITransform, IVideoAsset, IVideoMediaClip } from '../../types';
-import { Container, Graphics, Sprite, Texture } from 'pixi.js';
+import type { IVideoAsset, IVideoMediaClip } from '../../types';
+import { Sprite, Texture } from 'pixi.js';
 import type { AssetManager } from '@renderer/lib/studio/core/AssetManager';
 import type { Timer } from '@renderer/lib/studio/core/Timer';
 import { msToSec } from '@renderer/lib/studio/utils/time';
@@ -16,6 +16,8 @@ export class VideoClip extends BaseVideoClip implements IVideoMediaClip {
   private originVideoEl?: HTMLVideoElement;
   private proxyVideoEl?: HTMLVideoElement;
 
+  private readonly sprite: Sprite;
+
   protected getLabel(id: string) {
     return `VideoClip-${id}`;
   }
@@ -27,38 +29,50 @@ export class VideoClip extends BaseVideoClip implements IVideoMediaClip {
     this.trimStart = props.trimStart;
     this.trimEnd = props.trimEnd;
     this.showPlaceholder();
-    this.loadAsset();
 
-    const asset = this.assetManager.getAssetById<IVideoAsset>(this.assetId);
-    console.log(asset?.filePath, asset?.proxyFilePath);
+    this.sprite = new Sprite();
+    this.loadAsset()
+      .then(() => {
+        this.container.addChild(this.sprite);
+        this.removePlaceholder();
+      })
+      .catch((err) => {
+        console.error(err);
+      });
   }
 
-  private async loadAsset() {
-    const asset = this.assetManager.getAssetById<IVideoAsset>(this.assetId);
-    if (!asset) {
-      throw new Error('Video asset not found: ' + this.assetId);
-    }
-
-    const videoEl = document.createElement('video');
-    videoEl.src = asset.filePath;
-    videoEl.crossOrigin = 'anonymous';
-    videoEl.muted = false;
-    videoEl.loop = false;
-    videoEl.preload = 'auto';
-    videoEl.autoplay = false;
-
-    videoEl.oncanplay = () => {
-      const texture = Texture.from(videoEl);
-      const sprite = new Sprite(texture);
-      const size = this.transforms.size;
-      if (size) {
-        sprite.width = size.width;
-        sprite.height = size.height;
+  private loadAsset() {
+    return new Promise<void>((resolve, reject) => {
+      const asset = this.assetManager.getAssetById<IVideoAsset>(this.assetId);
+      if (!asset) {
+        reject(`Video(${this.id})'s asset(${this.assetId}) not found`);
+        return;
       }
-      this.container.addChild(sprite);
-      this.removePlaceholder();
-    };
-    this.originVideoEl = videoEl;
+
+      const size = this.transforms.size;
+
+      const videoEl = document.createElement('video');
+      videoEl.src = asset.filePath;
+      videoEl.crossOrigin = 'anonymous';
+      videoEl.muted = false;
+      videoEl.loop = false;
+      videoEl.preload = 'auto';
+      videoEl.autoplay = false;
+
+      videoEl.oncanplay = () => {
+        this.originVideoEl = videoEl;
+
+        this.sprite.texture = Texture.from(videoEl);
+        if (size) {
+          this.sprite.width = size.width;
+          this.sprite.height = size.height;
+        }
+        resolve();
+      };
+      videoEl.onerror = (e) => {
+        reject(e);
+      };
+    });
   }
 
   update(timer: Timer) {

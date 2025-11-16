@@ -18,7 +18,7 @@ export abstract class BaseVideoClip implements IVideoClipBase {
 
   /* instance */
   protected readonly container: Container;
-  protected placeholder?: Graphics;
+  protected placeholder?: Container;
 
   protected abstract getLabel(id: string): string;
   protected abstract update(timer: Timer): void;
@@ -96,15 +96,15 @@ export abstract class BaseVideoClip implements IVideoClipBase {
     if (this.placeholder) return;
 
     /* placeholder box */
-    this.placeholder = new Graphics();
+    this.placeholder = new Container();
+
+    const box = new Graphics();
     const { width, height } = this.transforms.size || {
       width: 100,
       height: 100,
     };
-    this.placeholder.rect(0, 0, width, height).fill(0x333333).stroke(0x666666);
-    this.container.addChild(this.placeholder);
+    box.rect(0, 0, width, height).fill(0x333333).stroke(0x666666);
 
-    /* text */
     const text = new Text({
       text: this.name,
       style: {
@@ -115,7 +115,10 @@ export abstract class BaseVideoClip implements IVideoClipBase {
     });
     text.anchor.set(0.5);
     text.position.set(width / 2, height / 2);
+
+    this.placeholder.addChild(box);
     this.placeholder.addChild(text);
+    this.container.addChild(this.placeholder);
   }
 
   protected removePlaceholder() {
