@@ -67,6 +67,10 @@ export class ShapeClip implements IShapeClip {
     parent.addChild(this.container);
   }
 
+  private updateTransforms(time: number) {
+    // TODO: Implement transform animations over time
+  }
+
   private applyTransforms() {
     const { position, scaleX, scaleY, opacity, rotation, anchorX, anchorY } =
       this.transforms;
@@ -81,6 +85,7 @@ export class ShapeClip implements IShapeClip {
   }
 
   update(currentTime: number) {
+    this.updateTransforms(currentTime);
     this.applyTransforms();
   }
 

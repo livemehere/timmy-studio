@@ -41,13 +41,20 @@ export class Renderer {
       width,
       height,
       background,
+      resizeTo: undefined,
     });
     this.startLoop();
   }
 
   destroy() {
+    /* Renderer 는 PreviewRenderer, Studio 에서 중복 호출 될 수 있음으로 */
+    if (!this.app || !this.app.stage) return;
     console.log('[Renderer] destroy()');
-    this.app.destroy(true);
+    this.app.destroy(true, {
+      children: true,
+      texture: true,
+      textureSource: true,
+    });
   }
 
   private startLoop() {
