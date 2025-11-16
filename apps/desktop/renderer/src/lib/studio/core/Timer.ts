@@ -1,7 +1,15 @@
 import { BehaviorSubject } from 'rxjs';
 
+export type PlaybackMode = 'playing' | 'seeking' | 'paused';
+
+export interface PlaybackContext {
+  currentTime: number;
+  mode: PlaybackMode;
+}
+
 export class Timer {
   private currentTime$ = new BehaviorSubject<number>(0);
+  private playbackMode$ = new BehaviorSubject<PlaybackMode>('paused');
   private isPlaying = false;
   private animationFrameId: number | null = null;
   private lastTimestamp: number | null = null;
@@ -19,6 +27,17 @@ export class Timer {
     return this.isPlaying;
   }
 
+  get mode(): PlaybackMode {
+    return this.playbackMode$.value;
+  }
+
+  get context(): PlaybackContext {
+    return {
+      currentTime: this.current,
+      mode: this.mode,
+    };
+  }
+
   setDuration(duration: number) {
     this.duration = duration;
   }
@@ -34,6 +53,7 @@ export class Timer {
     if (this.isPlaying) return;
 
     this.isPlaying = true;
+    this.playbackMode$.next('playing');
     this.lastTimestamp = performance.now();
     this.tick();
   }
@@ -42,6 +62,7 @@ export class Timer {
     if (!this.isPlaying) return;
 
     this.isPlaying = false;
+    this.playbackMode$.next('paused');
     this.lastTimestamp = null;
 
     if (this.animationFrameId !== null) {
@@ -55,7 +76,18 @@ export class Timer {
   }
 
   seek(ms: number) {
+    // Set mode to seeking temporarily
+    this.playbackMode$.next('seeking');
     this.currentTime$.next(ms);
+
+    // Reset mode back to previous state after a short delay
+    setTimeout(() => {
+      if (this.isPlaying) {
+        this.playbackMode$.next('playing');
+      } else {
+        this.playbackMode$.next('paused');
+      }
+    }, 100);
   }
 
   reset() {

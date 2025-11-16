@@ -29,7 +29,9 @@ export function StudioProvider({
   useEffect(() => {
     studioRef.current!.initialized = true;
     return () => {
+      console.log(studioRef.current);
       studioRef.current?.destroy();
+      studioRef.current = null;
       console.log('[StudioProvider] destroy');
     };
   }, []);

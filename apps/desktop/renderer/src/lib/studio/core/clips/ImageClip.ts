@@ -150,7 +150,7 @@ export class ImageClip implements IImageClip {
     parent.addChild(this.container);
   }
 
-  update(_currentTime: number) {
+  update(_context: any) {
     // No-op: All updates are handled reactively via subscriptions
     // This method exists only to satisfy the interface contract
   }

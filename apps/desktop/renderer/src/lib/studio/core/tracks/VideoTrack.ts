@@ -1,10 +1,12 @@
 import type { IVideoClip, IVideoTrack } from '@renderer/lib/studio/types';
+import type { PlaybackContext } from '@renderer/lib/studio/core/Timer';
 import { ShapeClip } from '@renderer/lib/studio/core/clips/ShapeClip';
 import { TextClip } from '@renderer/lib/studio/core/clips/TextClip';
 import { ImageClip } from '@renderer/lib/studio/core/clips/ImageClip';
+import { VideoMediaClip } from '@renderer/lib/studio/core/clips/VideoMediaClip';
 import { Container } from 'pixi.js';
 
-type VideoClip = ShapeClip | TextClip | ImageClip;
+type VideoClip = ShapeClip | TextClip | ImageClip | VideoMediaClip;
 
 export class VideoTrack implements IVideoTrack {
   type: 'video' = 'video';
@@ -69,6 +71,9 @@ export class VideoTrack implements IVideoTrack {
       if (props.type === 'image') {
         return new ImageClip(props);
       }
+      if (props.type === 'video') {
+        return new VideoMediaClip(props);
+      }
       throw new Error(`Unsupported clip type: ${props.type}`);
     });
   }
@@ -83,11 +88,11 @@ export class VideoTrack implements IVideoTrack {
     this.container.visible = false;
   }
 
-  update(currentTime: number) {
+  update(context: PlaybackContext) {
     this.clips.forEach((clip) => {
-      if (currentTime >= clip.startTime && currentTime <= clip.endTime) {
+      if (context.currentTime >= clip.startTime && context.currentTime <= clip.endTime) {
         clip.show();
-        clip.update(currentTime);
+        clip.update(context);
       } else {
         clip.hide();
       }

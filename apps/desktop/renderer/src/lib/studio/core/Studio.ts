@@ -7,6 +7,9 @@ import { PIXI_LABELS } from '@renderer/lib/studio/constants';
 import { VideoTrack } from '@renderer/lib/studio/core/tracks/VideoTrack';
 import { Timer } from '@renderer/lib/studio/core/Timer';
 import { ImageAsset } from '@renderer/lib/studio/core/assets/ImageAsset';
+import { VideoAsset } from '@renderer/lib/studio/core/assets/VideoAsset';
+
+type Asset = ImageAsset | VideoAsset;
 
 export class Studio {
   initialized = false;
@@ -20,7 +23,7 @@ export class Studio {
   private sceneContainer: Container;
 
   // Asset management
-  private static assetMap: Map<string, ImageAsset> = new Map();
+  private static assetMap: Map<string, Asset> = new Map();
   private static idMap: Map<string, any> = new Map();
 
   static getById<T>(id: string): T | undefined {
@@ -31,11 +34,11 @@ export class Studio {
     Studio.idMap.delete(id);
   }
 
-  static getAsset(assetId: string): ImageAsset | undefined {
+  static getAsset(assetId: string): Asset | undefined {
     return Studio.assetMap.get(assetId);
   }
 
-  static registerAsset(asset: ImageAsset): void {
+  static registerAsset(asset: Asset): void {
     Studio.assetMap.set(asset.id, asset);
   }
 
@@ -121,11 +124,13 @@ export class Studio {
       if (assetProps.type === 'image') {
         const asset = new ImageAsset(assetProps);
         Studio.registerAsset(asset);
-
-        // Preload the asset
+        asset.preload();
+      } else if (assetProps.type === 'video') {
+        const asset = new VideoAsset(assetProps);
+        Studio.registerAsset(asset);
         asset.preload();
       }
-      // TODO: Handle audio and video assets
+      // TODO: Handle audio assets
     });
 
     console.log('[Studio] Assets instantiated:', assets.length);
@@ -142,10 +147,13 @@ export class Studio {
 
   private startUpdateLoop() {
     this.app.ticker.add(() => {
+      // Get playback context from timer
+      const context = this.timer.context;
+
       this.videoTracks.forEach((track) => {
         if (track.enabled) {
           track.show();
-          track.update(this.timer.current);
+          track.update(context);
         } else {
           track.hide();
         }

@@ -11,6 +11,7 @@ function createInitialProject(): IProject {
   const imageAsset3Id = uid(4); // 800x600
   const imageAsset4Id = uid(4); // 300x500 portrait
   const imageAsset5Id = uid(4); // 500x300 landscape
+  const videoAsset1Id = uid(4); // Video asset
 
   return {
     id: uid(4),
@@ -76,6 +77,22 @@ function createInitialProject(): IProject {
           createdAt: new Date().toISOString(),
         },
       },
+      {
+        id: videoAsset1Id,
+        name: 'Sample Video',
+        type: 'video',
+        filePath:
+          'source://open?path=%2FUsers%2Fdeveloper%2FDownloads%2Fgood-3.mp4',
+        metadata: {
+          duration: 10000, // 10 seconds
+          width: 1920,
+          height: 1080,
+          frameRate: 30,
+          codec: 'h264',
+          size: 0,
+          createdAt: new Date().toISOString(),
+        },
+      },
     ],
     metadata: {
       createdAt: new Date().toISOString(),
@@ -88,7 +105,7 @@ function createInitialProject(): IProject {
       height: 1080,
       frameRate: 30,
       sampleRate: 44100,
-      duration: 1000 * 10,
+      duration: 1000 * 10 * 3,
       backgroundColor: '#000000',
     },
     tracks: [
@@ -407,7 +424,7 @@ function createInitialProject(): IProject {
               opacity: 1,
             },
             textData: {
-              content: 'That\'s All Folks!',
+              content: "That's All Folks!",
               fontSize: 64,
               fontFamily: 'Arial',
               color: 0xffffff, // white
@@ -579,6 +596,69 @@ function createInitialProject(): IProject {
               scaleY: 1.0,
               rotation: Math.PI / 16,
               opacity: 0.6,
+            },
+          },
+          // Video: Full screen background (0-6s)
+          {
+            id: uid(4),
+            name: 'Video Background',
+            type: 'video',
+            assetId: videoAsset1Id,
+            startTime: 0,
+            endTime: 30000,
+            trimStart: 0,
+            trimEnd: 6000,
+            transforms: {
+              position: {
+                x: 960,
+                y: 540,
+              },
+              scaleX: 0.5,
+              scaleY: 0.5,
+              rotation: 0,
+              opacity: 0.4,
+            },
+          },
+          // Video: Center (2-8s)
+          {
+            id: uid(4),
+            name: 'Video Center',
+            type: 'video',
+            assetId: videoAsset1Id,
+            startTime: 2000,
+            endTime: 8000,
+            trimStart: 1000,
+            trimEnd: 7000,
+            transforms: {
+              position: {
+                x: 960,
+                y: 540,
+              },
+              scaleX: 0.6,
+              scaleY: 0.6,
+              rotation: 0,
+              opacity: 0.9,
+            },
+          },
+          // Video: Small rotated (5-10s)
+          {
+            id: uid(4),
+            name: 'Video Small Rotated',
+            type: 'video',
+            assetId: videoAsset1Id,
+            startTime: 5000,
+            endTime: 10000,
+            trimStart: 2000,
+            trimEnd: 7000,
+            transforms: {
+              position: {
+                x: 1600,
+                y: 800,
+              },
+              scaleX: 0.3,
+              scaleY: 0.3,
+              rotation: Math.PI / 6,
+              opacity: 0.8,
             },
           },
         ],
