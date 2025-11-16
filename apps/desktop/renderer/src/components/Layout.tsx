@@ -1,5 +1,5 @@
 import { css } from '@emotion/react';
-import { Outlet, useNavigate } from 'react-router';
+import { Outlet, useLocation, useNavigate } from 'react-router';
 import { Suspense } from 'react';
 import { Spinner } from './UI/Spinner';
 import { Docks } from './UI/Docks';
@@ -10,6 +10,7 @@ export default function Layout() {
   const docks = createDockItems({
     navigate,
   });
+  const { pathname } = useLocation();
 
   return (
     <>
@@ -19,7 +20,7 @@ export default function Layout() {
           app-region: drag;
         `}
       >
-        Timmy Studio
+        Timmy Studio {import.meta.env.DEV && `(${pathname})`}
       </header>
       <main className="flex-1">
         <Suspense
