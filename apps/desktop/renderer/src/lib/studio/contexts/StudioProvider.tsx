@@ -11,26 +11,29 @@ export function StudioProvider({
   children: React.ReactNode;
   initialProject: IProject;
 }) {
-  const studioRef = useRef<Studio | null>(null);
+  const studioRef = useRef<Studio>(null as unknown as Studio);
+  const initRef = useRef<boolean>(false);
 
   if (!studioRef.current) {
-    const studio = new Studio({ project: initialProject });
-    studioRef.current = studio;
-    console.log('[StudioProvider] created');
+    studioRef.current = new Studio();
+    studioRef.current.updateProject(initialProject);
   }
 
   useEffect(() => {
-    if (studioRef.current && studioRef.current.initialized) {
-      studioRef.current.project$.next(initialProject);
-      console.log('[StudioProvider] update poject');
+    /** Skip the first render */
+    if (!initRef.current) {
+      initRef.current = true;
+      return;
     }
+
+    studioRef.current.updateProject(initialProject);
   }, [initialProject]);
 
   useEffect(() => {
-    studioRef.current!.initialized = true;
     return () => {
-      studioRef.current?.destroy();
-      console.log('[StudioProvider] destroy');
+      studioRef.current.destroy();
+      studioRef.current = null as unknown as Studio;
+      initRef.current = false;
     };
   }, []);
 
