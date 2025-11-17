@@ -48,33 +48,6 @@ function createInitialProject(): IProject {
         zIndex: 0,
         opacity: 1,
         clips: [
-          // {
-          //   id: uid(4),
-          //   name: 'Rectangle',
-          //   type: 'shape',
-          //   startTime: 0,
-          //   endTime: 3000,
-          //   transforms: {
-          //     position: {
-          //       x: 300,
-          //       y: 100,
-          //     },
-          //     scaleX: 1,
-          //     scaleY: 1,
-          //     rotation: 0,
-          //     opacity: 1,
-          //   },
-          //   shapeData: {
-          //     shapeType: 'rectangle',
-          //     width: 200,
-          //     height: 150,
-          //     color: 'dodgerblue',
-          //     border: {
-          //       width: 2,
-          //       color: 'white',
-          //     },
-          //   },
-          // },
           {
             id: uid(4),
             name: 'Video1',
@@ -87,6 +60,33 @@ function createInitialProject(): IProject {
               size: {
                 width: 540,
                 height: 960,
+              },
+            },
+          },
+          {
+            id: uid(4),
+            name: 'Rectangle',
+            type: 'shape',
+            startTime: 0,
+            endTime: 3000,
+            transforms: {
+              position: {
+                x: 300,
+                y: 100,
+              },
+              scaleX: 1,
+              scaleY: 1,
+              rotation: 0,
+              opacity: 1,
+            },
+            shapeData: {
+              shapeType: 'rectangle',
+              width: 200,
+              height: 150,
+              color: 'dodgerblue',
+              border: {
+                width: 2,
+                color: 'white',
               },
             },
           },
@@ -110,13 +110,6 @@ export default function VideoPlayerPage() {
       <div>
         <PreviewRenderer />
         <Updater />
-        <button
-          onClick={() => {
-            setProject(() => createInitialProject());
-          }}
-        >
-          reset
-        </button>
       </div>
     </StudioProvider>
   );
