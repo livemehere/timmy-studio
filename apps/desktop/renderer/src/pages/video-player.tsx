@@ -36,7 +36,7 @@ function createInitialProject(): IProject {
       frameRate: 30,
       sampleRate: 44100,
       duration: 1000 * 60,
-      backgroundColor: '#000000',
+      background: '#000000',
     },
     tracks: [
       {

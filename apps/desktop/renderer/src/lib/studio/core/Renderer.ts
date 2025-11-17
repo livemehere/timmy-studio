@@ -5,7 +5,7 @@ import type { Timer } from '@renderer/lib/studio/core/Timer';
 import type { AssetManager } from '@renderer/lib/studio/core/AssetManager';
 
 export class Renderer {
-  private isInitialized = false;
+  private _isInitialized = false;
   private app: Application;
   private sceneContainer: Container;
   private tracks: VideoTrack[] = [];
@@ -16,6 +16,10 @@ export class Renderer {
   static readonly LABELS = {
     SCENE_CONTAINER: 'SCENE_CONTAINER',
   };
+
+  get isInitialized() {
+    return this._isInitialized;
+  }
 
   constructor(
     trackData: IVideoTrack[],
@@ -52,11 +56,11 @@ export class Renderer {
       resizeTo: undefined,
     });
     this.startLoop();
-    this.isInitialized = true;
+    this._isInitialized = true;
   }
 
   resize(width: number, height: number) {
-    if (!this.isInitialized) {
+    if (!this._isInitialized) {
       console.warn('[Renderer] setsize() called before init()');
       return;
     }
@@ -71,8 +75,8 @@ export class Renderer {
     this.app.renderer.resize(width, height);
   }
 
-  set backgroundColor(color: string) {
-    if (!this.isInitialized) {
+  set background(color: string) {
+    if (!this._isInitialized) {
       console.warn('[Renderer] setBackgroundColor() called before init()');
       return;
     }
@@ -85,7 +89,7 @@ export class Renderer {
   }
 
   set frameRate(frameRate: number) {
-    if (!this.isInitialized) {
+    if (!this._isInitialized) {
       console.warn('[Renderer] setFrameRate() called before init()');
       return;
     }
@@ -97,7 +101,7 @@ export class Renderer {
   }
 
   destroy() {
-    if (!this.isInitialized) {
+    if (!this._isInitialized) {
       console.warn('[Renderer] destroy() called before init()');
       return;
     }

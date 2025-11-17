@@ -1,4 +1,4 @@
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, filter } from 'rxjs';
 import type { IProject } from '../types';
 import { Timer } from '@renderer/lib/studio/core/Timer';
 import { Renderer } from '@renderer/lib/studio/core/Renderer';
@@ -14,7 +14,7 @@ const DEFAULT_PROJECT: IProject = {
     frameRate: 30,
     sampleRate: 44100,
     duration: 60000,
-    backgroundColor: '#000000',
+    background: '#000000',
   },
   metadata: {
     createdAt: new Date().toISOString(),
@@ -58,27 +58,26 @@ export class Studio {
     this.assets$.next(initial.assets);
 
     this.assetManager = new AssetManager(initial.assets);
-    this.timer = new Timer(this.settings$.value.duration);
+    this.timer = new Timer(initial.settings.duration);
     this.renderer = new Renderer(
-      this.tracks$.value.filter((track) => track.type === 'video'),
+      initial.tracks.filter((track) => track.type === 'video'),
       this.timer,
       this.assetManager
     );
     this.audioManager = new AudioManager();
-
     this.setupSubscriptions();
   }
 
   private setupSubscriptions() {
-    this.settings$.subscribe(
-      ({ width, height, backgroundColor, duration, frameRate }) => {
+    this.settings$
+      .pipe(filter(() => this.renderer.isInitialized))
+      .subscribe(({ width, height, background, duration, frameRate }) => {
         this.renderer.resize(width, height);
-        this.renderer.backgroundColor = backgroundColor;
+        this.renderer.background = background;
         this.renderer.frameRate = frameRate;
-        this.timer.durationMs = duration;
+        // this.timer.durationMs = duration;
         // this.audioManager.setSampleRate(sampleRate);
-      }
-    );
+      });
   }
 
   updateProject(project: IProject) {

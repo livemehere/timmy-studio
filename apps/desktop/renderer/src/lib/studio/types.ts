@@ -21,7 +21,7 @@ export interface IProjectSettings {
   frameRate: number;
   sampleRate: number;
   duration: number;
-  backgroundColor: string;
+  background: string;
 }
 
 export interface IProjectMetadata {
