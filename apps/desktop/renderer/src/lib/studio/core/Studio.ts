@@ -1,53 +1,66 @@
-import { BehaviorSubject, distinctUntilChanged, map, skip } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 import type { IProject, IStudio } from '../types';
 import { Timer } from '@renderer/lib/studio/core/Timer';
 import { Renderer } from '@renderer/lib/studio/core/Renderer';
 import { AudioManager } from '@renderer/lib/studio/core/AudioManager';
 import { AssetManager } from '@renderer/lib/studio/core/AssetManager';
 
+const DEFAULT_PROJECT: IProject = {
+  id: 'default-project',
+  name: 'New Project',
+  settings: {
+    width: 1280,
+    height: 720,
+    frameRate: 30,
+    sampleRate: 44100,
+    duration: 60000,
+    backgroundColor: '#000000',
+  },
+  metadata: {
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    author: 'unknown',
+    description: '',
+  },
+  tracks: [],
+  assets: [],
+};
+
 export class Studio implements IStudio {
-  private project$: BehaviorSubject<IProject>;
+  readonly id$ = new BehaviorSubject<IProject['id']>(DEFAULT_PROJECT.id);
+  readonly name$ = new BehaviorSubject<IProject['name']>(DEFAULT_PROJECT.name);
+  readonly settings$ = new BehaviorSubject<IProject['settings']>(
+    DEFAULT_PROJECT.settings
+  );
+  readonly tracks$ = new BehaviorSubject<IProject['tracks']>(
+    DEFAULT_PROJECT.tracks
+  );
+  readonly metadata$ = new BehaviorSubject<IProject['metadata']>(
+    DEFAULT_PROJECT.metadata
+  );
+  readonly assets$ = new BehaviorSubject<IProject['assets']>(
+    DEFAULT_PROJECT.assets
+  );
 
   readonly timer: Timer;
   readonly renderer: Renderer;
   readonly audioManager: AudioManager;
   readonly assetManager: AssetManager;
 
-  get settings() {
-    return this.project$.value.settings;
-  }
-
-  subscribeSettings(callback: (settings: IProject['settings']) => void) {
-    const subscription = this.project$
-      .pipe(
-        map((project) => project.settings),
-        distinctUntilChanged()
-      )
-      .subscribe((settings) => {
-        callback(settings);
-      });
-    return () => {
-      subscription.unsubscribe();
-    };
-  }
-
-  get videoTrackData() {
-    return this.project$.value.tracks.filter((track) => track.type === 'video');
-  }
-
-  constructor(project: IProject) {
+  constructor(initial: IProject) {
     console.log('[Studio] new Studio()');
-    this.project$ = new BehaviorSubject<IProject>(project);
-    /* 생성자로 인한 방출 무시 1회 */
-    this.project$.pipe(skip(1)).subscribe((newProject) => {
-      // TODO: 전체 업데이트
-      console.log('[Studio] project updated', newProject);
-    });
 
-    this.assetManager = new AssetManager(project.assets);
-    this.timer = new Timer(this.settings.duration);
+    this.id$.next(initial.id);
+    this.name$.next(initial.name);
+    this.settings$.next(initial.settings);
+    this.tracks$.next(initial.tracks);
+    this.metadata$.next(initial.metadata);
+    this.assets$.next(initial.assets);
+
+    this.assetManager = new AssetManager(initial.assets);
+    this.timer = new Timer(this.settings$.value.duration);
     this.renderer = new Renderer(
-      this.videoTrackData,
+      this.tracks$.value.filter((track) => track.type === 'video'),
       this.timer,
       this.assetManager
     );
@@ -56,12 +69,24 @@ export class Studio implements IStudio {
 
   updateProject(project: IProject) {
     console.log('[Studio] updateProject()');
-    this.project$.next(project);
+    this.id$.next(project.id);
+    this.name$.next(project.name);
+    this.settings$.next(project.settings);
+    this.tracks$.next(project.tracks);
+    this.metadata$.next(project.metadata);
+    this.assets$.next(project.assets);
   }
 
   destroy() {
     console.log('[Studio] destroyed');
-    this.project$.complete();
+
+    this.id$.complete();
+    this.name$.complete();
+    this.settings$.complete();
+    this.tracks$.complete();
+    this.metadata$.complete();
+    this.assets$.complete();
+
     this.timer.destroy();
     this.renderer.destroy();
     this.audioManager.destroy();

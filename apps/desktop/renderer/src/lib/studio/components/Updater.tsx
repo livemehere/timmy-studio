@@ -1,8 +1,10 @@
-import { useProjectSettings } from '@renderer/lib/studio/hooks/useProjectSettings';
 import { useTimer } from '@renderer/lib/studio/hooks/useTimer';
+import { useStudio } from '@renderer/lib/studio/contexts/StudioProvider';
+import { useObservable } from '@renderer/lib/studio/hooks/useObservable';
 
 export function Updater() {
-  const settings = useProjectSettings();
+  const studio = useStudio();
+  const settings = useObservable(studio.settings$, studio.settings$.value);
   const { time, seek, play, pause, resume, reset } = useTimer();
   return (
     <div>
