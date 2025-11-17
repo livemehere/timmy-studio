@@ -13,9 +13,17 @@ export function PreviewRenderer() {
     };
   }, []);
 
+  // 가로형인지 세로형인지 판단
+  const isLandscape = studio.settings.width >= studio.settings.height;
+
   return (
-    <div className="w-full h-[500px] border border-gray-300">
-      <canvas ref={canvasRef} className="w-full h-full"></canvas>
+    <div className="w-full h-full flex items-center justify-center">
+      <canvas
+        ref={canvasRef}
+        className={`border border-amber-50 ${
+          isLandscape ? 'w-full h-auto' : 'w-auto h-full'
+        }`}
+      ></canvas>
     </div>
   );
 }
