@@ -1,13 +1,9 @@
 import { useStudio } from '@renderer/lib/studio/contexts/StudioProvider';
 import { useObservable } from '@renderer/lib/studio/hooks/useObservable';
-import { useEffect } from 'react';
 
 export function StudioDebugger() {
   const studio = useStudio();
   const settings = useObservable(studio.settings$, studio.settings$.value);
-  useEffect(() => {
-    console.log('[StudioDebugger] render');
-  });
 
   return (
     <div

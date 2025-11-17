@@ -3,9 +3,12 @@ import { VideoTrack } from '@renderer/lib/studio/core/tracks/VideoTrack';
 import type { IVideoTrack } from '@renderer/lib/studio/types';
 import type { Timer } from '@renderer/lib/studio/core/Timer';
 import type { AssetManager } from '@renderer/lib/studio/core/AssetManager';
+import { BehaviorSubject } from 'rxjs';
 
 export class Renderer {
-  private _isInitialized = false;
+  readonly init$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(
+    false
+  );
   private app: Application;
   private sceneContainer: Container;
   private tracks: VideoTrack[] = [];
@@ -18,7 +21,7 @@ export class Renderer {
   };
 
   get isInitialized() {
-    return this._isInitialized;
+    return this.init$.value;
   }
 
   constructor(
@@ -41,11 +44,13 @@ export class Renderer {
     });
   }
 
+  /* rect 에서 canvas 마운트 할 때 1회 호출 */
   async init(
     canvas: HTMLCanvasElement,
     width: number,
     height: number,
-    background: string
+    background: string,
+    fps: number
   ) {
     console.log('[Renderer] init()');
     await this.app.init({
@@ -55,12 +60,13 @@ export class Renderer {
       background,
       resizeTo: undefined,
     });
+    this.app.ticker.maxFPS = fps;
     this.startLoop();
-    this._isInitialized = true;
+    this.init$.next(true);
   }
 
   resize(width: number, height: number) {
-    if (!this._isInitialized) {
+    if (!this.isInitialized) {
       console.warn('[Renderer] setsize() called before init()');
       return;
     }
@@ -76,7 +82,7 @@ export class Renderer {
   }
 
   set background(color: string) {
-    if (!this._isInitialized) {
+    if (!this.isInitialized) {
       console.warn('[Renderer] setBackgroundColor() called before init()');
       return;
     }
@@ -89,7 +95,7 @@ export class Renderer {
   }
 
   set frameRate(frameRate: number) {
-    if (!this._isInitialized) {
+    if (!this.isInitialized) {
       console.warn('[Renderer] setFrameRate() called before init()');
       return;
     }
@@ -101,7 +107,7 @@ export class Renderer {
   }
 
   destroy() {
-    if (!this._isInitialized) {
+    if (!this.isInitialized) {
       console.warn('[Renderer] destroy() called before init()');
       return;
     }

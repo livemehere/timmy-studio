@@ -1,4 +1,4 @@
-import { BehaviorSubject, filter } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 import type { IProject } from '../types';
 import { Timer } from '@renderer/lib/studio/core/Timer';
 import { Renderer } from '@renderer/lib/studio/core/Renderer';
@@ -69,15 +69,19 @@ export class Studio {
   }
 
   private setupSubscriptions() {
-    this.settings$
-      .pipe(filter(() => this.renderer.isInitialized))
-      .subscribe(({ width, height, background, duration, frameRate }) => {
-        this.renderer.resize(width, height);
-        this.renderer.background = background;
-        this.renderer.frameRate = frameRate;
-        // this.timer.durationMs = duration;
-        // this.audioManager.setSampleRate(sampleRate);
-      });
+    this.settings$.subscribe(() => {
+      const { width, height, background, duration, frameRate, sampleRate } =
+        this.settings$.value;
+
+      /* renderer.init() 이후 캔버스 변경사항에 대해서 구독 */
+      this.renderer.resize(width, height);
+      this.renderer.background = background;
+      this.renderer.frameRate = frameRate;
+
+      /* studio 생성 이후에 변경사항에 대해서 구독 */
+      this.timer.durationMs = duration;
+      this.audioManager.sampleRate = sampleRate;
+    });
   }
 
   updateProject(project: IProject) {
