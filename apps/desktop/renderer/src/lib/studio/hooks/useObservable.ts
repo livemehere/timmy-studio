@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { Observable } from 'rxjs';
 import { map, distinctUntilChanged } from 'rxjs/operators';
 
@@ -15,16 +15,19 @@ export function useObservable<T, R = T>(
   selector?: (value: T) => R
 ): T | R {
   const [value, setValue] = useState<T | R>(initialValue);
+  const memoizedSelector = useEffectEvent(
+    selector ?? ((v: T) => v as unknown as R)
+  );
 
   useEffect(() => {
     const subscription = selector
       ? observable
-          .pipe(map(selector), distinctUntilChanged())
+          .pipe(map(memoizedSelector), distinctUntilChanged())
           .subscribe(setValue)
       : observable.subscribe(setValue);
 
     return () => subscription.unsubscribe();
-  }, [observable, selector]);
+  }, [observable]);
 
   return value;
 }
