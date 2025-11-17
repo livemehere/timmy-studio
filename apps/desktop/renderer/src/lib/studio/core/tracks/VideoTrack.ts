@@ -10,9 +10,9 @@ export class VideoTrack implements IVideoTrack {
   id: string;
   name: string;
   locked: boolean;
-  clips: (ShapeClip | VideoClip)[];
+  clips = new Map<string, ShapeClip | VideoClip>();
 
-  private container: Container;
+  readonly container: Container;
   private readonly assetManager: AssetManager;
 
   static getLabel(id: string) {
@@ -56,9 +56,10 @@ export class VideoTrack implements IVideoTrack {
     this.opacity = data.opacity;
     this.zIndex = data.zIndex;
 
-    this.clips = this.instantiateClips(data.clips);
-    this.clips.forEach((clip) => {
+    data.clips.forEach((clipData) => {
+      const clip = this.instantiateClip(clipData);
       clip.appendTo(this.container);
+      this.clips.set(clipData.id, clip);
     });
   }
 
@@ -66,15 +67,46 @@ export class VideoTrack implements IVideoTrack {
     parent.addChild(this.container);
   }
 
-  private instantiateClips(clips: IVideoClip[]) {
-    return clips.map((props) => {
-      if (props.type === 'shape') {
-        return new ShapeClip(props);
-      } else if (props.type === 'video') {
-        return new VideoClip(props, this.assetManager);
-      }
-      throw new Error(`Unsupported clip type: ${props.type}`);
-    });
+  getClip(clipId: string) {
+    return this.clips.get(clipId);
+  }
+
+  getClipContainer(clipId: string): Container | undefined {
+    return this.clips.get(clipId)?.container;
+  }
+
+  addClip(clipData: IVideoClip) {
+    if (this.clips.has(clipData.id)) {
+      console.warn(`[VideoTrack] Clip ${clipData.id} already exists`);
+      return;
+    }
+    const clip = this.instantiateClip(clipData);
+    clip.appendTo(this.container);
+    this.clips.set(clipData.id, clip);
+  }
+
+  removeClip(clipId: string) {
+    const clip = this.clips.get(clipId);
+    if (clip) {
+      clip.destroy?.();
+      this.clips.delete(clipId);
+    }
+  }
+
+  setClipZIndex(clipId: string, zIndex: number) {
+    const clip = this.clips.get(clipId);
+    if (clip?.container) {
+      clip.container.zIndex = zIndex;
+    }
+  }
+
+  private instantiateClip(props: IVideoClip) {
+    if (props.type === 'shape') {
+      return new ShapeClip(props);
+    } else if (props.type === 'video') {
+      return new VideoClip(props, this.assetManager);
+    }
+    throw new Error(`Unsupported clip type: ${props.type}`);
   }
 
   tick(timer: Timer) {
@@ -98,5 +130,11 @@ export class VideoTrack implements IVideoTrack {
 
   private update(timer: Timer) {
     this.clips.forEach((clip) => clip.tick(timer));
+  }
+
+  destroy() {
+    this.clips.forEach((clip) => clip.destroy?.());
+    this.clips.clear();
+    this.container.destroy();
   }
 }

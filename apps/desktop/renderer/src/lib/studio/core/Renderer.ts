@@ -11,7 +11,7 @@ export class Renderer {
   );
   private app: Application;
   private sceneContainer: Container;
-  private tracks: VideoTrack[] = [];
+  private tracks = new Map<string, VideoTrack>();
 
   private timer: Timer;
   private assetManager: AssetManager;
@@ -37,11 +37,51 @@ export class Renderer {
     this.sceneContainer.label = Renderer.LABELS.SCENE_CONTAINER;
     this.app.stage.addChild(this.sceneContainer);
 
-    this.tracks = trackData.map((data) => {
+    trackData.forEach((data) => {
       const track = new VideoTrack(data, this.assetManager);
       track.appendTo(this.sceneContainer);
-      return track;
+      this.tracks.set(data.id, track);
     });
+  }
+
+  getTrack(trackId: string): VideoTrack | undefined {
+    return this.tracks.get(trackId);
+  }
+
+  getTrackContainer(trackId: string): Container | undefined {
+    return this.tracks.get(trackId)?.container;
+  }
+
+  addTrack(data: IVideoTrack) {
+    if (this.tracks.has(data.id)) {
+      console.warn(`[Renderer] Track ${data.id} already exists`);
+      return;
+    }
+    const track = new VideoTrack(data, this.assetManager);
+    track.appendTo(this.sceneContainer);
+    this.tracks.set(data.id, track);
+  }
+
+  removeTrack(trackId: string) {
+    const track = this.tracks.get(trackId);
+    if (track) {
+      track.destroy();
+      this.tracks.delete(trackId);
+    }
+  }
+
+  toggleTrackVisibility(trackId: string, visible: boolean) {
+    const track = this.tracks.get(trackId);
+    if (track) {
+      track.enabled = visible;
+    }
+  }
+
+  setTrackZIndex(trackId: string, zIndex: number) {
+    const track = this.tracks.get(trackId);
+    if (track) {
+      track.zIndex = zIndex;
+    }
   }
 
   /* rect 에서 canvas 마운트 할 때 1회 호출 */
@@ -117,12 +157,14 @@ export class Renderer {
       return;
     }
 
+    this.tracks.forEach((track) => track.destroy());
+    this.tracks.clear();
+
     this.app.destroy(true);
     this.app = null as any;
     this.sceneContainer = null as any;
     this.timer = null as any;
     this.assetManager = null as any;
-    this.tracks = [];
     console.log('[Renderer] destroy()');
   }
 

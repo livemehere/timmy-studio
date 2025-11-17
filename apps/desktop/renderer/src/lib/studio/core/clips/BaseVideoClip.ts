@@ -17,7 +17,7 @@ export abstract class BaseVideoClip implements IVideoClipBase {
   animations?: IAnimation[];
 
   /* instance */
-  protected readonly container: Container;
+  readonly container: Container;
   protected placeholder?: Container;
 
   protected abstract getLabel(id: string): string;
@@ -36,7 +36,7 @@ export abstract class BaseVideoClip implements IVideoClipBase {
     this.container.label = this.getLabel(this.id);
   }
 
-  protected appendTo(parent: Container) {
+  appendTo(parent: Container) {
     parent.addChild(this.container);
   }
 
@@ -60,7 +60,7 @@ export abstract class BaseVideoClip implements IVideoClipBase {
     this.container.visible = false;
   }
 
-  protected destroy() {
+  destroy() {
     this.container.destroy(true);
   }
 

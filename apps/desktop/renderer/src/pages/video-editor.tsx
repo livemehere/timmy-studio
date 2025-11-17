@@ -3,7 +3,7 @@ import { StudioProvider } from '@renderer/lib/studio/contexts/StudioProvider';
 import { uid } from 'uid';
 import { PreviewRenderer } from '@renderer/lib/studio/components/PreviewRenderer';
 import { StudioDebugger } from '@renderer/lib/studio/components/StduioDebugger';
-import { Tracks } from '@renderer/lib/studio/components/Tracks';
+import { Tracks } from '@renderer/lib/studio/components/Track/Tracks';
 
 export default function VideoEditorPage() {
   return (

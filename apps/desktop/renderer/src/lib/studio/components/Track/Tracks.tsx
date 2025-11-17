@@ -1,9 +1,6 @@
 import { useStudio } from '@renderer/lib/studio/contexts/StudioProvider';
 import { useObservable } from '@renderer/lib/studio/hooks/useObservable';
-
-function Track({}: { track: Track }) {
-  return <div></div>;
-}
+import { Track } from '@renderer/lib/studio/components/Track/Track';
 
 export function Tracks() {
   const studio = useStudio();
@@ -11,9 +8,9 @@ export function Tracks() {
   console.log(tracks);
   return (
     <div>
-      {tracks.map((track) => {
-        return <div key={track.id}>{track.name}</div>;
-      })}
+      {tracks.map((track) => (
+        <Track key={track.id} track={track} />
+      ))}
     </div>
   );
 }
