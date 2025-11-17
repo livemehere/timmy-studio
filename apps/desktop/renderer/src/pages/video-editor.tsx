@@ -3,6 +3,7 @@ import { StudioProvider } from '@renderer/lib/studio/contexts/StudioProvider';
 import { uid } from 'uid';
 import { PreviewRenderer } from '@renderer/lib/studio/components/PreviewRenderer';
 import { StudioDebugger } from '@renderer/lib/studio/components/StduioDebugger';
+import { Tracks } from '@renderer/lib/studio/components/Tracks';
 
 export default function VideoEditorPage() {
   return (
@@ -79,7 +80,7 @@ export default function VideoEditorPage() {
           </Panel>
           <PanelResizeHandle className={'h-1 bg-neutral-950'} />
           <Panel className={'bg-neutral-900'} defaultSize={40}>
-            Bottom
+            <Tracks />
           </Panel>
         </PanelGroup>
       </div>
