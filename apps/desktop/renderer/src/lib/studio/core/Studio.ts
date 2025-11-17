@@ -1,5 +1,5 @@
 import { BehaviorSubject } from 'rxjs';
-import type { IProject, IStudio } from '../types';
+import type { IProject } from '../types';
 import { Timer } from '@renderer/lib/studio/core/Timer';
 import { Renderer } from '@renderer/lib/studio/core/Renderer';
 import { AudioManager } from '@renderer/lib/studio/core/AudioManager';
@@ -26,7 +26,7 @@ const DEFAULT_PROJECT: IProject = {
   assets: [],
 };
 
-export class Studio implements IStudio {
+export class Studio {
   readonly id$ = new BehaviorSubject<IProject['id']>(DEFAULT_PROJECT.id);
   readonly name$ = new BehaviorSubject<IProject['name']>(DEFAULT_PROJECT.name);
   readonly settings$ = new BehaviorSubject<IProject['settings']>(
@@ -65,6 +65,20 @@ export class Studio implements IStudio {
       this.assetManager
     );
     this.audioManager = new AudioManager();
+
+    this.setupSubscriptions();
+  }
+
+  private setupSubscriptions() {
+    this.settings$.subscribe(
+      ({ width, height, backgroundColor, duration, frameRate }) => {
+        this.renderer.resize(width, height);
+        this.renderer.backgroundColor = backgroundColor;
+        this.renderer.frameRate = frameRate;
+        this.timer.durationMs = duration;
+        // this.audioManager.setSampleRate(sampleRate);
+      }
+    );
   }
 
   updateProject(project: IProject) {

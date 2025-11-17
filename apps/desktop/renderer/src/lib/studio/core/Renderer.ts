@@ -55,12 +55,52 @@ export class Renderer {
     this.isInitialized = true;
   }
 
+  resize(width: number, height: number) {
+    if (!this.isInitialized) {
+      console.warn('[Renderer] setsize() called before init()');
+      return;
+    }
+    if (
+      width === this.app.renderer.width &&
+      height === this.app.renderer.height
+    ) {
+      return;
+    }
+
+    console.log('[Renderer] resize:', width, height);
+    this.app.renderer.resize(width, height);
+  }
+
+  set backgroundColor(color: string) {
+    if (!this.isInitialized) {
+      console.warn('[Renderer] setBackgroundColor() called before init()');
+      return;
+    }
+    if (this.app.renderer.background.color.value === color) {
+      return;
+    }
+
+    console.log('[Renderer] set backgroundColor:', color);
+    this.app.renderer.background.color = color;
+  }
+
+  set frameRate(frameRate: number) {
+    if (!this.isInitialized) {
+      console.warn('[Renderer] setFrameRate() called before init()');
+      return;
+    }
+    if (this.app.ticker.maxFPS === frameRate) {
+      return;
+    }
+    console.log('[Renderer] set frameRate:', frameRate);
+    this.app.ticker.maxFPS = frameRate;
+  }
+
   destroy() {
     if (!this.isInitialized) {
       console.warn('[Renderer] destroy() called before init()');
       return;
     }
-
     /* Renderer 는 PreviewRenderer, Studio 에서 중복 호출 될 수 있음으로 */
     if (!this.app || !this.app.stage) {
       console.warn('[Renderer] destroy() called but app is already destroyed');
