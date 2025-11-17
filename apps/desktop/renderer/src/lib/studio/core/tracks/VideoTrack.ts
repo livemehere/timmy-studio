@@ -10,7 +10,11 @@ export class VideoTrack implements IVideoTrack {
   id: string;
   name: string;
   locked: boolean;
-  clips = new Map<string, ShapeClip | VideoClip>();
+  private _clips = new Map<string, ShapeClip | VideoClip>();
+
+  get clips() {
+    return [...this._clips.values()];
+  }
 
   readonly container: Container;
   private readonly assetManager: AssetManager;
@@ -59,7 +63,7 @@ export class VideoTrack implements IVideoTrack {
     data.clips.forEach((clipData) => {
       const clip = this.instantiateClip(clipData);
       clip.appendTo(this.container);
-      this.clips.set(clipData.id, clip);
+      this._clips.set(clipData.id, clip);
     });
   }
 
@@ -68,33 +72,33 @@ export class VideoTrack implements IVideoTrack {
   }
 
   getClip(clipId: string) {
-    return this.clips.get(clipId);
+    return this._clips.get(clipId);
   }
 
   getClipContainer(clipId: string): Container | undefined {
-    return this.clips.get(clipId)?.container;
+    return this._clips.get(clipId)?.container;
   }
 
   addClip(clipData: IVideoClip) {
-    if (this.clips.has(clipData.id)) {
+    if (this._clips.has(clipData.id)) {
       console.warn(`[VideoTrack] Clip ${clipData.id} already exists`);
       return;
     }
     const clip = this.instantiateClip(clipData);
     clip.appendTo(this.container);
-    this.clips.set(clipData.id, clip);
+    this._clips.set(clipData.id, clip);
   }
 
   removeClip(clipId: string) {
-    const clip = this.clips.get(clipId);
+    const clip = this._clips.get(clipId);
     if (clip) {
       clip.destroy?.();
-      this.clips.delete(clipId);
+      this._clips.delete(clipId);
     }
   }
 
   setClipZIndex(clipId: string, zIndex: number) {
-    const clip = this.clips.get(clipId);
+    const clip = this._clips.get(clipId);
     if (clip?.container) {
       clip.container.zIndex = zIndex;
     }
@@ -129,12 +133,12 @@ export class VideoTrack implements IVideoTrack {
   }
 
   private update(timer: Timer) {
-    this.clips.forEach((clip) => clip.tick(timer));
+    this._clips.forEach((clip) => clip.tick(timer));
   }
 
   destroy() {
-    this.clips.forEach((clip) => clip.destroy?.());
-    this.clips.clear();
+    this._clips.forEach((clip) => clip.destroy?.());
+    this._clips.clear();
     this.container.destroy();
   }
 }

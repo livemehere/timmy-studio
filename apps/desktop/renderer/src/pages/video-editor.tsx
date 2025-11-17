@@ -11,7 +11,21 @@ export default function VideoEditorPage() {
       initialProject={{
         id: uid(4),
         name: 'sample project',
-        assets: [],
+        assets: [
+          {
+            id: 'sample-video-asset',
+            name: 'Sample Video',
+            type: 'video',
+            filePath:
+              'source://open?path=%2FUsers%2Fdeveloper%2FDownloads%2Ftarget.MOV',
+            proxyFilePath:
+              'source://open?path=%2FUsers%2Fdeveloper%2FDownloads%2Fgood-2.mp4',
+            metadata: {
+              size: 1000,
+              createdAt: new Date().toISOString(),
+            },
+          },
+        ],
         metadata: {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -37,6 +51,21 @@ export default function VideoEditorPage() {
             zIndex: 0,
             opacity: 1,
             clips: [
+              {
+                id: uid(4),
+                name: 'Video1',
+                type: 'video',
+                startTime: 0,
+                endTime: 60000,
+                assetId: 'sample-video-asset',
+                transforms: {
+                  position: { x: 0, y: 0 },
+                  size: {
+                    width: 540,
+                    height: 960,
+                  },
+                },
+              },
               {
                 id: 'rect',
                 name: 'Rectangle Shape',
