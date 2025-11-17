@@ -5,7 +5,6 @@ import { Track } from '@renderer/lib/studio/components/Track/Track';
 export function Tracks() {
   const studio = useStudio();
   const tracks = useObservable(studio.tracks$, studio.tracks$.value);
-  console.log(tracks);
   return (
     <div>
       {tracks.map((track) => (
