@@ -5,11 +5,15 @@ export class AssetManager {
 
   constructor(initialAssets: IAsset[] = []) {
     this.assets = new Map();
-    initialAssets.forEach((asset) => this.assets.set(asset.id, asset));
+    initialAssets.forEach((asset) => {
+      this.addAsset(asset);
+    });
+    console.log(`[AssetManager] initialized with ${this.assets.size} assets`);
   }
 
   addAsset(asset: IAsset): void {
     this.assets.set(asset.id, asset);
+    console.log(`[AssetManager] Asset added: ${asset.id}`);
   }
 
   getAssetById<T = IAsset>(id: string) {

@@ -5,12 +5,13 @@ import type { Timer } from '@renderer/lib/studio/core/Timer';
 import type { AssetManager } from '@renderer/lib/studio/core/AssetManager';
 
 export class Renderer {
+  private isInitialized = false;
   private app: Application;
   private sceneContainer: Container;
   private tracks: VideoTrack[] = [];
 
-  private readonly timer: Timer;
-  private readonly assetManager: AssetManager;
+  private timer: Timer;
+  private assetManager: AssetManager;
 
   static readonly LABELS = {
     SCENE_CONTAINER: 'SCENE_CONTAINER',
@@ -51,16 +52,28 @@ export class Renderer {
       resizeTo: undefined,
     });
     this.startLoop();
+    this.isInitialized = true;
   }
 
   destroy() {
+    if (!this.isInitialized) {
+      console.warn('[Renderer] destroy() called before init()');
+      return;
+    }
+
     /* Renderer 는 PreviewRenderer, Studio 에서 중복 호출 될 수 있음으로 */
-    if (!this.app || !this.app.stage) return;
-    console.log('[Renderer] destroy()');
+    if (!this.app || !this.app.stage) {
+      console.warn('[Renderer] destroy() called but app is already destroyed');
+      return;
+    }
+
     this.app.destroy(true);
-    this.app = null as unknown as Application;
-    this.sceneContainer = null as unknown as Container;
+    this.app = null as any;
+    this.sceneContainer = null as any;
+    this.timer = null as any;
+    this.assetManager = null as any;
     this.tracks = [];
+    console.log('[Renderer] destroy()');
   }
 
   private startLoop() {
