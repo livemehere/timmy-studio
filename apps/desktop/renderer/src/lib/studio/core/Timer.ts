@@ -1,53 +1,58 @@
 import { BehaviorSubject } from 'rxjs';
 
-export class Timer {
-  private currentTimeMs$ = new BehaviorSubject<number>(0);
-  private _durationMs: number;
+export interface ITimer {
+  currentMs: number;
+  isPlaying: boolean;
+  durationMs: number;
+  play(): void;
+  pause(): void;
+  resume(): void;
+  seek(ms: number): void;
+  reset(): void;
+  destroy(): void;
+}
 
-  private _isPlaying = false;
+export class Timer implements ITimer {
+  readonly currentMs$ = new BehaviorSubject<number>(0);
+  readonly durationMs$ = new BehaviorSubject<number>(0);
+  readonly isPlaying$ = new BehaviorSubject<boolean>(false);
+
   private animationFrameId: number | null = null;
   private lastTimestamp: number | null = null;
 
   constructor(duration: number) {
     console.log(`[Timer] new Timer(${duration})`);
-    this._durationMs = duration;
+    this.durationMs$.next(duration);
   }
 
   get currentMs() {
-    return this.currentTimeMs$.value;
+    return this.currentMs$.value;
   }
 
   get isPlaying() {
-    return this._isPlaying;
+    return this.isPlaying$.value;
   }
 
   get durationMs() {
-    return this._durationMs;
+    return this.durationMs$.value;
   }
 
   set durationMs(ms: number) {
-    this._durationMs = ms;
-  }
-
-  subscribe(callback: (time: number) => void) {
-    const subscription = this.currentTimeMs$.subscribe(callback);
-    return () => {
-      subscription.unsubscribe();
-    };
+    this.durationMs$.next(ms);
   }
 
   play() {
-    if (this._isPlaying) return;
+    if (this.isPlaying$.value) return;
 
-    this._isPlaying = true;
+    this.isPlaying$.next(true);
     this.lastTimestamp = performance.now();
     this.tick();
   }
 
   pause() {
-    if (!this._isPlaying) return;
+    if (!this.isPlaying$.value) return;
 
-    this._isPlaying = false;
+    this.isPlaying$.next(false);
     this.lastTimestamp = null;
 
     if (this.animationFrameId !== null) {
@@ -61,28 +66,28 @@ export class Timer {
   }
 
   seek(ms: number) {
-    this.currentTimeMs$.next(ms);
+    this.currentMs$.next(ms);
   }
 
   reset() {
     this.pause();
-    this.currentTimeMs$.next(0);
+    this.currentMs$.next(0);
   }
 
   private tick = () => {
-    if (!this._isPlaying) return;
+    if (!this.isPlaying$.value) return;
 
     const now = performance.now();
     if (this.lastTimestamp !== null) {
       const deltaTime = now - this.lastTimestamp;
       const newTime = Math.min(
-        this.currentTimeMs$.value + deltaTime,
-        this._durationMs
+        this.currentMs$.value + deltaTime,
+        this.durationMs$.value
       );
-      this.currentTimeMs$.next(newTime);
+      this.currentMs$.next(newTime);
 
       // Auto-stop when reaching duration
-      if (newTime >= this._durationMs) {
+      if (newTime >= this.durationMs$.value) {
         this.pause();
         return;
       }
@@ -95,6 +100,8 @@ export class Timer {
   destroy() {
     console.log('[Timer] destroyed');
     this.pause();
-    this.currentTimeMs$.complete();
+    this.currentMs$.complete();
+    this.isPlaying$.complete();
+    this.durationMs$.complete();
   }
 }

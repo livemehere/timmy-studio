@@ -31,7 +31,7 @@ export function PreviewRenderer() {
   }, []);
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center">
+    <div className="relative w-full h-[calc(100%-26px)] flex items-center justify-center">
       <div
         className={
           'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 text-shadow-lg text-shadow-blue-600/50'

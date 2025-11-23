@@ -3,7 +3,6 @@ import type { IProject } from '@renderer/lib/studio/types';
 import { uid } from 'uid';
 import { StudioProvider } from '@renderer/lib/studio/contexts/StudioProvider';
 import { PreviewRenderer } from '@renderer/lib/studio/components/PreviewRenderer';
-import { Updater } from '@renderer/lib/studio/components/Updater';
 
 function createInitialProject(): IProject {
   return {
@@ -109,7 +108,6 @@ export default function VideoPlayerPage() {
     <StudioProvider initialProject={project}>
       <div>
         <PreviewRenderer />
-        <Updater />
       </div>
     </StudioProvider>
   );

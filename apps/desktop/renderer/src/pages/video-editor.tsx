@@ -4,6 +4,9 @@ import { uid } from 'uid';
 import { PreviewRenderer } from '@renderer/lib/studio/components/PreviewRenderer';
 import { StudioDebugger } from '@renderer/lib/studio/components/StduioDebugger';
 import { Tracks } from '@renderer/lib/studio/components/Track/Tracks';
+import { ActionBar } from '@renderer/lib/studio/components/ActionBar';
+import { Timeline } from '@renderer/lib/studio/components/Timeline';
+import { TimerActionBar } from '@renderer/lib/studio/components/TimerActionBar';
 
 export default function VideoEditorPage() {
   return (
@@ -100,6 +103,7 @@ export default function VideoEditorPage() {
               <PanelResizeHandle className={'w-1 bg-neutral-950'} />
               <Panel className={'bg-neutral-900'}>
                 <PreviewRenderer />
+                <TimerActionBar />
               </Panel>
               <PanelResizeHandle className={'w-1 bg-neutral-950'} />
               <Panel className={'bg-neutral-900'} defaultSize={25}>
@@ -109,6 +113,8 @@ export default function VideoEditorPage() {
           </Panel>
           <PanelResizeHandle className={'h-1 bg-neutral-950'} />
           <Panel className={'bg-neutral-900'} defaultSize={40}>
+            <ActionBar />
+            <Timeline />
             <Tracks />
           </Panel>
         </PanelGroup>
