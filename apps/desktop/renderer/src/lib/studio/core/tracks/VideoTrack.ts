@@ -1,21 +1,27 @@
 import type { IVideoClip, IVideoTrack } from '@renderer/lib/studio/types';
-import type { PlaybackContext } from '@renderer/lib/studio/core/Timer';
 import { ShapeClip } from '@renderer/lib/studio/core/clips/ShapeClip';
-import { TextClip } from '@renderer/lib/studio/core/clips/TextClip';
-import { ImageClip } from '@renderer/lib/studio/core/clips/ImageClip';
-import { VideoMediaClip } from '@renderer/lib/studio/core/clips/VideoMediaClip';
 import { Container } from 'pixi.js';
-
-type VideoClip = ShapeClip | TextClip | ImageClip | VideoMediaClip;
+import { VideoClip } from '../clips/VideoClip';
+import type { AssetManager } from '@renderer/lib/studio/core/AssetManager';
+import type { Timer } from '@renderer/lib/studio/core/Timer';
 
 export class VideoTrack implements IVideoTrack {
   type: 'video' = 'video';
   id: string;
   name: string;
   locked: boolean;
-  clips: VideoClip[];
+  private _clips = new Map<string, ShapeClip | VideoClip>();
 
-  private container: Container = new Container();
+  get clips() {
+    return [...this._clips.values()];
+  }
+
+  readonly container: Container;
+  private readonly assetManager: AssetManager;
+
+  static getLabel(id: string) {
+    return `VideoTrack-${id}`;
+  }
 
   get enabled() {
     return this.container.visible;
@@ -41,61 +47,98 @@ export class VideoTrack implements IVideoTrack {
     this.container.zIndex = value;
   }
 
-  constructor(props: IVideoTrack) {
-    this.id = props.id;
-    this.locked = props.locked;
-    this.name = props.name;
+  constructor(data: IVideoTrack, assetManager: AssetManager) {
+    this.assetManager = assetManager;
 
-    this.enabled = props.enabled;
-    this.opacity = props.opacity;
-    this.zIndex = props.zIndex;
+    this.container = new Container();
+    this.container.label = VideoTrack.getLabel(data.id);
 
-    this.clips = this.instantiateClips(props.clips);
-    this.clips.forEach((clip) => {
-      clip.add(this.container);
+    this.id = data.id;
+    this.locked = data.locked;
+    this.name = data.name;
+    this.enabled = data.enabled;
+    this.opacity = data.opacity;
+    this.zIndex = data.zIndex;
+
+    data.clips.forEach((clipData) => {
+      const clip = this.instantiateClip(clipData);
+      clip.appendTo(this.container);
+      this._clips.set(clipData.id, clip);
     });
   }
 
-  add(parent: Container) {
+  appendTo(parent: Container) {
     parent.addChild(this.container);
   }
 
-  private instantiateClips(clips: IVideoClip[]) {
-    return clips.map((props) => {
-      if (props.type === 'shape') {
-        return new ShapeClip(props);
-      }
-      if (props.type === 'text') {
-        return new TextClip(props);
-      }
-      if (props.type === 'image') {
-        return new ImageClip(props);
-      }
-      if (props.type === 'video') {
-        return new VideoMediaClip(props);
-      }
-      throw new Error(`Unsupported clip type: ${props.type}`);
-    });
+  getClip(clipId: string) {
+    return this._clips.get(clipId);
   }
 
-  show() {
+  getClipContainer(clipId: string): Container | undefined {
+    return this._clips.get(clipId)?.container;
+  }
+
+  addClip(clipData: IVideoClip) {
+    if (this._clips.has(clipData.id)) {
+      console.warn(`[VideoTrack] Clip ${clipData.id} already exists`);
+      return;
+    }
+    const clip = this.instantiateClip(clipData);
+    clip.appendTo(this.container);
+    this._clips.set(clipData.id, clip);
+  }
+
+  removeClip(clipId: string) {
+    const clip = this._clips.get(clipId);
+    if (clip) {
+      clip.destroy?.();
+      this._clips.delete(clipId);
+    }
+  }
+
+  setClipZIndex(clipId: string, zIndex: number) {
+    const clip = this._clips.get(clipId);
+    if (clip?.container) {
+      clip.container.zIndex = zIndex;
+    }
+  }
+
+  private instantiateClip(props: IVideoClip) {
+    if (props.type === 'shape') {
+      return new ShapeClip(props);
+    } else if (props.type === 'video') {
+      return new VideoClip(props, this.assetManager);
+    }
+    throw new Error(`Unsupported clip type: ${props.type}`);
+  }
+
+  tick(timer: Timer) {
+    if (this.enabled) {
+      this.show();
+      this.update(timer);
+    } else {
+      this.hide();
+    }
+  }
+
+  private show() {
     if (this.container.visible) return;
     this.container.visible = true;
   }
 
-  hide() {
+  private hide() {
     if (!this.container.visible) return;
     this.container.visible = false;
   }
 
-  update(context: PlaybackContext) {
-    this.clips.forEach((clip) => {
-      if (context.currentTime >= clip.startTime && context.currentTime <= clip.endTime) {
-        clip.show();
-        clip.update(context);
-      } else {
-        clip.hide();
-      }
-    });
+  private update(timer: Timer) {
+    this._clips.forEach((clip) => clip.tick(timer));
+  }
+
+  destroy() {
+    this._clips.forEach((clip) => clip.destroy?.());
+    this._clips.clear();
+    this.container.destroy();
   }
 }

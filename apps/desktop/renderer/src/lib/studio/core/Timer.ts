@@ -1,68 +1,58 @@
 import { BehaviorSubject } from 'rxjs';
 
-export type PlaybackMode = 'playing' | 'seeking' | 'paused';
-
-export interface PlaybackContext {
-  currentTime: number;
-  mode: PlaybackMode;
+export interface ITimer {
+  currentMs: number;
+  isPlaying: boolean;
+  durationMs: number;
+  play(): void;
+  pause(): void;
+  resume(): void;
+  seek(ms: number): void;
+  reset(): void;
+  destroy(): void;
 }
 
-export class Timer {
-  private currentTime$ = new BehaviorSubject<number>(0);
-  private playbackMode$ = new BehaviorSubject<PlaybackMode>('paused');
-  private isPlaying = false;
+export class Timer implements ITimer {
+  readonly currentMs$ = new BehaviorSubject<number>(0);
+  readonly durationMs$ = new BehaviorSubject<number>(0);
+  readonly isPlaying$ = new BehaviorSubject<boolean>(false);
+
   private animationFrameId: number | null = null;
   private lastTimestamp: number | null = null;
-  private duration: number;
 
   constructor(duration: number) {
-    this.duration = duration;
+    console.log(`[Timer] new Timer(${duration})`);
+    this.durationMs$.next(duration);
   }
 
-  get current() {
-    return this.currentTime$.value;
+  get currentMs() {
+    return this.currentMs$.value;
   }
 
-  get playing() {
-    return this.isPlaying;
+  get isPlaying() {
+    return this.isPlaying$.value;
   }
 
-  get mode(): PlaybackMode {
-    return this.playbackMode$.value;
+  get durationMs() {
+    return this.durationMs$.value;
   }
 
-  get context(): PlaybackContext {
-    return {
-      currentTime: this.current,
-      mode: this.mode,
-    };
-  }
-
-  setDuration(duration: number) {
-    this.duration = duration;
-  }
-
-  subscribe(callback: (time: number) => void) {
-    const subscription = this.currentTime$.subscribe(callback);
-    return () => {
-      subscription.unsubscribe();
-    };
+  set durationMs(ms: number) {
+    this.durationMs$.next(ms);
   }
 
   play() {
-    if (this.isPlaying) return;
+    if (this.isPlaying$.value) return;
 
-    this.isPlaying = true;
-    this.playbackMode$.next('playing');
+    this.isPlaying$.next(true);
     this.lastTimestamp = performance.now();
     this.tick();
   }
 
   pause() {
-    if (!this.isPlaying) return;
+    if (!this.isPlaying$.value) return;
 
-    this.isPlaying = false;
-    this.playbackMode$.next('paused');
+    this.isPlaying$.next(false);
     this.lastTimestamp = null;
 
     if (this.animationFrameId !== null) {
@@ -76,36 +66,28 @@ export class Timer {
   }
 
   seek(ms: number) {
-    // Set mode to seeking temporarily
-    this.playbackMode$.next('seeking');
-    this.currentTime$.next(ms);
-
-    // Reset mode back to previous state after a short delay
-    setTimeout(() => {
-      if (this.isPlaying) {
-        this.playbackMode$.next('playing');
-      } else {
-        this.playbackMode$.next('paused');
-      }
-    }, 100);
+    this.currentMs$.next(ms);
   }
 
   reset() {
     this.pause();
-    this.currentTime$.next(0);
+    this.currentMs$.next(0);
   }
 
   private tick = () => {
-    if (!this.isPlaying) return;
+    if (!this.isPlaying$.value) return;
 
     const now = performance.now();
     if (this.lastTimestamp !== null) {
       const deltaTime = now - this.lastTimestamp;
-      const newTime = Math.min(this.currentTime$.value + deltaTime, this.duration);
-      this.currentTime$.next(newTime);
+      const newTime = Math.min(
+        this.currentMs$.value + deltaTime,
+        this.durationMs$.value
+      );
+      this.currentMs$.next(newTime);
 
       // Auto-stop when reaching duration
-      if (newTime >= this.duration) {
+      if (newTime >= this.durationMs$.value) {
         this.pause();
         return;
       }
@@ -116,7 +98,10 @@ export class Timer {
   };
 
   destroy() {
+    console.log('[Timer] destroyed');
     this.pause();
-    this.currentTime$.complete();
+    this.currentMs$.complete();
+    this.isPlaying$.complete();
+    this.durationMs$.complete();
   }
 }

@@ -1,8 +1,124 @@
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { StudioProvider } from '@renderer/lib/studio/contexts/StudioProvider';
+import { uid } from 'uid';
+import { PreviewRenderer } from '@renderer/lib/studio/components/PreviewRenderer';
+import { StudioDebugger } from '@renderer/lib/studio/components/StduioDebugger';
+import { Tracks } from '@renderer/lib/studio/components/Track/Tracks';
+import { ActionBar } from '@renderer/lib/studio/components/ActionBar';
+import { Timeline } from '@renderer/lib/studio/components/Timeline';
+import { TimerActionBar } from '@renderer/lib/studio/components/TimerActionBar';
+
 export default function VideoEditorPage() {
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Video Editor</h1>
-      <p>This is the video editor page.</p>
-    </div>
+    <StudioProvider
+      initialProject={{
+        id: uid(4),
+        name: 'sample project',
+        assets: [
+          {
+            id: 'sample-video-asset',
+            name: 'Sample Video',
+            type: 'video',
+            filePath:
+              'source://open?path=%2FUsers%2Fdeveloper%2FDownloads%2Ftarget.MOV',
+            proxyFilePath:
+              'source://open?path=%2FUsers%2Fdeveloper%2FDownloads%2Fgood-2.mp4',
+            metadata: {
+              size: 1000,
+              createdAt: new Date().toISOString(),
+            },
+          },
+        ],
+        metadata: {
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        settings: {
+          // width: 1920,
+          // height: 1080,
+          // 새로형
+          width: 720,
+          height: 1280,
+          frameRate: 30,
+          sampleRate: 44100,
+          duration: 1000 * 60,
+          background: '#000000',
+        },
+        tracks: [
+          {
+            id: 'video-track-1',
+            name: 'Video Track 1',
+            type: 'video',
+            enabled: true,
+            locked: false,
+            zIndex: 0,
+            opacity: 1,
+            clips: [
+              {
+                id: uid(4),
+                name: 'Video1',
+                type: 'video',
+                startTime: 0,
+                endTime: 60000,
+                assetId: 'sample-video-asset',
+                transforms: {
+                  position: { x: 0, y: 0 },
+                  size: {
+                    width: 540,
+                    height: 960,
+                  },
+                },
+              },
+              {
+                id: 'rect',
+                name: 'Rectangle Shape',
+                type: 'shape',
+                startTime: 0,
+                endTime: 10000,
+                transforms: {
+                  position: { x: 100, y: 100 },
+                  size: { width: 400, height: 300 },
+                  rotation: 0,
+                },
+                shapeData: {
+                  shapeType: 'rectangle',
+                  width: 100,
+                  height: 100,
+                  color: 'red',
+                },
+              },
+            ],
+          },
+        ],
+      }}
+    >
+      <div className="h-full p-2 overflow-hidden">
+        <StudioDebugger />
+        <PanelGroup direction={'vertical'}>
+          <Panel>
+            <PanelGroup direction={'horizontal'}>
+              <Panel className={'bg-neutral-900'} defaultSize={30}>
+                Resources
+              </Panel>
+              <PanelResizeHandle className={'w-1 bg-neutral-950'} />
+              <Panel className={'bg-neutral-900'}>
+                <PreviewRenderer />
+                <TimerActionBar />
+              </Panel>
+              <PanelResizeHandle className={'w-1 bg-neutral-950'} />
+              <Panel className={'bg-neutral-900'} defaultSize={25}>
+                Properties
+              </Panel>
+            </PanelGroup>
+          </Panel>
+          <PanelResizeHandle className={'h-1 bg-neutral-950'} />
+          <Panel className={'bg-neutral-900'} defaultSize={40}>
+            <ActionBar />
+            <Timeline />
+            <Tracks />
+          </Panel>
+        </PanelGroup>
+      </div>
+    </StudioProvider>
   );
 }

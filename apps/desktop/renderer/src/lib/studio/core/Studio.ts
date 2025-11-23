@@ -1,171 +1,111 @@
-import isEqual from 'fast-deep-equal';
-import { Application, Container } from 'pixi.js';
 import { BehaviorSubject } from 'rxjs';
-import { distinctUntilChanged } from 'rxjs/operators';
 import type { IProject } from '../types';
-import { PIXI_LABELS } from '@renderer/lib/studio/constants';
-import { VideoTrack } from '@renderer/lib/studio/core/tracks/VideoTrack';
 import { Timer } from '@renderer/lib/studio/core/Timer';
-import { ImageAsset } from '@renderer/lib/studio/core/assets/ImageAsset';
-import { VideoAsset } from '@renderer/lib/studio/core/assets/VideoAsset';
+import { Renderer } from '@renderer/lib/studio/core/Renderer';
+import { AudioManager } from '@renderer/lib/studio/core/AudioManager';
+import { AssetManager } from '@renderer/lib/studio/core/AssetManager';
 
-type Asset = ImageAsset | VideoAsset;
+const DEFAULT_PROJECT: IProject = {
+  id: 'default-project',
+  name: 'New Project',
+  settings: {
+    width: 1280,
+    height: 720,
+    frameRate: 30,
+    sampleRate: 44100,
+    duration: 60000,
+    background: '#000000',
+  },
+  metadata: {
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    author: 'unknown',
+    description: '',
+  },
+  tracks: [],
+  assets: [],
+};
 
 export class Studio {
-  initialized = false;
+  readonly id$ = new BehaviorSubject<IProject['id']>(DEFAULT_PROJECT.id);
+  readonly name$ = new BehaviorSubject<IProject['name']>(DEFAULT_PROJECT.name);
+  readonly settings$ = new BehaviorSubject<IProject['settings']>(
+    DEFAULT_PROJECT.settings
+  );
+  readonly tracks$ = new BehaviorSubject<IProject['tracks']>(
+    DEFAULT_PROJECT.tracks
+  );
+  readonly metadata$ = new BehaviorSubject<IProject['metadata']>(
+    DEFAULT_PROJECT.metadata
+  );
+  readonly assets$ = new BehaviorSubject<IProject['assets']>(
+    DEFAULT_PROJECT.assets
+  );
 
-  project$: BehaviorSubject<IProject>;
-  timer: Timer;
+  readonly timer: Timer;
+  readonly renderer: Renderer;
+  readonly audioManager: AudioManager;
+  readonly assetManager: AssetManager;
 
-  app: Application;
-  videoTracks: VideoTrack[] = [];
+  constructor(initial: IProject) {
+    console.log('[Studio] new Studio()');
 
-  private sceneContainer: Container;
+    this.id$.next(initial.id);
+    this.name$.next(initial.name);
+    this.settings$.next(initial.settings);
+    this.tracks$.next(initial.tracks);
+    this.metadata$.next(initial.metadata);
+    this.assets$.next(initial.assets);
 
-  // Asset management
-  private static assetMap: Map<string, Asset> = new Map();
-  private static idMap: Map<string, any> = new Map();
-
-  static getById<T>(id: string): T | undefined {
-    return Studio.idMap.get(id);
+    this.assetManager = new AssetManager(initial.assets);
+    this.timer = new Timer(initial.settings.duration);
+    this.renderer = new Renderer(
+      initial.tracks.filter((track) => track.type === 'video'),
+      this.timer,
+      this.assetManager
+    );
+    this.audioManager = new AudioManager();
+    this.setupSubscriptions();
   }
 
-  static removeById(id: string) {
-    Studio.idMap.delete(id);
+  private setupSubscriptions() {
+    this.settings$.subscribe(() => {
+      const { width, height, background, duration, frameRate, sampleRate } =
+        this.settings$.value;
+
+      /* renderer.init() 이후 캔버스 변경사항에 대해서 구독 */
+      this.renderer.resize(width, height);
+      this.renderer.background = background;
+      this.renderer.frameRate = frameRate;
+
+      /* studio 생성 이후에 변경사항에 대해서 구독 */
+      this.timer.durationMs = duration;
+      this.audioManager.sampleRate = sampleRate;
+    });
   }
 
-  static getAsset(assetId: string): Asset | undefined {
-    return Studio.assetMap.get(assetId);
-  }
-
-  static registerAsset(asset: Asset): void {
-    Studio.assetMap.set(asset.id, asset);
-  }
-
-  static removeAsset(assetId: string): void {
-    const asset = Studio.assetMap.get(assetId);
-    if (asset) {
-      asset.destroy();
-      Studio.assetMap.delete(assetId);
-    }
-  }
-
-  static clearAssets(): void {
-    Studio.assetMap.forEach((asset) => asset.destroy());
-    Studio.assetMap.clear();
-  }
-
-  constructor(props: { project: IProject }) {
-    this.project$ = new BehaviorSubject<IProject>(props.project);
-    this.timer = new Timer(props.project.settings.duration);
-    this.app = new Application();
-    this.sceneContainer = new Container();
-
-    // Initialize assets
-    this.instantiateAssets(props.project.assets);
+  updateProject(project: IProject) {
+    console.log('[Studio] updateProject()');
+    this.id$.next(project.id);
+    this.name$.next(project.name);
+    this.settings$.next(project.settings);
+    this.tracks$.next(project.tracks);
+    this.metadata$.next(project.metadata);
+    this.assets$.next(project.assets);
   }
 
   destroy() {
-    this.project$.complete();
+    console.log('[Studio] destroyed');
+
+    this.id$.complete();
+    this.name$.complete();
+    this.settings$.complete();
+    this.tracks$.complete();
+    this.metadata$.complete();
+    this.assets$.complete();
+
     this.timer.destroy();
-    this.destroyRenderer();
-    Studio.clearAssets();
-  }
-
-  destroyRenderer() {
-    if (this.app.stage !== null) {
-      this.app.destroy(true);
-      this.sceneContainer.destroy(true);
-      console.log('[Studio] pixi destroyed');
-    }
-  }
-
-  async initRenderer({ canvas }: { canvas: HTMLCanvasElement }) {
-    if (this.app.stage == null) {
-      console.log('[Studio] init pixi application');
-      this.app = new Application();
-    }
-
-    const project = this.project$.getValue();
-    await this.app.init({
-      canvas,
-      width: project.settings.width,
-      height: project.settings.height,
-      background: project.settings.backgroundColor,
-    });
-
-    if (this.sceneContainer.destroyed) {
-      console.log('[Studio] recreate scene container');
-      this.sceneContainer = new Container();
-    }
-
-    this.sceneContainer.label = PIXI_LABELS.SCENE_CONTAINER;
-    this.app.stage.addChild(this.sceneContainer);
-
-    this.subscribeToProject();
-    this.instantiateVideoTracks();
-    this.startUpdateLoop();
-  }
-
-  private subscribeToProject() {
-    this.project$.pipe(distinctUntilChanged(isEqual)).subscribe((project) => {
-      console.log('[Studio] project updated, rebuilding scene');
-      this.timer.setDuration(project.settings.duration);
-      this.rebuildScene(project);
-    });
-  }
-
-  private instantiateAssets(assets: IProject['assets']) {
-    // Clear existing assets
-    Studio.clearAssets();
-
-    // Create and register new assets
-    assets.forEach((assetProps) => {
-      if (assetProps.type === 'image') {
-        const asset = new ImageAsset(assetProps);
-        Studio.registerAsset(asset);
-        asset.preload();
-      } else if (assetProps.type === 'video') {
-        const asset = new VideoAsset(assetProps);
-        Studio.registerAsset(asset);
-        asset.preload();
-      }
-      // TODO: Handle audio assets
-    });
-
-    console.log('[Studio] Assets instantiated:', assets.length);
-  }
-
-  private instantiateVideoTracks() {
-    this.videoTracks = this.project$.value.tracks
-      .filter((t) => t.type === 'video')
-      .map((props) => new VideoTrack(props));
-    this.videoTracks.forEach((track) => {
-      track.add(this.sceneContainer);
-    });
-  }
-
-  private startUpdateLoop() {
-    this.app.ticker.add(() => {
-      // Get playback context from timer
-      const context = this.timer.context;
-
-      this.videoTracks.forEach((track) => {
-        if (track.enabled) {
-          track.show();
-          track.update(context);
-        } else {
-          track.hide();
-        }
-      });
-    });
-  }
-
-  private rebuildScene(newProject: IProject) {
-    // FIXME: 인스턴스화 한 videoTracks 내부에서처리 필요
-    this.sceneContainer.removeChildren();
-    Studio.idMap.clear();
-
-    // TODO: video, audio 각각 초기화
+    this.renderer.destroy();
+    this.audioManager.destroy();
   }
 }

@@ -1,4 +1,8 @@
 // ============================================================================
+// Studio
+// ============================================================================
+
+// ============================================================================
 // Project
 // ============================================================================
 
@@ -17,7 +21,7 @@ export interface IProjectSettings {
   frameRate: number;
   sampleRate: number;
   duration: number;
-  backgroundColor: string;
+  background: string;
 }
 
 export interface IProjectMetadata {
@@ -79,8 +83,8 @@ export interface IVideoClipBase extends IBaseClip {
 export interface IVideoMediaClip extends IVideoClipBase {
   type: 'video';
   assetId: string;
-  trimStart: number;
-  trimEnd: number;
+  trimStart?: number;
+  trimEnd?: number;
 }
 
 export interface IImageClip extends IVideoClipBase {
@@ -115,9 +119,13 @@ export interface IAudioClip extends IBaseClip {
 // ============================================================================
 
 export interface ITransform {
-  position: {
+  position?: {
     x: number;
     y: number;
+  };
+  size?: {
+    width: number;
+    height: number;
   };
   scaleX?: number;
   scaleY?: number;
@@ -185,6 +193,7 @@ export interface IBaseAsset {
 
 export interface IVideoAsset extends IBaseAsset {
   type: 'video';
+  proxyFilePath?: string;
 }
 
 export interface IAudioAsset extends IBaseAsset {
