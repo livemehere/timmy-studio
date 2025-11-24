@@ -27,4 +27,9 @@ export class AssetManager {
   listAssets(): IAsset[] {
     return Array.from(this.assets.values());
   }
+
+  destroy(): void {
+    this.assets.clear();
+    console.log('[AssetManager] destroyed and all assets cleared');
+  }
 }
