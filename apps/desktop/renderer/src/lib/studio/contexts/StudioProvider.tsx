@@ -108,6 +108,16 @@ export function useTrack(trackId: string) {
   );
 }
 
+export function useClip(clipId: string) {
+  return useDocStore((state) => {
+    for (const track of state.tracks) {
+      const clip = track.clips.find((c) => c.id === clipId);
+      if (clip) return clip;
+    }
+    return undefined;
+  });
+}
+
 /**
  * 개별 asset을 id 기반으로 선택하는 hook (리렌더 최소화)
  */

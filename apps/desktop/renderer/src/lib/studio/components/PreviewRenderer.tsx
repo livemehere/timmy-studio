@@ -1,34 +1,25 @@
 import { useEffect, useRef } from 'react';
-import { useStudio } from '../contexts/StudioProvider';
-import { useObservable } from '@renderer/lib/studio/hooks/useObservable';
+import { useDocStore, useEngineStore } from '../contexts/StudioProvider';
 import { cn } from '@renderer/utils/cn';
 
 export function PreviewRenderer() {
-  const studio = useStudio();
-  const size = useObservable(
-    studio.settings$,
-    {
-      w: studio.settings$.value.width,
-      h: studio.settings$.value.height,
-    },
-    (p) => ({
-      w: p.width,
-      h: p.height,
-    })
-  );
+  const settings = useDocStore((state) => state.settings);
+  const renderer = useEngineStore((state) => state.renderer);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const { width, height, background, frameRate } = studio.settings$.value;
-    studio.renderer
-      .init(canvasRef.current!, width, height, background, frameRate)
+    if (!renderer || !canvasRef.current) return;
+
+    const { width, height, background, frameRate } = settings;
+    renderer
+      .init(canvasRef.current, width, height, background, frameRate)
       .catch((e) => {
         console.error('[PreviewRenderer] renderer init error', e);
       });
     return () => {
-      studio.renderer.destroy();
+      renderer.destroy();
     };
-  }, []);
+  }, [renderer]);
 
   return (
     <div className="relative w-full h-[calc(100%-26px)] flex items-center justify-center">
@@ -37,13 +28,13 @@ export function PreviewRenderer() {
           'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 text-shadow-lg text-shadow-blue-600/50'
         }
       >
-        {size.w} x {size.h}
+        {settings.width} x {settings.height}
       </div>
       <canvas
         ref={canvasRef}
         className={cn({
-          'w-full h-auto': size.w >= size.h,
-          'w-auto h-full': size.w < size.h,
+          'w-full h-auto': settings.width >= settings.height,
+          'w-auto h-full': settings.width < settings.height,
         })}
       ></canvas>
     </div>

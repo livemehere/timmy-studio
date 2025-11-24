@@ -1,32 +1,36 @@
-import { useStudio } from '@renderer/lib/studio/contexts/StudioProvider';
+import { useEngineStore } from '@renderer/lib/studio/contexts/StudioProvider';
 import { PauseIcon, PlayIcon } from 'lucide-react';
-import { useObservable } from '@renderer/lib/studio/hooks/useObservable';
+import { useState, useEffect } from 'react';
 
 export function TimerActionBar() {
-  const studio = useStudio();
+  const timer = useEngineStore((state) => state.timer);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentMs, setCurrentMs] = useState(0);
+  const [duration, setDuration] = useState(0);
 
-  const isPlaying = useObservable(
-    studio.timer.isPlaying$,
-    studio.timer.isPlaying
-  );
+  // Timer 상태 구독 (고주파 업데이트)
+  useEffect(() => {
+    if (!timer) return;
+
+    const unsubscribeIsPlaying = timer.isPlaying$.subscribe(setIsPlaying);
+    const unsubscribeCurrentMs = timer.currentMs$.subscribe(setCurrentMs);
+    const unsubscribeDuration = timer.durationMs$.subscribe(setDuration);
+
+    return () => {
+      unsubscribeIsPlaying.unsubscribe();
+      unsubscribeCurrentMs.unsubscribe();
+      unsubscribeDuration.unsubscribe();
+    };
+  }, [timer]);
 
   const handlePlay = () => {
-    if (studio.timer.isPlaying) {
-      studio.timer.pause();
+    if (!timer) return;
+    if (isPlaying) {
+      timer.pause();
     } else {
-      studio.timer.play();
+      timer.play();
     }
   };
-
-  const currentMs = useObservable(
-    studio.timer.currentMs$,
-    studio.timer.currentMs
-  );
-
-  const duration = useObservable(
-    studio.timer.durationMs$,
-    studio.timer.durationMs
-  );
 
   return (
     <div className={'h-[26px] flex items-center justify-between'}>

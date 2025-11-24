@@ -1,9 +1,8 @@
-import { useStudio } from '@renderer/lib/studio/contexts/StudioProvider';
-import { useObservable } from '@renderer/lib/studio/hooks/useObservable';
+import { useDocStore } from '@renderer/lib/studio/contexts/StudioProvider';
 
 export function StudioDebugger() {
-  const studio = useStudio();
-  const settings = useObservable(studio.settings$, studio.settings$.value);
+  const settings = useDocStore((state) => state.settings);
+  const updateSettings = useDocStore((state) => state.updateSettings);
 
   return (
     <div
@@ -20,10 +19,7 @@ export function StudioDebugger() {
         value={settings.width}
         onChange={(e) => {
           const v = Number(e.target.value);
-          studio.settings$.next({
-            ...settings,
-            width: v,
-          });
+          updateSettings({ width: v });
         }}
       />
     </div>

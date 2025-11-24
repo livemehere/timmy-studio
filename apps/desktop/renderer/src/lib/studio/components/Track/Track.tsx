@@ -7,9 +7,9 @@ import {
   VolumeOff,
 } from 'lucide-react';
 import { cn } from '@renderer/utils/cn';
-import type { ITrack } from '@renderer/lib/studio/types';
 import { useState } from 'react';
 import { Clip } from '@renderer/lib/studio/components/Track/Clip';
+import { useTrack } from '@renderer/lib/studio/contexts/StudioProvider';
 
 function TrackButton({
   icon: IconComp,
@@ -32,7 +32,11 @@ function TrackButton({
   );
 }
 
-export function Track({ track }: { track: ITrack }) {
+export function Track({ trackId }: { trackId: string }) {
+  const track = useTrack(trackId);
+  if (!track) {
+    throw new Error(`Track(${trackId}) not found`);
+  }
   const [active, setActive] = useState(false);
   return (
     <div className={'h-[60px] bg-neutral-850 flex gap-0.5'}>
@@ -53,7 +57,7 @@ export function Track({ track }: { track: ITrack }) {
 
       <div className={'bg-neutral-800 flex-1'}>
         {track.clips.map((clip) => (
-          <Clip key={clip.id} clip={clip} />
+          <Clip key={clip.id} clipId={clip.id} />
         ))}
       </div>
     </div>
