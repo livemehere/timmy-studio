@@ -1,14 +1,41 @@
 import type { IAsset } from '@renderer/lib/studio/types';
+import { BehaviorSubject } from 'rxjs';
 
 export class AssetManager {
   private assets: Map<string, IAsset>;
 
+  private isAllLoaded$ = new BehaviorSubject<boolean>(false);
+
+  get isAllLoaded() {
+    return this.isAllLoaded$.value;
+  }
+
   constructor(initialAssets: IAsset[] = []) {
+    console.debug(
+      `[AssetManager] Constructor called with ${initialAssets.length} assets`
+    );
     this.assets = new Map();
     initialAssets.forEach((asset) => {
       this.addAsset(asset);
     });
-    console.log(`[AssetManager] initialized with ${this.assets.size} assets`);
+  }
+
+  subscribeToAllLoaded(listener: (isLoaded: boolean) => void): () => void {
+    // Immediately invoke the listener with the current state
+    listener(this.isAllLoaded);
+
+    const subscription = this.isAllLoaded$.asObservable().subscribe(listener);
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }
+
+  async loadAllAssets(): Promise<void> {
+    console.debug('[AssetManager] loadAllAssets called');
+    //TODO
+    this.isAllLoaded$.next(true);
+    return void 0;
   }
 
   addAsset(asset: IAsset): void {
@@ -29,7 +56,7 @@ export class AssetManager {
   }
 
   destroy(): void {
+    console.debug('[AssetManager] Destroy called');
     this.assets.clear();
-    console.log('[AssetManager] destroyed and all assets cleared');
   }
 }

@@ -29,7 +29,7 @@ export class Renderer {
     timer: Timer,
     assetManager: AssetManager
   ) {
-    console.log('[Renderer] new Renderer()');
+    console.debug('[Renderer] Constructor called');
     this.timer = timer;
     this.assetManager = assetManager;
     this.app = new Application();
@@ -54,7 +54,6 @@ export class Renderer {
 
   addTrack(data: IVideoTrack) {
     if (this.tracks.has(data.id)) {
-      console.warn(`[Renderer] Track ${data.id} already exists`);
       return;
     }
     const track = new VideoTrack(data, this.assetManager);
@@ -90,9 +89,9 @@ export class Renderer {
     width: number,
     height: number,
     background: string,
-    fps: number
+    frameRate: number
   ) {
-    console.log('[Renderer] init()');
+    console.debug(`[Renderer] init(${width},${height}) called`);
     await this.app.init({
       canvas,
       width,
@@ -100,7 +99,7 @@ export class Renderer {
       background,
       resizeTo: undefined,
     });
-    this.app.ticker.maxFPS = fps;
+    this.app.ticker.maxFPS = frameRate;
     this.startLoop();
     this.init$.next(true);
   }
@@ -117,7 +116,7 @@ export class Renderer {
       return;
     }
 
-    console.log('[Renderer] resize:', width, height);
+    console.debug('[Renderer] resize:', width, height);
     this.app.renderer.resize(width, height);
   }
 
@@ -130,7 +129,7 @@ export class Renderer {
       return;
     }
 
-    console.log('[Renderer] set backgroundColor:', color);
+    console.debug('[Renderer] set backgroundColor:', color);
     this.app.renderer.background.color = color;
   }
 
@@ -142,7 +141,7 @@ export class Renderer {
     if (this.app.ticker.maxFPS === frameRate) {
       return;
     }
-    console.log('[Renderer] set frameRate:', frameRate);
+    console.debug('[Renderer] set frameRate:', frameRate);
     this.app.ticker.maxFPS = frameRate;
   }
 
@@ -157,6 +156,7 @@ export class Renderer {
       return;
     }
 
+    console.debug('[Renderer] destroy() called');
     this.tracks.forEach((track) => track.destroy());
     this.tracks.clear();
 
@@ -165,11 +165,10 @@ export class Renderer {
     this.sceneContainer = null as any;
     this.timer = null as any;
     this.assetManager = null as any;
-    console.log('[Renderer] destroy()');
   }
 
   private startLoop() {
-    console.log('[Renderer] startLoop()');
+    console.debug('[Renderer] startLoop()');
     this.app.ticker.add(() => {
       this.tracks.forEach((track) => track.tick(this.timer));
     });

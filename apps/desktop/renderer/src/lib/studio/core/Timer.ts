@@ -15,8 +15,8 @@ export class Timer {
   private lastTimestamp: number | null = null;
 
   constructor(duration: number) {
-    console.log(`[Timer] new Timer(${duration})`);
     this.durationMs$.next(duration);
+    console.debug(`[Timer] Initialized with duration: ${duration} ms`);
   }
 
   get currentMs() {
@@ -117,7 +117,7 @@ export class Timer {
   };
 
   destroy() {
-    console.log('[Timer] destroyed');
+    console.debug('[Timer] Destroying timer instance');
     this.pause();
     this.currentMs$.complete();
     this.isPlaying$.complete();

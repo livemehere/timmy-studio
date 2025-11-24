@@ -25,7 +25,6 @@ export function StudioProvider({
 
   // Initialize stores once
   if (!storesRef.current) {
-    console.log('[StudioProvider] Creating stores');
     const docStore = createDocStore(initialProject);
     const engineStore = createEngineStore();
 
@@ -44,7 +43,6 @@ export function StudioProvider({
   // Update project when initialProject changes
   useEffect(() => {
     if (storesRef.current) {
-      console.log('[StudioProvider] Loading project');
       storesRef.current.docStore.getState().loadProject(initialProject);
       storesRef.current.engineStore.getState().init(initialProject);
     }
@@ -53,7 +51,6 @@ export function StudioProvider({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      console.log('[StudioProvider] Cleaning up');
       if (unbindRef.current) {
         unbindRef.current();
       }

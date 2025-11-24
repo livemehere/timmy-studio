@@ -1,10 +1,10 @@
 export class AudioManager {
   sampleRate: number = 44100;
   constructor() {
-    console.log('[AudioManager] new AudioManager()');
+    console.debug('[AudioManager] Constructor called');
   }
 
   destroy() {
-    console.log('[AudioManager] destroy()');
+    console.debug('[AudioManager] Destroy called');
   }
 }

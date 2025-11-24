@@ -15,8 +15,7 @@ export function TimerActionBar() {
   useEffect(() => {
     if (!timer) return;
 
-    const unsubscribe = timer.subscribe(setTimerState);
-    return unsubscribe;
+    return timer.subscribe(setTimerState);
   }, [timer]);
 
   const handlePlay = () => {

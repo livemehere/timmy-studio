@@ -54,10 +54,6 @@ export class VideoClip extends BaseVideoClip implements IVideoMediaClip {
         this.container.addChild(this.sprite);
         this.sprite.texture = texture;
         this.removePlaceholder();
-        console.log(
-          `[VideoClip] ${this.name} origin video loaded`,
-          videoEl.src
-        );
       })
       .catch((err) => {
         console.error(err);
@@ -68,10 +64,6 @@ export class VideoClip extends BaseVideoClip implements IVideoMediaClip {
         .then(({ videoEl, texture }) => {
           this.proxyVideoEl = videoEl;
           this.proxyVideoTexture = texture;
-          console.log(
-            `[VideoClip] ${this.name} proxy video loaded`,
-            videoEl.src
-          );
         })
         .catch((err) => {
           console.error(err);
@@ -119,15 +111,13 @@ export class VideoClip extends BaseVideoClip implements IVideoMediaClip {
       return type === 'proxy' ? this.proxyVideoEl : this.originVideoEl;
 
     this.currentType = type;
-    if (type === 'proxy' && this.proxyVideoTexture) {
+    if (this.proxyVideoTexture) {
       this.sprite.texture = this.proxyVideoTexture;
-      console.log('[VideoClip] swap to proxy video texture');
       return this.proxyVideoEl;
     }
 
     if (this.originVideoTexture) {
       this.sprite.texture = this.originVideoTexture;
-      console.log('[VideoClip] swap to origin video texture');
     }
     return this.originVideoEl;
   }
@@ -135,7 +125,6 @@ export class VideoClip extends BaseVideoClip implements IVideoMediaClip {
   private seek(videoEl: HTMLVideoElement, timeSec: number) {
     if (videoEl.currentTime === timeSec) return;
     videoEl.currentTime = timeSec;
-    console.log(`[VideoClip] ${this.name} seek to`, timeSec);
   }
 
   private getDurationSec() {
