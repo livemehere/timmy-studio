@@ -1,21 +1,15 @@
 import { BehaviorSubject } from 'rxjs';
 
-export interface ITimer {
+export interface TimerState {
   currentMs: number;
   isPlaying: boolean;
   durationMs: number;
-  play(): void;
-  pause(): void;
-  resume(): void;
-  seek(ms: number): void;
-  reset(): void;
-  destroy(): void;
 }
 
-export class Timer implements ITimer {
-  readonly currentMs$ = new BehaviorSubject<number>(0);
-  readonly durationMs$ = new BehaviorSubject<number>(0);
-  readonly isPlaying$ = new BehaviorSubject<boolean>(false);
+export class Timer {
+  private readonly currentMs$ = new BehaviorSubject<number>(0);
+  private readonly durationMs$ = new BehaviorSubject<number>(0);
+  private readonly isPlaying$ = new BehaviorSubject<boolean>(false);
 
   private animationFrameId: number | null = null;
   private lastTimestamp: number | null = null;
@@ -41,6 +35,35 @@ export class Timer implements ITimer {
     this.durationMs$.next(ms);
   }
 
+  /**
+   * Timer 상태 변경을 구독합니다.
+   * @param listener 상태가 변경될 때 호출되는 콜백
+   * @returns unsubscribe 함수
+   */
+  subscribe(listener: (state: TimerState) => void): () => void {
+    // 즉시 현재 상태 전달
+    listener(this.getState());
+
+    // 세 개의 Observable을 합쳐서 하나의 구독으로 관리
+    const subscriptions = [
+      this.currentMs$.subscribe(() => listener(this.getState())),
+      this.isPlaying$.subscribe(() => listener(this.getState())),
+      this.durationMs$.subscribe(() => listener(this.getState())),
+    ];
+
+    return () => {
+      subscriptions.forEach((sub) => sub.unsubscribe());
+    };
+  }
+
+  private getState(): TimerState {
+    return {
+      currentMs: this.currentMs$.value,
+      isPlaying: this.isPlaying$.value,
+      durationMs: this.durationMs$.value,
+    };
+  }
+
   play() {
     if (this.isPlaying$.value) return;
 
@@ -59,10 +82,6 @@ export class Timer implements ITimer {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
-  }
-
-  resume() {
-    this.play();
   }
 
   seek(ms: number) {
