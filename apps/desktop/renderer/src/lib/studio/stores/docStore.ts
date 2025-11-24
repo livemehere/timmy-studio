@@ -1,5 +1,6 @@
 import { createStore } from 'zustand/vanilla';
 import type { IProject, ITrack, IAsset } from '../types';
+import isEqual from 'fast-deep-equal';
 
 const DEFAULT_PROJECT: IProject = {
   id: 'default-project',
@@ -58,6 +59,7 @@ export type DocStore = DocState & DocActions;
 export const createDocStore = (initialProject?: IProject) => {
   const project = initialProject ?? DEFAULT_PROJECT;
 
+  console.debug(`[DocStore] Creating store for project: ${project.id}`);
   return createStore<DocStore>((set, get) => ({
     // Initial state - 개별 필드로 펼침
     id: project.id,
@@ -69,6 +71,13 @@ export const createDocStore = (initialProject?: IProject) => {
 
     // Actions
     loadProject: (newProject) => {
+      if (isEqual(get().getProject(), newProject)) {
+        console.debug(
+          `[DocStore] Project ${newProject.id} is already loaded. Skipping.`
+        );
+        return;
+      }
+      console.debug(`[DocStore] Loading project: ${newProject.id}`);
       set({
         id: newProject.id,
         name: newProject.name,

@@ -35,28 +35,26 @@ export const createEngineStore = () => {
 
     // Actions
     init: (project) => {
-      console.log('[EngineStore] Initializing engine instances');
-
       // Destroy existing instances if any
       const state = get();
       if (state.isInitialized) {
-        state.destroy();
+        console.debug('[EngineStore] Engine already initialized, Skipping.');
+        return;
       }
 
+      console.debug('[EngineStore] Initializing engine instances');
       // Create new instances
       const assetManager = new AssetManager(project.assets);
+      assetManager.loadAllAssets();
+
       const timer = new Timer(project.settings.duration);
       const renderer = new Renderer(
         project.tracks.filter((track) => track.type === 'video'),
         timer,
         assetManager
       );
-      const audioManager = new AudioManager();
 
-      // Initialize renderer settings
-      renderer.resize(project.settings.width, project.settings.height);
-      renderer.background = project.settings.background;
-      renderer.frameRate = project.settings.frameRate;
+      const audioManager = new AudioManager();
 
       // Initialize audio manager
       audioManager.sampleRate = project.settings.sampleRate;
@@ -71,7 +69,7 @@ export const createEngineStore = () => {
     },
 
     destroy: () => {
-      console.log('[EngineStore] Destroying engine instances');
+      console.debug('[EngineStore] Destroying engine instances');
 
       const state = get();
 
