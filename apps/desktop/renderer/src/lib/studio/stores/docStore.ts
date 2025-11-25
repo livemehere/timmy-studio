@@ -49,6 +49,7 @@ export interface DocActions {
   // Asset actions
   addAsset: (asset: IAsset) => void;
   removeAsset: (assetId: string) => void;
+  updateAsset: (assetId: string, updates: Partial<IAsset>) => void;
 
   // Reset
   reset: () => void;
@@ -59,106 +60,136 @@ export type DocStore = DocState & DocActions;
 export const createDocStore = (initialProject?: IProject) => {
   const project = initialProject ?? DEFAULT_PROJECT;
 
-  console.debug(`[DocStore] Creating store for project: ${project.id}`);
-  return createStore<DocStore>((set, get) => ({
-    // Initial state - 개별 필드로 펼침
-    id: project.id,
-    name: project.name,
-    settings: project.settings,
-    metadata: project.metadata,
-    tracks: project.tracks,
-    assets: project.assets,
-
-    // Actions
-    loadProject: (newProject) => {
-      if (isEqual(get().getProject(), newProject)) {
-        console.debug(
-          `[DocStore] Project ${newProject.id} is already loaded. Skipping.`
-        );
-        return;
-      }
-      console.debug(`[DocStore] Loading project: ${newProject.id}`);
+  console.debug(`[DocStore] createStore ${project.id}`);
+  return createStore<DocStore>((set, get) => {
+    // updatedAt 자동 갱신 헬퍼
+    const setWithUpdatedAt = (partial: Partial<DocState>) => {
+      const { metadata, ...rest } = partial;
       set({
-        id: newProject.id,
-        name: newProject.name,
-        settings: newProject.settings,
-        metadata: newProject.metadata,
-        tracks: newProject.tracks,
-        assets: newProject.assets,
-      });
-    },
-
-    getProject: () => {
-      const state = get();
-      const project: IProject = {
-        id: state.id,
-        name: state.name,
-        settings: state.settings,
-        metadata: state.metadata,
-        tracks: state.tracks,
-        assets: state.assets,
-      };
-      return project;
-    },
-
-    updateSettings: (settingsUpdate) => {
-      const currentSettings = get().settings;
-      set({ settings: { ...currentSettings, ...settingsUpdate } });
-    },
-
-    updateMetadata: (metadataUpdate) => {
-      const currentMetadata = get().metadata;
-      set({
+        ...rest,
         metadata: {
-          ...currentMetadata,
-          ...metadataUpdate,
+          ...get().metadata,
+          ...metadata,
           updatedAt: new Date().toISOString(),
         },
       });
-    },
+    };
 
-    updateName: (name) => {
-      set({ name });
-    },
+    return {
+      // Initial state - 개별 필드로 펼침
+      id: project.id,
+      name: project.name,
+      settings: project.settings,
+      metadata: project.metadata,
+      tracks: project.tracks,
+      assets: project.assets,
 
-    addTrack: (track) => {
-      const currentTracks = get().tracks;
-      set({ tracks: [...currentTracks, track] });
-    },
+      // Actions
+      loadProject: (newProject) => {
+        if (isEqual(get().getProject(), newProject)) {
+          console.debug(
+            `[DocStore] loadProject ${newProject.id} is already loaded. Skipping.`
+          );
+          return;
+        }
+        console.debug(`[DocStore] loadProject ${newProject.id} called`);
+        set({
+          id: newProject.id,
+          name: newProject.name,
+          settings: newProject.settings,
+          metadata: newProject.metadata,
+          tracks: newProject.tracks,
+          assets: newProject.assets,
+        });
+      },
 
-    removeTrack: (trackId) => {
-      const currentTracks = get().tracks;
-      set({ tracks: currentTracks.filter((t) => t.id !== trackId) });
-    },
+      getProject: () => {
+        const state = get();
+        const project: IProject = {
+          id: state.id,
+          name: state.name,
+          settings: state.settings,
+          metadata: state.metadata,
+          tracks: state.tracks,
+          assets: state.assets,
+        };
+        return project;
+      },
 
-    updateTrack: (trackId, updates) => {
-      const currentTracks = get().tracks;
-      set({
-        tracks: currentTracks.map((track) =>
-          track.id === trackId ? ({ ...track, ...updates } as ITrack) : track
-        ),
-      });
-    },
+      updateSettings: (settingsUpdate) => {
+        const currentSettings = get().settings;
+        setWithUpdatedAt({
+          settings: { ...currentSettings, ...settingsUpdate },
+        });
+      },
 
-    addAsset: (asset) => {
-      const currentAssets = get().assets;
-      set({ assets: [...currentAssets, asset] });
-    },
+      updateMetadata: (metadataUpdate) => {
+        const currentMetadata = get().metadata;
+        setWithUpdatedAt({
+          metadata: {
+            ...currentMetadata,
+            ...metadataUpdate,
+          },
+        });
+      },
 
-    removeAsset: (assetId) => {
-      const currentAssets = get().assets;
-      set({ assets: currentAssets.filter((a) => a.id !== assetId) });
-    },
+      updateName: (name) => {
+        setWithUpdatedAt({ name });
+      },
 
-    reset: () => {
-      set({
-        id: DEFAULT_PROJECT.id,
-        name: DEFAULT_PROJECT.name,
-        settings: DEFAULT_PROJECT.settings,
-        metadata: DEFAULT_PROJECT.metadata,
-        tracks: DEFAULT_PROJECT.tracks,
-        assets: DEFAULT_PROJECT.assets,
-      });
-    },
-  }));
+      addTrack: (track) => {
+        const currentTracks = get().tracks;
+        setWithUpdatedAt({ tracks: [...currentTracks, track] });
+      },
+
+      removeTrack: (trackId) => {
+        const currentTracks = get().tracks;
+        setWithUpdatedAt({
+          tracks: currentTracks.filter((t) => t.id !== trackId),
+        });
+      },
+
+      updateTrack: (trackId, updates) => {
+        const currentTracks = get().tracks;
+        setWithUpdatedAt({
+          tracks: currentTracks.map((track) =>
+            track.id === trackId ? ({ ...track, ...updates } as ITrack) : track
+          ),
+        });
+      },
+
+      addAsset: (asset) => {
+        const currentAssets = get().assets;
+        setWithUpdatedAt({ assets: [...currentAssets, asset] });
+      },
+
+      removeAsset: (assetId) => {
+        const currentAssets = get().assets;
+        setWithUpdatedAt({
+          assets: currentAssets.filter((a) => a.id !== assetId),
+        });
+      },
+
+      updateAsset: (assetId, updates) => {
+        const currentAssets = get().assets;
+        setWithUpdatedAt({
+          assets: currentAssets.map((asset) =>
+            asset.id === assetId ? ({ ...asset, ...updates } as IAsset) : asset
+          ),
+        });
+      },
+
+      reset: () => {
+        console.debug(`[DocStore] reset to default project`);
+        set({
+          id: DEFAULT_PROJECT.id,
+          name: DEFAULT_PROJECT.name,
+          settings: DEFAULT_PROJECT.settings,
+          metadata: DEFAULT_PROJECT.metadata,
+          tracks: DEFAULT_PROJECT.tracks,
+          assets: DEFAULT_PROJECT.assets,
+        });
+      },
+    };
+  });
 };
