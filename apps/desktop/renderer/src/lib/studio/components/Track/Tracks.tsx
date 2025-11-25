@@ -1,8 +1,8 @@
-import { useDocStore } from '@renderer/lib/studio/contexts/StudioProvider';
+import { useDocTracks } from '@renderer/lib/studio/hooks';
 import { Track } from '@renderer/lib/studio/components/Track/Track';
 
 export function Tracks() {
-  const tracks = useDocStore((state) => state.tracks);
+  const tracks = useDocTracks();
   return (
     <div>
       {tracks.map((track) => (

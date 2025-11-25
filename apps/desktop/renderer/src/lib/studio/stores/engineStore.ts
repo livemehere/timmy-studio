@@ -102,7 +102,9 @@ export const createEngineStore = () => {
         // Sync 완료 후 상태 업데이트 (Audio)
         // TODO: AudioManager 구현 완료 후 실제 동작
         const audioTrackIds = audioTracks.map((t) => t.id);
-        const audioClipIds = audioTracks.flatMap((t) => t.clips.map((c) => c.id));
+        const audioClipIds = audioTracks.flatMap((t) =>
+          t.clips.map((c) => c.id)
+        );
 
         set({
           isRendererReady: true,

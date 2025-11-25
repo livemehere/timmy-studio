@@ -44,7 +44,9 @@ export class AudioManager {
   private addTrack(track: IAudioTrack): void {
     // TODO: 오디오 트랙 노드 생성 (GainNode 등)
     console.debug(`[AudioManager] Track added: ${track.id}`);
-    this.trackNodes.set(track.id, { /* TODO: 실제 노드 */ });
+    this.trackNodes.set(track.id, {
+      /* TODO: 실제 노드 */
+    });
 
     // 클립도 함께 추가
     this.syncClips(track.id, track.clips);
@@ -102,7 +104,7 @@ export class AudioManager {
   private addClip(trackId: string, clip: IAudioClip): void {
     // TODO: 오디오 클립 노드 생성 (AudioBufferSourceNode 등)
     console.debug(`[AudioManager] Clip added: ${clip.id} to track ${trackId}`);
-    this.clipNodes.set(clip.id, { trackId, /* TODO: 실제 노드 */ });
+    this.clipNodes.set(clip.id, { trackId /* TODO: 실제 노드 */ });
   }
 
   private updateClip(clip: IAudioClip): void {

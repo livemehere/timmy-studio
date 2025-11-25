@@ -68,7 +68,10 @@ export function bindDocToEngine(
     const syncAudioTracks = () => {
       if (!engine.audioManager) return;
       const audioTracks = getAudioTracks();
-      console.debug('[bindDocToEngine] Syncing audio tracks:', audioTracks.length);
+      console.debug(
+        '[bindDocToEngine] Syncing audio tracks:',
+        audioTracks.length
+      );
       engine.audioManager.syncTracks(audioTracks);
 
       // sync 후 IDs 업데이트

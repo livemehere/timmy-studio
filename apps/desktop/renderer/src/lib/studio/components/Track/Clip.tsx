@@ -1,18 +1,13 @@
 import { useEffect } from 'react';
-import {
-  useClip,
-  useClipSprite,
-  useRendererReady,
-} from '@renderer/lib/studio/contexts/StudioProvider';
+import { useDocClip, usePixiClipSprite } from '@renderer/lib/studio/hooks';
 import type { IVideoClip } from '../../types';
 
 export function Clip({ clipId }: { clipId: string }) {
-  const clip = useClip<IVideoClip>(clipId);
-  const isRendererReady = useRendererReady();
-  const sprite = useClipSprite(clipId);
+  const clip = useDocClip<IVideoClip>(clipId);
+  const sprite = usePixiClipSprite(clipId);
 
   useEffect(() => {
-    if (isRendererReady && sprite) {
+    if (sprite) {
       console.debug(`[Clip] Sprite loaded for clip: ${clipId}`, {
         label: sprite.label,
         x: sprite.x,
@@ -22,7 +17,7 @@ export function Clip({ clipId }: { clipId: string }) {
         alpha: sprite.alpha,
       });
     }
-  }, [clipId, isRendererReady, sprite]);
+  }, [clipId, sprite]);
 
   if (!clip) {
     throw new Error(`Clip(${clipId}) not found`);

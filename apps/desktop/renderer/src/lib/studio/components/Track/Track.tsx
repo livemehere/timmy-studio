@@ -9,7 +9,7 @@ import {
 import { cn } from '@renderer/utils/cn';
 import { useState } from 'react';
 import { Clip } from '@renderer/lib/studio/components/Track/Clip';
-import { useTrack } from '@renderer/lib/studio/contexts/StudioProvider';
+import { useDocTrack } from '@renderer/lib/studio/hooks';
 
 function TrackButton({
   icon: IconComp,
@@ -33,7 +33,7 @@ function TrackButton({
 }
 
 export function Track({ trackId }: { trackId: string }) {
-  const track = useTrack(trackId);
+  const track = useDocTrack(trackId);
   if (!track) {
     throw new Error(`Track(${trackId}) not found`);
   }
