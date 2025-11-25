@@ -3,9 +3,17 @@ import type {
   IVideoTrack,
   IVideoClip,
   ITransform,
+  IVideoMediaClip,
 } from '@renderer/lib/studio/types';
 import type { Timer } from '@renderer/lib/studio/core/Timer';
 import type { AssetManager } from '@renderer/lib/studio/core/AssetManager';
+
+interface ClipState {
+  clip: IVideoClip;
+  trackId: string;
+  isUsingProxy: boolean; // 현재 proxy texture 사용 중인지
+  lastSeekTime: number; // 마지막 seeking 시간
+}
 
 export class Renderer {
   // 초기화 상태
@@ -18,9 +26,16 @@ export class Renderer {
   // 내부 관리 Map
   private trackContainers = new Map<string, Container>();
   private clipSprites = new Map<string, Sprite>();
+  private clipStates = new Map<string, ClipState>(); // 클립별 런타임 상태
+
+  // Track 데이터 캐시 (loop에서 참조)
+  private tracksCache: IVideoTrack[] = [];
+
+  // 이전 타이머 상태 (변경 감지용)
+  private lastIsPlaying = false;
+  private lastCurrentMs = 0;
 
   // 외부 의존성
-  // @ts-expect-error - Reserved for future video synchronization
   private timer: Timer;
   private assetManager: AssetManager;
 
@@ -99,6 +114,9 @@ export class Renderer {
   // ============================================================================
 
   syncTracks(tracks: IVideoTrack[]): void {
+    // loop에서 참조할 수 있도록 캐시
+    this.tracksCache = tracks;
+
     const currentTrackIds = new Set(tracks.map((t) => t.id));
 
     // 제거된 트랙 정리
@@ -220,10 +238,16 @@ export class Renderer {
 
     const texture = Texture.from(element);
 
-    // 비디오의 경우 자동 재생 비활성화 (HTMLVideoElement에서 직접 제어)
+    // 비디오의 경우 자동 재생 비활성화 (Texture.from이 자동재생 시킬 수 있음)
     if (clip.type === 'video') {
       (element as HTMLVideoElement).pause();
       (element as HTMLVideoElement).currentTime = 0;
+
+      const proxy = this.assetManager.getVideoProxy(clip.assetId);
+      if (proxy) {
+        proxy.pause();
+        proxy.currentTime = 0;
+      }
     }
 
     const sprite = new Sprite(texture);
@@ -234,10 +258,23 @@ export class Renderer {
     container.addChild(sprite);
     this.clipSprites.set(clip.id, sprite);
 
+    // 클립 상태 초기화
+    this.clipStates.set(clip.id, {
+      clip,
+      trackId,
+      isUsingProxy: false,
+      lastSeekTime: -1,
+    });
+
     console.debug(`[Renderer] Clip added: ${clip.id}`);
   }
 
   private updateClip(clip: IVideoClip): void {
+    // clipStates 업데이트
+    const state = this.clipStates.get(clip.id);
+    if (state) {
+      state.clip = clip;
+    }
     const sprite = this.clipSprites.get(clip.id);
     if (!sprite) return;
 
@@ -259,6 +296,7 @@ export class Renderer {
     sprite.parent?.removeChild(sprite);
     sprite.destroy();
     this.clipSprites.delete(clipId);
+    this.clipStates.delete(clipId);
   }
 
   // ============================================================================
@@ -378,8 +416,193 @@ export class Renderer {
   private startLoop(): void {
     console.debug('[Renderer] startLoop()');
     this.app.ticker.add(() => {
-      // Video time sync will be handled by Timer's play/pause/seek
-      // Just let Pixi render the current state
+      const currentTime = this.timer.currentMs;
+      const isPlaying = this.timer.isPlaying;
+      const wasPlaying = this.lastIsPlaying;
+      const lastTime = this.lastCurrentMs;
+
+      // 상태 변경 감지
+      const playStateChanged = isPlaying !== wasPlaying;
+      const isSeeking = !isPlaying && currentTime !== lastTime;
+
+      // Track 단위 처리
+      for (const track of this.tracksCache) {
+        this.updateTrackVisibility(track, currentTime);
+      }
+
+      // Clip 단위 처리
+      for (const [clipId, state] of this.clipStates) {
+        const { clip } = state;
+        const sprite = this.clipSprites.get(clipId);
+        if (!sprite) continue;
+
+        // 클립 가시성 (시간 범위 체크)
+        const isClipVisible =
+          currentTime >= clip.startTime && currentTime < clip.endTime;
+        sprite.visible = isClipVisible;
+
+        if (!isClipVisible) {
+          // 클립이 보이지 않으면 비디오 일시정지
+          if (clip.type === 'video') {
+            this.pauseVideoClip(clip);
+          }
+          continue;
+        }
+
+        // Transform 업데이트 (애니메이션 지원을 위해 매 프레임)
+        this.applyTransform(sprite, clip.transforms);
+
+        // 비디오 클립 특별 처리
+        if (clip.type === 'video') {
+          this.handleVideoClip(
+            clip,
+            sprite,
+            state,
+            currentTime,
+            isPlaying,
+            playStateChanged,
+            isSeeking
+          );
+        }
+      }
+
+      // 상태 저장
+      this.lastIsPlaying = isPlaying;
+      this.lastCurrentMs = currentTime;
     });
+  }
+
+  // ============================================================================
+  // Loop Helpers
+  // ============================================================================
+
+  /**
+   * Track 가시성 업데이트
+   * - enabled 속성 반영
+   * - 해당 track의 클립들 중 현재 시간에 보이는 클립이 있는지 확인
+   */
+  private updateTrackVisibility(track: IVideoTrack, currentTime: number): void {
+    const container = this.trackContainers.get(track.id);
+    if (!container) return;
+
+    // Track enabled가 false면 무조건 숨김
+    if (!track.enabled) {
+      container.visible = false;
+      return;
+    }
+
+    // Track 내 클립 중 현재 시간에 활성화된 클립이 있는지 확인
+    const hasActiveClip = track.clips.some(
+      (clip) => currentTime >= clip.startTime && currentTime < clip.endTime
+    );
+
+    container.visible = hasActiveClip;
+    container.alpha = track.opacity;
+  }
+
+  /**
+   * 비디오 클립 처리
+   * - 재생/일시정지 제어
+   * - Seeking 시 proxy 스왑
+   * - 재생 시 origin으로 복귀
+   */
+  private handleVideoClip(
+    clip: IVideoMediaClip,
+    sprite: Sprite,
+    state: ClipState,
+    currentTime: number,
+    isPlaying: boolean,
+    playStateChanged: boolean,
+    isSeeking: boolean
+  ): void {
+    const origin = this.assetManager.getVideoOrigin(clip.assetId);
+    const proxy = this.assetManager.getVideoProxy(clip.assetId);
+    if (!origin) return;
+
+    // 클립 내 상대 시간 계산 (trimStart 고려)
+    const trimStart = clip.trimStart ?? 0;
+    const clipRelativeTime = (currentTime - clip.startTime + trimStart) / 1000;
+
+    if (isPlaying) {
+      // 재생 중: origin 비디오 사용
+      if (state.isUsingProxy && proxy) {
+        // proxy → origin 스왑 전에 시간 동기화
+        origin.currentTime = proxy.currentTime;
+        this.swapVideoTexture(sprite, origin);
+        state.isUsingProxy = false;
+        proxy.pause();
+        console.debug(
+          `[Renderer] Swap to origin: ${clip.id} (time: ${origin.currentTime})`
+        );
+      }
+
+      if (playStateChanged) {
+        // 재생 시작: 시간 동기화 후 재생
+        origin.currentTime = clipRelativeTime;
+        origin.play().catch((e) => {
+          console.warn(`[Renderer] Video play failed: ${clip.id}`, e);
+        });
+      }
+    } else {
+      // 일시정지 상태
+      if (playStateChanged) {
+        // 방금 일시정지됨 - 모든 비디오 요소 정지
+        origin.pause();
+        if (proxy) {
+          proxy.currentTime = origin.currentTime;
+          proxy.pause();
+        }
+      }
+
+      if (isSeeking) {
+        console.log('seeking', origin.currentTime, proxy?.currentTime);
+        // Seeking 중: proxy 사용 (있는 경우)
+        if (proxy && !state.isUsingProxy) {
+          // origin → proxy 스왑 전에 시간 동기화
+          proxy.currentTime = origin.currentTime;
+          this.swapVideoTexture(sprite, proxy);
+          state.isUsingProxy = true;
+          console.debug(
+            `[Renderer] Swap to proxy: ${clip.id} (time: ${proxy.currentTime} / origin: ${origin.currentTime})`
+          );
+        }
+
+        // 시간 업데이트 (proxy 또는 origin)
+        const videoElement = state.isUsingProxy && proxy ? proxy : origin;
+        videoElement.currentTime = clipRelativeTime;
+        state.lastSeekTime = currentTime;
+      }
+      proxy?.pause();
+    }
+  }
+
+  /**
+   * 비디오 클립 일시정지
+   */
+  private pauseVideoClip(clip: IVideoMediaClip): void {
+    const videos = this.assetManager.getVideo(clip.assetId);
+    if (videos) {
+      if (!videos.origin.paused) {
+        videos.origin.pause();
+      }
+      if (videos.proxy && !videos.proxy.paused) {
+        videos.proxy.pause();
+      }
+    }
+  }
+
+  /**
+   * 스프라이트의 비디오 텍스처 교체
+   */
+  private swapVideoTexture(
+    sprite: Sprite,
+    videoElement: HTMLVideoElement
+  ): void {
+    const newTexture = Texture.from(videoElement);
+    sprite.texture = newTexture;
+    // Texture.from()이 video를 자동 재생시킬 수 있으므로 즉시 pause
+    if (!this.timer.isPlaying) {
+      videoElement.pause();
+    }
   }
 }
