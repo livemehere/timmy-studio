@@ -3,7 +3,7 @@ import { Timer } from '../core/Timer';
 import { Renderer } from '../core/Renderer';
 import { AudioManager } from '../core/AudioManager';
 import { AssetManager } from '../core/AssetManager';
-import type { IProject } from '../types';
+import type { IProject, IVideoTrack } from '../types';
 
 export interface EngineState {
   // Engine instances (런타임 인스턴스 소유)
@@ -25,6 +25,7 @@ export interface EngineActions {
 export type EngineStore = EngineState & EngineActions;
 
 export const createEngineStore = () => {
+  console.debug('[EngineStore] createStore');
   return createStore<EngineStore>((set, get) => ({
     // Initial state
     timer: null,
@@ -35,23 +36,29 @@ export const createEngineStore = () => {
 
     // Actions
     init: (project) => {
-      // Destroy existing instances if any
       const state = get();
       if (state.isInitialized) {
-        console.debug('[EngineStore] Engine already initialized, Skipping.');
+        console.debug('[EngineStore] init already, Skipping.');
         return;
       }
 
-      console.debug('[EngineStore] Initializing engine instances');
+      console.debug('[EngineStore] init called');
 
       // Create engine instances
-      const assetManager = new AssetManager();
+      const assetManager = new AssetManager(project.assets);
       const timer = new Timer(project.settings.duration);
       const renderer = new Renderer(timer, assetManager);
-      const audioManager = new AudioManager();
+      const audioManager = new AudioManager(project.settings.sampleRate);
 
-      // Initialize audio manager
-      audioManager.sampleRate = project.settings.sampleRate;
+      // Load all assets, then sync tracks
+      const videoTracks = project.tracks.filter(
+        (track) => track.type === 'video'
+      ) as IVideoTrack[];
+
+      // 로드가 끝나면, track을 renderer 에서 인스턴스화
+      assetManager.loadAllAssets(() => {
+        renderer.syncTracks(videoTracks);
+      });
 
       set({
         timer,
