@@ -20,13 +20,59 @@ export function bindDocToEngine(
       throw new Error('[bindDocToEngine] Engine is not initialized yet.');
     }
 
+    // 공통: videoTracks 추출 및 syncedIds 업데이트 헬퍼
+    const getVideoTracks = () =>
+      state.tracks.filter((track) => track.type === 'video');
+
+    const getAudioTracks = () =>
+      state.tracks.filter((track) => track.type === 'audio');
+
+    const updateSyncedIds = () => {
+      const videoTracks = getVideoTracks();
+      const trackIds = videoTracks.map((t) => t.id);
+      const clipIds = videoTracks.flatMap((t) => t.clips.map((c) => c.id));
+
+      engineStore.getState().setSyncedTrackIds(trackIds);
+      engineStore.getState().setSyncedClipIds(clipIds);
+
+      console.debug(
+        `[bindDocToEngine] Synced IDs updated - tracks: ${trackIds.length}, clips: ${clipIds.length}`
+      );
+    };
+
+    // TODO: AudioManager 구현 완료 후 사용
+    const updateSyncedAudioIds = () => {
+      const audioTracks = getAudioTracks();
+      const trackIds = audioTracks.map((t) => t.id);
+      const clipIds = audioTracks.flatMap((t) => t.clips.map((c) => c.id));
+
+      engineStore.getState().setSyncedAudioTrackIds(trackIds);
+      engineStore.getState().setSyncedAudioClipIds(clipIds);
+
+      console.debug(
+        `[bindDocToEngine] Audio synced IDs updated - tracks: ${trackIds.length}, clips: ${clipIds.length}`
+      );
+    };
+
     const syncTracks = () => {
       if (!engine.renderer) return;
-      const videoTracks = state.tracks.filter(
-        (track) => track.type === 'video'
-      );
+      const videoTracks = getVideoTracks();
       console.debug('[bindDocToEngine] Syncing tracks:', videoTracks.length);
       engine.renderer.syncTracks(videoTracks);
+
+      // sync 후 IDs 업데이트
+      updateSyncedIds();
+    };
+
+    // TODO: AudioManager 구현 완료 후 사용
+    const syncAudioTracks = () => {
+      if (!engine.audioManager) return;
+      const audioTracks = getAudioTracks();
+      console.debug('[bindDocToEngine] Syncing audio tracks:', audioTracks.length);
+      engine.audioManager.syncTracks(audioTracks);
+
+      // sync 후 IDs 업데이트
+      updateSyncedAudioIds();
     };
 
     /** settings sync */
@@ -76,6 +122,7 @@ export function bindDocToEngine(
 
       engine.assetManager.beginToLoading(totalChanges, () => {
         syncTracks();
+        syncAudioTracks(); // TODO: AudioManager 구현 완료 후 동작 확인
       });
 
       for (const asset of removedAssets) {
@@ -99,6 +146,7 @@ export function bindDocToEngine(
         throw new Error('[bindDocToEngine] Assets are not fully loaded yet.');
       }
       syncTracks();
+      syncAudioTracks(); // TODO: AudioManager 구현 완료 후 동작 확인
     }
   });
 

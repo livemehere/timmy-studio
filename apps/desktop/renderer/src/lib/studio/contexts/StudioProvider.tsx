@@ -1,7 +1,8 @@
 import { createContext, useRef, useContext, useEffect } from 'react';
 import { useStore } from 'zustand';
 import type { StoreApi } from 'zustand/vanilla';
-import type { IProject } from '../types';
+import type { Container, Sprite } from 'pixi.js';
+import type { IAudioClip, IProject, IVideoClip } from '../types';
 import { createDocStore, type DocStore } from '../stores/docStore';
 import { createEngineStore, type EngineStore } from '../stores/engineStore';
 import { bindDocToEngine } from '../stores/bindDocToEngine';
@@ -105,11 +106,11 @@ export function useTrack(trackId: string) {
   );
 }
 
-export function useClip(clipId: string) {
+export function useClip<T extends IVideoClip | IAudioClip>(clipId: string) {
   return useDocStore((state) => {
     for (const track of state.tracks) {
       const clip = track.clips.find((c) => c.id === clipId);
-      if (clip) return clip;
+      if (clip) return clip as T;
     }
     return undefined;
   });
@@ -122,4 +123,99 @@ export function useAsset(assetId: string) {
   return useDocStore((state) =>
     state.assets.find((asset) => asset.id === assetId)
   );
+}
+
+// ============================================================================
+// Pixi.js Object Hooks (Renderer sync 후 사용 가능)
+// ============================================================================
+
+/**
+ * Renderer가 ready 상태인지 확인하는 hook
+ * Track/Clip Container/Sprite를 가져오기 전에 체크 필요
+ */
+export function useRendererReady(): boolean {
+  return useEngineStore((state) => state.isRendererReady);
+}
+
+/**
+ * Track의 Pixi Container를 가져오는 hook
+ * @returns Container | null (Renderer가 ready 상태가 아니거나 track이 없으면 null)
+ */
+export function useTrackContainer(trackId: string): Container | null {
+  const renderer = useEngineStore((state) => state.renderer);
+  const isReady = useEngineStore((state) => state.isRendererReady);
+  // syncedTrackIds를 구독하여 sync 완료 시 리렌더링
+  const syncedTrackIds = useEngineStore((state) => state.syncedTrackIds);
+
+  if (!isReady || !renderer || !syncedTrackIds.includes(trackId)) {
+    return null;
+  }
+
+  return renderer.getTrackContainer(trackId) ?? null;
+}
+
+/**
+ * Clip의 Pixi Sprite를 가져오는 hook
+ * @returns Sprite | null (Renderer가 ready 상태가 아니거나 clip이 없으면 null)
+ */
+export function useClipSprite(clipId: string): Sprite | null {
+  const renderer = useEngineStore((state) => state.renderer);
+  const isReady = useEngineStore((state) => state.isRendererReady);
+  // syncedClipIds를 구독하여 sync 완료 시 리렌더링
+  const syncedClipIds = useEngineStore((state) => state.syncedClipIds);
+
+  if (!isReady || !renderer || !syncedClipIds.includes(clipId)) {
+    return null;
+  }
+
+  return renderer.getClipSprite(clipId) ?? null;
+}
+
+// ============================================================================
+// AudioManager Object Hooks (Audio sync 후 사용 가능)
+// TODO: AudioManager 구현 완료 후 실제 타입으로 변경
+// ============================================================================
+
+/**
+ * AudioManager가 ready 상태인지 확인하는 hook
+ * Audio Track/Clip Node를 가져오기 전에 체크 필요
+ */
+export function useAudioReady(): boolean {
+  return useEngineStore((state) => state.isAudioReady);
+}
+
+/**
+ * Audio Track의 Node를 가져오는 hook
+ * TODO: AudioManager 구현 완료 후 실제 타입(GainNode 등)으로 변경
+ * @returns unknown | null (AudioManager가 ready 상태가 아니거나 track이 없으면 null)
+ */
+export function useAudioTrackNode(trackId: string): unknown | null {
+  const audioManager = useEngineStore((state) => state.audioManager);
+  const isReady = useEngineStore((state) => state.isAudioReady);
+  // syncedAudioTrackIds를 구독하여 sync 완료 시 리렌더링
+  const syncedAudioTrackIds = useEngineStore((state) => state.syncedAudioTrackIds);
+
+  if (!isReady || !audioManager || !syncedAudioTrackIds.includes(trackId)) {
+    return null;
+  }
+
+  return audioManager.getTrackNode(trackId);
+}
+
+/**
+ * Audio Clip의 Node를 가져오는 hook
+ * TODO: AudioManager 구현 완료 후 실제 타입(AudioBufferSourceNode 등)으로 변경
+ * @returns unknown | null (AudioManager가 ready 상태가 아니거나 clip이 없으면 null)
+ */
+export function useAudioClipNode(clipId: string): unknown | null {
+  const audioManager = useEngineStore((state) => state.audioManager);
+  const isReady = useEngineStore((state) => state.isAudioReady);
+  // syncedAudioClipIds를 구독하여 sync 완료 시 리렌더링
+  const syncedAudioClipIds = useEngineStore((state) => state.syncedAudioClipIds);
+
+  if (!isReady || !audioManager || !syncedAudioClipIds.includes(clipId)) {
+    return null;
+  }
+
+  return audioManager.getClipNode(clipId);
 }
