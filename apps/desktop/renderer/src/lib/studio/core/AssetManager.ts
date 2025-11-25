@@ -24,8 +24,8 @@ export class AssetManager {
   private isLoading = false;
   // 로딩 상태 추적
   private pendingCount = 0;
-  private loadedCount = 0;
-  private onAllLoadedCallback: (() => void) | undefined;
+  private loadCompleteCount = 0;
+  private onLoadEnded: (() => void) | undefined;
 
   constructor(initialAssets: IAsset[] = []) {
     console.debug(
@@ -36,38 +36,40 @@ export class AssetManager {
     });
   }
 
-  private tryToResolveAllLoadedCallback(): void {
-    if (this.loadedCount >= this.pendingCount && this.onAllLoadedCallback) {
+  private tryToResolveLoadedCallback(): void {
+    if (this.loadCompleteCount >= this.pendingCount) {
       console.debug('[AssetManager] All assets loaded!');
-      this.onAllLoadedCallback();
-      this.onAllLoadedCallback = undefined;
+      this.onLoadEnded?.();
+      this.onLoadEnded = undefined;
+      this.isLoading = false;
     }
   }
 
   // 로딩 상태 관리
-  beginToLoading(count: number): void {
+  beginToLoading(count: number, callback?: () => void): void {
     if (this.isLoading) {
       throw new Error(
-        `[AssetManager] Already in loading state ${this.loadedCount} / ${this.pendingCount}.`
+        `[AssetManager] Already in loading state ${this.loadCompleteCount} / ${this.pendingCount}.`
       );
     }
 
     this.isLoading = true;
     this.pendingCount = count;
-    this.loadedCount = 0;
-    console.debug(`[AssetManager] Pending assets: ${count}`);
+    this.loadCompleteCount = 0;
+    this.onLoadEnded = callback;
+    console.debug(`[AssetManager] beginToLoading : ${count}`);
   }
 
   private incrementLoaded(): void {
-    this.loadedCount++;
+    this.loadCompleteCount++;
     console.debug(
-      `[AssetManager] Loaded ${this.loadedCount}/${this.pendingCount}`
+      `[AssetManager] Loaded ${this.loadCompleteCount}/${this.pendingCount}`
     );
-    this.tryToResolveAllLoadedCallback();
+    this.tryToResolveLoadedCallback();
   }
 
   get isAllLoaded(): boolean {
-    return this.pendingCount > 0 && this.loadedCount >= this.pendingCount;
+    return this.pendingCount > 0 && this.loadCompleteCount >= this.pendingCount;
   }
 
   /**
@@ -93,8 +95,7 @@ export class AssetManager {
     console.debug(
       `[AssetManager] Start to loading all assets (${assets.length})`
     );
-    this.beginToLoading(assets.length);
-    this.onAllLoadedCallback = onComplete;
+    this.beginToLoading(assets.length, onComplete);
 
     for (const asset of assets) {
       this.loadAsset(asset.id).catch((err) => {
@@ -323,7 +324,6 @@ export class AssetManager {
     console.debug(
       `[AssetManager] Video loaded: ${assetId} (proxy: ${!!elements.proxy})`
     );
-    this.incrementLoaded();
     return elements;
   }
 
@@ -399,7 +399,6 @@ export class AssetManager {
 
     this.audioElements.set(assetId, audio);
     console.debug(`[AssetManager] Audio loaded: ${assetId}`);
-    this.incrementLoaded();
     return audio;
   }
 
@@ -453,7 +452,6 @@ export class AssetManager {
 
     this.imageElements.set(assetId, img);
     console.debug(`[AssetManager] Image loaded: ${assetId}`);
-    this.incrementLoaded();
     return img;
   }
 
@@ -533,7 +531,7 @@ export class AssetManager {
 
     // 상태 초기화
     this.pendingCount = 0;
-    this.loadedCount = 0;
-    this.onAllLoadedCallback = undefined;
+    this.loadCompleteCount = 0;
+    this.onLoadEnded = undefined;
   }
 }
