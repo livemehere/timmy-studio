@@ -1,6 +1,8 @@
 import type { StoreApi } from 'zustand/vanilla';
 import type { DocStore } from './docStore';
 import type { EngineStore } from './engineStore';
+import isEqual from 'fast-deep-equal';
+import { deepDiffArrays } from '@renderer/lib/studio/utils/deepDiffArrays';
 
 /**
  * docStore의 변경사항을 engineStore에 자동으로 반영하는 바인딩 로직
@@ -9,49 +11,100 @@ export function bindDocToEngine(
   docStore: StoreApi<DocStore>,
   engineStore: StoreApi<EngineStore>
 ) {
-  console.log('[Binding] Setting up doc-to-engine bindings');
+  console.debug('[Binding] Setting up doc-to-engine bindings');
 
   const unsubscribe = docStore.subscribe((state, prevState) => {
     const engine = engineStore.getState();
 
     if (!engine.isInitialized) {
-      return;
+      throw new Error('[bindDocToEngine] Engine is not initialized yet.');
     }
 
-    // Settings 변경 시 engine에 반영
-    if (state.settings !== prevState.settings) {
-      if (engine.renderer && engine.timer && engine.audioManager) {
-        engine.renderer.resize(state.settings.width, state.settings.height);
-        engine.renderer.background = state.settings.background;
-        engine.renderer.frameRate = state.settings.frameRate;
-        engine.timer.durationMs = state.settings.duration;
-        engine.audioManager.sampleRate = state.settings.sampleRate;
-      }
-    }
+    const syncTracks = () => {
+      if (!engine.renderer) return;
+      const videoTracks = state.tracks.filter(
+        (track) => track.type === 'video'
+      );
+      console.debug('[bindDocToEngine] Syncing tracks:', videoTracks.length);
+      engine.renderer.syncTracks(videoTracks);
+    };
 
-    // Tracks 변경 시 renderer에 반영
-    if (state.tracks !== prevState.tracks) {
-      if (engine.renderer) {
-        const videoTracks = state.tracks.filter(
-          (track) => track.type === 'video'
+    /** settings sync */
+    if (!isEqual(state.settings, prevState.settings)) {
+      if (!engine.renderer || !engine.timer || !engine.audioManager) {
+        throw new Error(
+          '[bindDocToEngine] Engine components are not initialized properly.'
         );
-        console.log('[Binding] Tracks updated:', videoTracks.length);
-        // TODO: renderer에 tracks 업데이트 메서드 구현 필요
+      }
+      engine.renderer.resize(state.settings.width, state.settings.height);
+      engine.renderer.background = state.settings.background;
+      engine.renderer.frameRate = state.settings.frameRate;
+      engine.timer.durationMs = state.settings.duration;
+      engine.audioManager.sampleRate = state.settings.sampleRate;
+    }
+
+    /** assets sync */
+    const assetsChanged = state.assets !== prevState.assets;
+    if (assetsChanged) {
+      if (!engine.assetManager) {
+        throw new Error(
+          '[bindDocToEngine] AssetManager is not initialized in engine.'
+        );
+      }
+
+      const {
+        added: addedAssets,
+        removed: removedAssets,
+        updated: updatedAssets,
+      } = deepDiffArrays(prevState.assets, state.assets);
+
+      const totalChanges =
+        addedAssets.length + removedAssets.length + updatedAssets.length;
+      if (totalChanges === 0) {
+        console.debug('[bindDocToEngine] No actual asset changes detected.');
+        return;
+      }
+
+      console.debug(
+        '[bindDocToEngine] Assets changed. Added:',
+        addedAssets.length,
+        'Removed:',
+        removedAssets.length,
+        'Updated:',
+        updatedAssets.length
+      );
+
+      engine.assetManager.beginToLoading(totalChanges, () => {
+        syncTracks();
+      });
+
+      for (const asset of removedAssets) {
+        console.debug(`[bindDocToEngine] Removing asset: ${asset.id}`);
+        engine.assetManager.removeAssetById(asset.id);
+      }
+      for (const asset of updatedAssets) {
+        console.debug(`[bindDocToEngine] Updating asset: ${asset.id}`);
+        engine.assetManager.updateAsset(asset.id, asset);
+      }
+      for (const asset of addedAssets) {
+        console.debug(`[bindDocToEngine] Adding asset: ${asset.id}`);
+        engine.assetManager.addAsset(asset);
       }
     }
 
-    // Assets 변경 시 assetManager에 반영
-    if (state.assets !== prevState.assets) {
-      if (engine.assetManager) {
-        console.log('[Binding] Assets updated:', state.assets.length);
-        // TODO: assetManager에 assets 업데이트 메서드 구현 필요
+    // Tracks만 변경 시 renderer에 반영 (assets 변경과 동시에 일어나지 않은 경우)
+    const tracksChanged = state.tracks !== prevState.tracks;
+    if (tracksChanged && !assetsChanged) {
+      if (!engine.assetManager!.isAllLoaded) {
+        throw new Error('[bindDocToEngine] Assets are not fully loaded yet.');
       }
+      syncTracks();
     }
   });
 
   // Cleanup function
   return () => {
-    console.log('[Binding] Cleaning up doc-to-engine bindings');
+    console.debug('[bindDocToEngine] Cleaning up doc-to-engine bindings');
     unsubscribe();
   };
 }

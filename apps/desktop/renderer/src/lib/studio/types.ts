@@ -194,10 +194,13 @@ export interface IBaseAsset {
 export interface IVideoAsset extends IBaseAsset {
   type: 'video';
   proxyFilePath?: string;
+  playbackRate?: number;
+  volume?: number;
 }
 
 export interface IAudioAsset extends IBaseAsset {
   type: 'audio';
+  volume?: number;
 }
 
 export interface IImageAsset extends IBaseAsset {
