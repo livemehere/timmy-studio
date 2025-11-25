@@ -3,7 +3,7 @@ import { Timer } from '../core/Timer';
 import { Renderer } from '../core/Renderer';
 import { AudioManager } from '../core/AudioManager';
 import { AssetManager } from '../core/AssetManager';
-import type { IProject, IVideoTrack } from '../types';
+import type { IProject } from '../types';
 
 export interface EngineState {
   // Engine instances (런타임 인스턴스 소유)
@@ -50,14 +50,18 @@ export const createEngineStore = () => {
       const renderer = new Renderer(timer, assetManager);
       const audioManager = new AudioManager(project.settings.sampleRate);
 
-      // Load all assets, then sync tracks
       const videoTracks = project.tracks.filter(
         (track) => track.type === 'video'
-      ) as IVideoTrack[];
+      );
 
-      // 로드가 끝나면, track을 renderer 에서 인스턴스화
-      assetManager.loadAllAssets(() => {
+      const audioTracks = project.tracks.filter(
+        (track) => track.type === 'audio'
+      );
+
+      /** 단 1회, 전체 로딩 및 동기화 */
+      assetManager.initialLoadAllAssets(() => {
         renderer.syncTracks(videoTracks);
+        audioManager.syncTracks(audioTracks);
       });
 
       set({
