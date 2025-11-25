@@ -13,6 +13,8 @@ interface ClipState {
   trackId: string;
   isUsingProxy: boolean; // 현재 proxy texture 사용 중인지
   lastSeekTime: number; // 마지막 seeking 시간
+  isOriginPreloading: boolean; // origin이 preload 중인지
+  pendingProxySwap: boolean; // proxy 스왑 대기 중인지 (seeked 이벤트 대기)
 }
 
 export class Renderer {
@@ -264,6 +266,8 @@ export class Renderer {
       trackId,
       isUsingProxy: false,
       lastSeekTime: -1,
+      isOriginPreloading: false,
+      pendingProxySwap: false,
     });
 
     console.debug(`[Renderer] Clip added: ${clip.id}`);
@@ -525,20 +529,25 @@ export class Renderer {
 
     if (isPlaying) {
       // 재생 중: origin 비디오 사용
+
+      // pending swap 취소 (재생 시작되면 proxy 스왑 불필요)
+      if (state.pendingProxySwap) {
+        state.pendingProxySwap = false;
+      }
+
       if (state.isUsingProxy && proxy) {
-        // proxy → origin 스왑 전에 시간 동기화
-        origin.currentTime = proxy.currentTime;
+        // proxy → origin 스왑 (origin은 이미 preload됨)
         this.swapVideoTexture(sprite, origin);
         state.isUsingProxy = false;
+        state.isOriginPreloading = false;
         proxy.pause();
         console.debug(
-          `[Renderer] Swap to origin: ${clip.id} (time: ${origin.currentTime})`
+          `[Renderer] Swap to origin: ${clip.id} (origin: ${origin.currentTime.toFixed(3)}, proxy: ${proxy.currentTime.toFixed(3)})`
         );
       }
 
       if (playStateChanged) {
-        // 재생 시작: 시간 동기화 후 재생
-        origin.currentTime = clipRelativeTime;
+        // 재생 시작: 재생
         origin.play().catch((e) => {
           console.warn(`[Renderer] Video play failed: ${clip.id}`, e);
         });
@@ -546,33 +555,58 @@ export class Renderer {
     } else {
       // 일시정지 상태
       if (playStateChanged) {
-        // 방금 일시정지됨 - 모든 비디오 요소 정지
+        // 방금 일시정지됨 - origin의 실제 프레임 위치를 기준으로 동기화
+        const actualOriginTime = origin.currentTime;
         origin.pause();
         if (proxy) {
-          proxy.currentTime = origin.currentTime;
+          // proxy를 origin의 실제 멈춘 프레임으로 동기화 (프레임 점프 방지)
+          proxy.currentTime = actualOriginTime;
           proxy.pause();
         }
+        console.debug(
+          `[Renderer] Paused: ${clip.id} (origin: ${actualOriginTime.toFixed(3)}, calculated: ${clipRelativeTime.toFixed(3)})`
+        );
       }
 
       if (isSeeking) {
-        console.log('seeking', origin.currentTime, proxy?.currentTime);
         // Seeking 중: proxy 사용 (있는 경우)
-        if (proxy && !state.isUsingProxy) {
-          // origin → proxy 스왑 전에 시간 동기화
-          proxy.currentTime = origin.currentTime;
-          this.swapVideoTexture(sprite, proxy);
-          state.isUsingProxy = true;
-          console.debug(
-            `[Renderer] Swap to proxy: ${clip.id} (time: ${proxy.currentTime} / origin: ${origin.currentTime})`
-          );
+        if (proxy && !state.isUsingProxy && !state.pendingProxySwap) {
+          // origin → proxy 스왑 요청: seeked 이벤트 후 스왑
+          state.pendingProxySwap = true;
+          const targetTime = origin.currentTime;
+          proxy.currentTime = targetTime;
+
+          const onSeeked = () => {
+            proxy.removeEventListener('seeked', onSeeked);
+            // 아직 재생 시작 안했고, 스왑 대기 중이면 스왑 실행
+            if (!this.timer.isPlaying && state.pendingProxySwap) {
+              this.swapVideoTexture(sprite, proxy);
+              state.isUsingProxy = true;
+              state.pendingProxySwap = false;
+              console.debug(
+                `[Renderer] Swap to proxy (seeked): ${clip.id} (time: ${proxy.currentTime.toFixed(3)})`
+              );
+            } else {
+              state.pendingProxySwap = false;
+            }
+          };
+          proxy.addEventListener('seeked', onSeeked, { once: true });
         }
 
-        // 시간 업데이트 (proxy 또는 origin)
-        const videoElement = state.isUsingProxy && proxy ? proxy : origin;
-        videoElement.currentTime = clipRelativeTime;
+        // 이미 proxy 사용 중이면 시간만 업데이트
+        if (state.isUsingProxy && proxy) {
+          proxy.currentTime = clipRelativeTime;
+        }
+
+        // origin도 백그라운드에서 동일 시간으로 preload (스왑 시 프레임 점프 방지)
+        origin.currentTime = clipRelativeTime;
+
         state.lastSeekTime = currentTime;
       }
-      proxy?.pause();
+
+      if (proxy && !proxy.paused) {
+        proxy.pause();
+      }
     }
   }
 
