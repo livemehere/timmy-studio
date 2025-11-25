@@ -43,17 +43,11 @@ export const createEngineStore = () => {
       }
 
       console.debug('[EngineStore] Initializing engine instances');
-      // Create new instances
-      const assetManager = new AssetManager(project.assets);
-      assetManager.loadAllAssets();
 
+      // Create engine instances
+      const assetManager = new AssetManager();
       const timer = new Timer(project.settings.duration);
-      const renderer = new Renderer(
-        project.tracks.filter((track) => track.type === 'video'),
-        timer,
-        assetManager
-      );
-
+      const renderer = new Renderer(timer, assetManager);
       const audioManager = new AudioManager();
 
       // Initialize audio manager
