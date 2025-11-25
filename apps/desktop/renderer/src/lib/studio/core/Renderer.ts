@@ -30,9 +30,6 @@ export class Renderer {
   private clipSprites = new Map<string, Sprite>();
   private clipStates = new Map<string, ClipState>(); // 클립별 런타임 상태
 
-  // Track 데이터 캐시 (loop에서 참조)
-  private tracksCache: IVideoTrack[] = [];
-
   // 이전 타이머 상태 (변경 감지용)
   private lastIsPlaying = false;
   private lastCurrentMs = 0;
@@ -116,9 +113,6 @@ export class Renderer {
   // ============================================================================
 
   syncTracks(tracks: IVideoTrack[]): void {
-    // loop에서 참조할 수 있도록 캐시
-    this.tracksCache = tracks;
-
     const currentTrackIds = new Set(tracks.map((t) => t.id));
 
     // 제거된 트랙 정리
@@ -429,11 +423,6 @@ export class Renderer {
       const playStateChanged = isPlaying !== wasPlaying;
       const isSeeking = !isPlaying && currentTime !== lastTime;
 
-      // Track 단위 처리
-      for (const track of this.tracksCache) {
-        this.updateTrackVisibility(track, currentTime);
-      }
-
       // Clip 단위 처리
       for (const [clipId, state] of this.clipStates) {
         const { clip } = state;
@@ -474,34 +463,6 @@ export class Renderer {
       this.lastIsPlaying = isPlaying;
       this.lastCurrentMs = currentTime;
     });
-  }
-
-  // ============================================================================
-  // Loop Helpers
-  // ============================================================================
-
-  /**
-   * Track 가시성 업데이트
-   * - enabled 속성 반영
-   * - 해당 track의 클립들 중 현재 시간에 보이는 클립이 있는지 확인
-   */
-  private updateTrackVisibility(track: IVideoTrack, currentTime: number): void {
-    const container = this.trackContainers.get(track.id);
-    if (!container) return;
-
-    // Track enabled가 false면 무조건 숨김
-    if (!track.enabled) {
-      container.visible = false;
-      return;
-    }
-
-    // Track 내 클립 중 현재 시간에 활성화된 클립이 있는지 확인
-    const hasActiveClip = track.clips.some(
-      (clip) => currentTime >= clip.startTime && currentTime < clip.endTime
-    );
-
-    container.visible = hasActiveClip;
-    container.alpha = track.opacity;
   }
 
   // ============================================================================
