@@ -36,10 +36,12 @@ export function TimelineTrack({
   trackId,
   trackTitleWidth,
   trackHeight,
+  pxPerSec,
 }: {
   trackId: string;
   trackTitleWidth: number;
   trackHeight: number;
+  pxPerSec: number;
 }) {
   const track = useDocTrack(trackId);
   if (!track) {
@@ -51,7 +53,7 @@ export function TimelineTrack({
       style={{
         height: trackHeight,
       }}
-      className={'h-[60px] bg-neutral-850 flex gap-0.5'}
+      className={'bg-neutral-850 flex gap-0.5'}
     >
       <div
         className={
@@ -69,9 +71,9 @@ export function TimelineTrack({
         <TrackButton icon={Ellipsis} />
       </div>
 
-      <div className={'bg-neutral-800 flex-1'}>
+      <div className={'bg-neutral-800 flex-1 relative'}>
         {track.clips.map((clip) => (
-          <TimelineItem key={clip.id} clipId={clip.id} />
+          <TimelineItem key={clip.id} clipId={clip.id} pxPerSec={pxPerSec} />
         ))}
       </div>
     </div>

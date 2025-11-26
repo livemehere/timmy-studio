@@ -6,11 +6,13 @@ export function TimelineTracks({
   height,
   trackTitleWidth,
   trackHeight,
+  pxPerSec,
 }: {
   width: number;
   height: number;
   trackTitleWidth: number;
   trackHeight: number;
+  pxPerSec: number;
 }) {
   const tracks = useDocTracks();
   return (
@@ -26,6 +28,7 @@ export function TimelineTracks({
           trackId={track.id}
           trackTitleWidth={trackTitleWidth}
           trackHeight={trackHeight}
+          pxPerSec={pxPerSec}
         />
       ))}
     </div>

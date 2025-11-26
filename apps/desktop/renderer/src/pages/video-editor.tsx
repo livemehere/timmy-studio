@@ -17,6 +17,8 @@ export default function VideoEditorPage() {
   const trackTitleWidth = 120;
   const trackHeight = 60;
 
+  const pxPerSec = 10;
+
   const hScrollContainerRef = useRef<HTMLDivElement>(null);
   const { scrollX } = useScroll({
     container: hScrollContainerRef,
@@ -86,8 +88,8 @@ export default function VideoEditorPage() {
                 id: 'rect',
                 name: 'Rectangle Shape',
                 type: 'shape',
-                startTime: 0,
-                endTime: 10000,
+                startTime: 31000,
+                endTime: 40000,
                 transforms: {
                   position: { x: 100, y: 100 },
                   size: { width: 400, height: 300 },
@@ -144,6 +146,7 @@ export default function VideoEditorPage() {
                   height={totalTrackHeight}
                   trackTitleWidth={trackTitleWidth}
                   trackHeight={trackHeight}
+                  pxPerSec={pxPerSec}
                 />
               </div>
             </div>
