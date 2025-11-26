@@ -8,12 +8,14 @@ import { ActionBar } from '@renderer/lib/studio/components/ActionBar';
 import { TimelineRulerCanvas } from '@renderer/lib/studio/components/TimelineRulerCanvas';
 import { TimerActionBar } from '@renderer/lib/studio/components/TimerActionBar';
 import { useRef } from 'react';
-import { useMotionValueEvent, useScroll } from 'motion/react';
+import { useScroll } from 'motion/react';
 
 export default function VideoEditorPage() {
-  const contentWidth = 1200;
-  const contentHeight = 2200;
-  const leftTrackWidth = 120;
+  const totalTrackWidth = 1200;
+  const totalTrackHeight = 2200;
+
+  const trackTitleWidth = 120;
+  const trackHeight = 60;
 
   const hScrollContainerRef = useRef<HTMLDivElement>(null);
   const { scrollX } = useScroll({
@@ -128,7 +130,7 @@ export default function VideoEditorPage() {
               <div className={'sticky top-0 z-30 bg-neutral-900'}>
                 <ActionBar />
                 <TimelineRulerCanvas
-                  leftPadding={leftTrackWidth}
+                  leftPadding={trackTitleWidth}
                   scrollXMotionValue={scrollX}
                 />
               </div>
@@ -137,7 +139,12 @@ export default function VideoEditorPage() {
                 ref={hScrollContainerRef}
                 className={'w-full overflow-x-scroll'}
               >
-                <TimelineTracks width={contentWidth} height={contentHeight} />
+                <TimelineTracks
+                  width={totalTrackWidth}
+                  height={totalTrackHeight}
+                  trackTitleWidth={trackTitleWidth}
+                  trackHeight={trackHeight}
+                />
               </div>
             </div>
           </Panel>

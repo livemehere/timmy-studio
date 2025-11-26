@@ -32,18 +32,32 @@ function TrackButton({
   );
 }
 
-export function TimelineTrack({ trackId }: { trackId: string }) {
+export function TimelineTrack({
+  trackId,
+  trackTitleWidth,
+  trackHeight,
+}: {
+  trackId: string;
+  trackTitleWidth: number;
+  trackHeight: number;
+}) {
   const track = useDocTrack(trackId);
   if (!track) {
     throw new Error(`Track(${trackId}) not found`);
   }
   const [active, setActive] = useState(false);
   return (
-    <div className={'h-[60px] bg-neutral-850 flex gap-0.5'}>
+    <div
+      style={{
+        height: trackHeight,
+      }}
+      className={'h-[60px] bg-neutral-850 flex gap-0.5'}
+    >
       <div
         className={
-          'sticky left-0 z-20 w-[120px] bg-neutral-800 shrink-0 flex items-center justify-center gap-1.5'
+          'sticky left-0 z-20 bg-neutral-800 shrink-0 flex items-center justify-center gap-1.5'
         }
+        style={{ width: trackTitleWidth }}
       >
         <TrackButton
           icon={LockKeyhole}

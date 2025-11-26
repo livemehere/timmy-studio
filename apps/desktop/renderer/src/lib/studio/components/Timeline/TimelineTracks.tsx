@@ -4,9 +4,13 @@ import { TimelineTrack } from '@renderer/lib/studio/components/Timeline/Timeline
 export function TimelineTracks({
   width,
   height,
+  trackTitleWidth,
+  trackHeight,
 }: {
   width: number;
   height: number;
+  trackTitleWidth: number;
+  trackHeight: number;
 }) {
   const tracks = useDocTracks();
   return (
@@ -17,7 +21,12 @@ export function TimelineTracks({
       }}
     >
       {tracks.map((track) => (
-        <TimelineTrack key={track.id} trackId={track.id} />
+        <TimelineTrack
+          key={track.id}
+          trackId={track.id}
+          trackTitleWidth={trackTitleWidth}
+          trackHeight={trackHeight}
+        />
       ))}
     </div>
   );
