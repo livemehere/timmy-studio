@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@renderer/utils/cn';
 import { useState } from 'react';
-import { Clip } from '@renderer/lib/studio/components/Track/Clip';
+import { TimelineItem } from '@renderer/lib/studio/components/Timeline/TimelineItem';
 import { useDocTrack } from '@renderer/lib/studio/hooks';
 
 function TrackButton({
@@ -32,7 +32,7 @@ function TrackButton({
   );
 }
 
-export function Track({ trackId }: { trackId: string }) {
+export function TimelineTrack({ trackId }: { trackId: string }) {
   const track = useDocTrack(trackId);
   if (!track) {
     throw new Error(`Track(${trackId}) not found`);
@@ -42,7 +42,7 @@ export function Track({ trackId }: { trackId: string }) {
     <div className={'h-[60px] bg-neutral-850 flex gap-0.5'}>
       <div
         className={
-          'w-[120px] bg-neutral-800 shrink-0 flex items-center justify-center gap-1.5'
+          'sticky left-0 z-20 w-[120px] bg-neutral-800 shrink-0 flex items-center justify-center gap-1.5'
         }
       >
         <TrackButton
@@ -57,7 +57,7 @@ export function Track({ trackId }: { trackId: string }) {
 
       <div className={'bg-neutral-800 flex-1'}>
         {track.clips.map((clip) => (
-          <Clip key={clip.id} clipId={clip.id} />
+          <TimelineItem key={clip.id} clipId={clip.id} />
         ))}
       </div>
     </div>

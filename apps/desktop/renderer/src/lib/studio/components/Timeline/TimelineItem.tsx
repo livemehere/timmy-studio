@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useDocClip, usePixiClipSprite } from '@renderer/lib/studio/hooks';
 import type { IVideoClip } from '../../types';
 
-export function Clip({ clipId }: { clipId: string }) {
+export function TimelineItem({ clipId }: { clipId: string }) {
   const clip = useDocClip<IVideoClip>(clipId);
   const sprite = usePixiClipSprite(clipId);
 

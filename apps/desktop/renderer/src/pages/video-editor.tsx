@@ -3,12 +3,23 @@ import { StudioProvider } from '@renderer/lib/studio/contexts/StudioProvider';
 import { uid } from 'uid';
 import { PreviewRenderer } from '@renderer/lib/studio/components/PreviewRenderer';
 import { StudioDebugger } from '@renderer/lib/studio/components/StduioDebugger';
-import { Tracks } from '@renderer/lib/studio/components/Track/Tracks';
+import { TimelineTracks } from '@renderer/lib/studio/components/Timeline/TimelineTracks';
 import { ActionBar } from '@renderer/lib/studio/components/ActionBar';
-import { Timeline } from '@renderer/lib/studio/components/Timeline';
+import { TimelineRulerCanvas } from '@renderer/lib/studio/components/TimelineRulerCanvas';
 import { TimerActionBar } from '@renderer/lib/studio/components/TimerActionBar';
+import { useRef } from 'react';
+import { useMotionValueEvent, useScroll } from 'motion/react';
 
 export default function VideoEditorPage() {
+  const contentWidth = 1200;
+  const contentHeight = 2200;
+  const leftTrackWidth = 120;
+
+  const hScrollContainerRef = useRef<HTMLDivElement>(null);
+  const { scrollX } = useScroll({
+    container: hScrollContainerRef,
+  });
+
   return (
     <StudioProvider
       initialProject={{
@@ -59,7 +70,7 @@ export default function VideoEditorPage() {
                 name: 'Video1',
                 type: 'video',
                 startTime: 0,
-                endTime: 60000,
+                endTime: 30000,
                 assetId: 'sample-video-asset',
                 transforms: {
                   position: { x: 0, y: 0 },
@@ -113,9 +124,22 @@ export default function VideoEditorPage() {
           </Panel>
           <PanelResizeHandle className={'h-1 bg-neutral-950'} />
           <Panel className={'bg-neutral-900'} defaultSize={40}>
-            <ActionBar />
-            <Timeline />
-            <Tracks />
+            <div className={'relative h-full overflow-y-scroll'}>
+              <div className={'sticky top-0 z-30 bg-neutral-900'}>
+                <ActionBar />
+                <TimelineRulerCanvas
+                  leftPadding={leftTrackWidth}
+                  scrollXMotionValue={scrollX}
+                />
+              </div>
+
+              <div
+                ref={hScrollContainerRef}
+                className={'w-full overflow-x-scroll'}
+              >
+                <TimelineTracks width={contentWidth} height={contentHeight} />
+              </div>
+            </div>
           </Panel>
         </PanelGroup>
       </div>
