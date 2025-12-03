@@ -26,14 +26,15 @@ export function setupTray() {
 
 export function createWindow() {
   const win = new BrowserWindow({
-    width: 1280,
-    height: 720,
+    width: 1920,
+    height: 1080,
     webPreferences: {
       preload: getPreloadPath(),
+      webSecurity: false,
     },
     frame: false,
     titleBarStyle: 'hiddenInset',
   });
-  loadWindow(win);
+  loadWindow(win, 'video-editor');
   return win;
 }

@@ -34,10 +34,8 @@ export default function VideoEditorPage() {
             id: 'sample-video-asset',
             name: 'Sample Video',
             type: 'video',
-            filePath:
-              'source://open?path=%2FUsers%2Fdeveloper%2FDownloads%2Ftarget.MOV',
-            proxyFilePath:
-              'source://open?path=%2FUsers%2Fdeveloper%2FDownloads%2Fgood-2.mp4',
+            filePath: 'file:///path/to/sample-media.MOV',
+            proxyFilePath: 'file:///path/to/sample-media.mp4',
             metadata: {
               size: 1000,
               createdAt: new Date().toISOString(),

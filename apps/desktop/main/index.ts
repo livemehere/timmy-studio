@@ -1,30 +1,21 @@
-import { app, BrowserWindow, protocol } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import log from 'electron-log/main';
-import {
-  isDev,
-  setupSessionSecurity,
-  debug,
-  handleSourceScheme,
-  SOURCE_SCHEME,
-} from '@timmy-studio/electron-utils/utils/main';
+import { isDev, debug } from '@timmy-studio/electron-utils/utils/main';
 import { ipc } from '@timmy-studio/electron-utils/ipc/main';
 import { createWindow, setupTray } from './setup-utils';
 
 log.initialize();
 log.info('App starting...');
-protocol.registerSchemesAsPrivileged([SOURCE_SCHEME]);
 
 // app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder');
 // app.commandLine.appendSwitch('enable-accelerated-video-decode');
 // app.commandLine.appendSwitch('ignore-gpu-blocklist'); // Optional, but can help in some cases
 
 app.whenReady().then(async () => {
-  setupSessionSecurity();
   debug({
     isEnabled: true,
   });
   setupTray();
-  handleSourceScheme();
 
   createWindow();
   app.on('activate', () => {
