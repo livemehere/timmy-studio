@@ -4,21 +4,27 @@ import { TimerActionBar } from '@renderer/lib/studio/components/TimerActionBar';
 import { ActionBar } from '@renderer/lib/studio/components/ActionBar';
 import { TimelineRulerCanvas } from '@renderer/lib/studio/components/TimelineRulerCanvas';
 import { TimelineTracks } from '@renderer/lib/studio/components/Timeline/TimelineTracks';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useMotionValue, useScroll, useTransform } from 'motion/react';
-import { useEngineTimer } from '@renderer/lib/studio/hooks';
+import { useDocSettings, useEngineTimer } from '@renderer/lib/studio/hooks';
 
 const MIN_PIXELS_PER_SECOND = 2;
 const MAX_PIXELS_PER_SECOND = 100;
 
 export function StudioApp() {
-  const totalTrackWidth = 1200;
+  const { duration } = useDocSettings();
   const totalTrackHeight = 2200;
 
   const trackTitleWidth = 120;
   const trackHeight = 60;
 
   const [pxPerSec, setPixPerSec] = useState(10);
+
+  // duration(ms)과 pxPerSec에 따라 totalTrackWidth 계산
+  const totalTrackWidth = useMemo(() => {
+    const durationSec = duration / 1000;
+    return durationSec * pxPerSec;
+  }, [duration, pxPerSec]);
 
   const timer = useEngineTimer();
   const currentTimeMs = useMotionValue(timer?.currentMs ?? 0);
@@ -119,7 +125,7 @@ export function StudioApp() {
               className={'w-full overflow-x-scroll'}
             >
               <TimelineTracks
-                width={totalTrackWidth}
+                width={totalTrackWidth + trackTitleWidth}
                 height={totalTrackHeight}
                 trackTitleWidth={trackTitleWidth}
                 trackHeight={trackHeight}
