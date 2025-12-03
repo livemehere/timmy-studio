@@ -85,6 +85,9 @@ export class Timer {
   }
 
   seek(ms: number) {
+    if (this.isPlaying) {
+      this.pause();
+    }
     this.currentMs$.next(ms);
   }
 
