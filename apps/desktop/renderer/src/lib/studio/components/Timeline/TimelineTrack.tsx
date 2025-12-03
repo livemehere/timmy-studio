@@ -57,7 +57,7 @@ export function TimelineTrack({
     >
       <div
         className={
-          'sticky left-0 z-20 bg-neutral-800 shrink-0 flex items-center justify-center gap-1.5'
+          'sticky left-0 z-50 bg-neutral-800 shrink-0 flex items-center justify-center gap-1.5'
         }
         style={{ width: trackTitleWidth }}
       >

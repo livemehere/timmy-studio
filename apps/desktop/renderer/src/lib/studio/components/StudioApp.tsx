@@ -5,7 +5,8 @@ import { ActionBar } from '@renderer/lib/studio/components/ActionBar';
 import { TimelineRulerCanvas } from '@renderer/lib/studio/components/TimelineRulerCanvas';
 import { TimelineTracks } from '@renderer/lib/studio/components/Timeline/TimelineTracks';
 import { useEffect, useRef, useState } from 'react';
-import { useScroll } from 'motion/react';
+import { motion, useMotionValue, useScroll, useTransform } from 'motion/react';
+import { useEngineTimer } from '@renderer/lib/studio/hooks';
 
 const MIN_PIXELS_PER_SECOND = 2;
 const MAX_PIXELS_PER_SECOND = 100;
@@ -19,10 +20,27 @@ export function StudioApp() {
 
   const [pxPerSec, setPixPerSec] = useState(10);
 
+  const timer = useEngineTimer();
+  const currentTimeMs = useMotionValue(timer?.currentMs ?? 0);
+
+  useEffect(() => {
+    if (!timer) return;
+    const unsub = timer.subscribe(({ currentMs }) => {
+      currentTimeMs.set(currentMs);
+    });
+    return () => {
+      unsub();
+    };
+  }, [timer]);
+
   const hScrollContainerRef = useRef<HTMLDivElement>(null);
   const vScrollContainerRef = useRef<HTMLDivElement>(null);
   const { scrollX } = useScroll({
     container: hScrollContainerRef,
+  });
+
+  const currentTimeLeft = useTransform(() => {
+    return `${(currentTimeMs.get() / 1000) * pxPerSec - scrollX.get()}px`;
   });
 
   useEffect(() => {
@@ -76,6 +94,11 @@ export function StudioApp() {
             ref={vScrollContainerRef}
             className={'relative h-full overflow-y-scroll'}
           >
+            <motion.div
+              className={'w-0.5 bg-white/50 h-full absolute top-0 z-30'}
+              style={{ left: currentTimeLeft, marginLeft: trackTitleWidth }}
+            />
+
             <div className={'sticky top-0 z-30 bg-neutral-900'}>
               <ActionBar />
               <TimelineRulerCanvas
