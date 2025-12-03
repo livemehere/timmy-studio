@@ -53,7 +53,7 @@ export function TimelineTrack({
       style={{
         height: trackHeight,
       }}
-      className={'bg-neutral-850 flex gap-0.5'}
+      className={'bg-neutral-850 flex'}
     >
       <div
         className={
