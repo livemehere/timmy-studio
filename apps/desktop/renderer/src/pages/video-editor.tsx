@@ -1,29 +1,8 @@
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { StudioProvider } from '@renderer/lib/studio/contexts/StudioProvider';
 import { uid } from 'uid';
-import { PreviewRenderer } from '@renderer/lib/studio/components/PreviewRenderer';
-import { StudioDebugger } from '@renderer/lib/studio/components/StduioDebugger';
-import { TimelineTracks } from '@renderer/lib/studio/components/Timeline/TimelineTracks';
-import { ActionBar } from '@renderer/lib/studio/components/ActionBar';
-import { TimelineRulerCanvas } from '@renderer/lib/studio/components/TimelineRulerCanvas';
-import { TimerActionBar } from '@renderer/lib/studio/components/TimerActionBar';
-import { useRef } from 'react';
-import { useScroll } from 'motion/react';
+import { StudioApp } from '@renderer/lib/studio/components/StudioApp';
 
 export default function VideoEditorPage() {
-  const totalTrackWidth = 1200;
-  const totalTrackHeight = 2200;
-
-  const trackTitleWidth = 120;
-  const trackHeight = 60;
-
-  const pxPerSec = 10;
-
-  const hScrollContainerRef = useRef<HTMLDivElement>(null);
-  const { scrollX } = useScroll({
-    container: hScrollContainerRef,
-  });
-
   return (
     <StudioProvider
       initialProject={{
@@ -105,52 +84,7 @@ export default function VideoEditorPage() {
         ],
       }}
     >
-      <div className="h-full p-2 overflow-hidden">
-        <StudioDebugger />
-        <PanelGroup direction={'vertical'}>
-          <Panel>
-            <PanelGroup direction={'horizontal'}>
-              <Panel className={'bg-neutral-900'} defaultSize={30}>
-                Resources
-              </Panel>
-              <PanelResizeHandle className={'w-1 bg-neutral-950'} />
-              <Panel className={'bg-neutral-900'}>
-                <PreviewRenderer />
-                <TimerActionBar />
-              </Panel>
-              <PanelResizeHandle className={'w-1 bg-neutral-950'} />
-              <Panel className={'bg-neutral-900'} defaultSize={25}>
-                Properties
-              </Panel>
-            </PanelGroup>
-          </Panel>
-          <PanelResizeHandle className={'h-1 bg-neutral-950'} />
-          <Panel className={'bg-neutral-900'} defaultSize={40}>
-            <div className={'relative h-full overflow-y-scroll'}>
-              <div className={'sticky top-0 z-30 bg-neutral-900'}>
-                <ActionBar />
-                <TimelineRulerCanvas
-                  leftPadding={trackTitleWidth}
-                  scrollXMotionValue={scrollX}
-                />
-              </div>
-
-              <div
-                ref={hScrollContainerRef}
-                className={'w-full overflow-x-scroll'}
-              >
-                <TimelineTracks
-                  width={totalTrackWidth}
-                  height={totalTrackHeight}
-                  trackTitleWidth={trackTitleWidth}
-                  trackHeight={trackHeight}
-                  pxPerSec={pxPerSec}
-                />
-              </div>
-            </div>
-          </Panel>
-        </PanelGroup>
-      </div>
+      <StudioApp />
     </StudioProvider>
   );
 }
