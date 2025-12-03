@@ -47,3 +47,6 @@ export {
   useAudioTrackNode,
   useAudioClipNode,
 } from './useAudio';
+
+// Canvas hooks
+export { useResizeCanvas } from './useResizeCanvas';
