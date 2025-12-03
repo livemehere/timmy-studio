@@ -1,5 +1,5 @@
 import { useEffectEvent, useRef } from 'react';
-import { useDocSettings, useResizeCanvas } from '../hooks';
+import { useDocSettings, useEngineTimer, useResizeCanvas } from '../hooks';
 import { type MotionValue, useMotionValueEvent } from 'motion/react';
 
 export function TimelineRulerCanvas({
@@ -13,6 +13,9 @@ export function TimelineRulerCanvas({
 }) {
   const { duration } = useDocSettings(); // duration: ms 라고 가정
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const timer = useEngineTimer();
+  const isDraggingRef = useRef(false);
 
   const redraw = useEffectEvent(() => {
     const canvas = canvasRef.current;
@@ -30,21 +33,61 @@ export function TimelineRulerCanvas({
     });
   });
 
-  const containerRef = useResizeCanvas(canvasRef, redraw);
+  useResizeCanvas(canvasRef, redraw, containerRef);
 
   // 스크롤 변할 때마다 redraw
   useMotionValueEvent(scrollXMotionValue, 'change', () => {
     redraw();
   });
 
+  // 클릭한 x 좌표를 시간(ms)으로 변환
+  const xToMs = (clientX: number): number => {
+    const container = containerRef.current;
+    if (!container) return 0;
+
+    const rect = container.getBoundingClientRect();
+    const localX = clientX - rect.left;
+    const scrollX = scrollXMotionValue.get();
+    const ms = ((localX + scrollX) / pixelPerSecond) * 1000;
+
+    // 0 ~ duration 범위로 클램프
+    return Math.max(0, Math.min(duration, ms));
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (!timer) return;
+
+    isDraggingRef.current = true;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+
+    const ms = xToMs(e.clientX);
+    timer.seek(ms);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!timer || !isDraggingRef.current) return;
+
+    const ms = xToMs(e.clientX);
+    timer.seek(ms);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    isDraggingRef.current = false;
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+  };
+
   return (
     <div className={'w-full h-[20px] select-none '}>
       <div
         ref={containerRef}
-        className={'h-full border-t-orange-400/30 border-t'}
+        className={'h-full border-t-orange-400/30 border-t cursor-pointer'}
         style={{
           marginLeft: leftPadding,
         }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
       >
         <canvas ref={canvasRef}></canvas>
       </div>

@@ -69,6 +69,7 @@ export function StudioApp() {
       el.removeEventListener('wheel', handleWheel);
     };
   }, []);
+
   return (
     <div className="h-full p-2 overflow-hidden">
       <PanelGroup direction={'vertical'}>
@@ -94,9 +95,14 @@ export function StudioApp() {
             ref={vScrollContainerRef}
             className={'relative h-full overflow-y-scroll'}
           >
+            {/* 현재시간 */}
             <motion.div
-              className={'w-0.5 bg-white/50 h-full absolute top-0 z-30'}
-              style={{ left: currentTimeLeft, marginLeft: trackTitleWidth }}
+              className={'w-0.5 bg-white/50 absolute top-0 z-30'}
+              style={{
+                left: currentTimeLeft,
+                marginLeft: trackTitleWidth,
+                height: totalTrackHeight,
+              }}
             />
 
             <div className={'sticky top-0 z-30 bg-neutral-900'}>
