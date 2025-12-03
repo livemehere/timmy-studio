@@ -254,14 +254,17 @@ export class AssetManager {
       if (needsReload) {
         await new Promise<void>((resolve, reject) => {
           elements.origin.oncanplay = () => resolve();
-          elements.origin.onerror = () =>
+          elements.origin.onerror = () => {
+            console.error(elements.origin.error?.message);
             reject(new Error(`Failed to reload video: ${asset.filePath}`));
+          };
         });
 
         if (elements.proxy && asset.proxyFilePath) {
           await new Promise<void>((resolve) => {
             elements.proxy!.oncanplay = () => resolve();
             elements.proxy!.onerror = () => {
+              console.error(elements.proxy!.error?.message);
               console.warn(
                 `[AssetManager] Failed to reload proxy: ${asset.proxyFilePath}`
               );
@@ -292,8 +295,10 @@ export class AssetManager {
 
     await new Promise<void>((resolve, reject) => {
       origin.oncanplay = () => resolve();
-      origin.onerror = () =>
+      origin.onerror = () => {
+        console.error(origin.error?.message);
         reject(new Error(`Failed to load video: ${asset.filePath}`));
+      };
     });
 
     const elements: VideoElements = { origin };
@@ -310,6 +315,7 @@ export class AssetManager {
       await new Promise<void>((resolve) => {
         proxy.oncanplay = () => resolve();
         proxy.onerror = () => {
+          console.error(proxy.error?.message);
           console.warn(
             `[AssetManager] Failed to load proxy: ${asset.proxyFilePath}`
           );
@@ -370,8 +376,10 @@ export class AssetManager {
       if (needsReload) {
         await new Promise<void>((resolve, reject) => {
           audio.oncanplay = () => resolve();
-          audio.onerror = () =>
+          audio.onerror = () => {
+            console.error(audio.error?.message);
             reject(new Error(`Failed to reload audio: ${asset.filePath}`));
+          };
         });
         console.debug(`[AssetManager] Audio reloaded: ${assetId}`);
       } else {
@@ -393,8 +401,10 @@ export class AssetManager {
 
     await new Promise<void>((resolve, reject) => {
       audio.oncanplay = () => resolve();
-      audio.onerror = () =>
+      audio.onerror = () => {
+        console.error(audio.error?.message);
         reject(new Error(`Failed to load audio: ${asset.filePath}`));
+      };
     });
 
     this.audioElements.set(assetId, audio);
@@ -424,8 +434,9 @@ export class AssetManager {
       if (img.src !== asset.filePath) {
         await new Promise<void>((resolve, reject) => {
           img.onload = () => resolve();
-          img.onerror = () =>
+          img.onerror = () => {
             reject(new Error(`Failed to reload image: ${asset.filePath}`));
+          };
           img.src = asset.filePath;
         });
         console.debug(`[AssetManager] Image reloaded: ${assetId}`);
@@ -445,8 +456,9 @@ export class AssetManager {
 
     await new Promise<void>((resolve, reject) => {
       img.onload = () => resolve();
-      img.onerror = () =>
+      img.onerror = () => {
         reject(new Error(`Failed to load image: ${asset.filePath}`));
+      };
       img.src = asset.filePath;
     });
 
