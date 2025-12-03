@@ -111,7 +111,7 @@ export function StudioApp() {
               }}
             />
 
-            <div className={'sticky top-0 z-30 bg-neutral-900'}>
+            <div className={'sticky top-0 z-60 bg-neutral-900'}>
               <ActionBar />
               <TimelineRulerCanvas
                 leftPadding={trackTitleWidth}

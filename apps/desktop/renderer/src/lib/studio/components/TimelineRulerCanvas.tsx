@@ -77,13 +77,13 @@ export function TimelineRulerCanvas({
   };
 
   return (
-    <div className={'w-full h-[20px] select-none '}>
+    <div className={'w-full h-[20px] select-none flex'}>
+      <div style={{ width: leftPadding }} className={'h-full'}></div>
       <div
         ref={containerRef}
-        className={'h-full border-t-orange-400/30 border-t cursor-pointer'}
-        style={{
-          marginLeft: leftPadding,
-        }}
+        className={
+          'h-full border-t-orange-400/30 border-t cursor-pointer flex-1'
+        }
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
