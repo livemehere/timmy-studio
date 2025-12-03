@@ -16,8 +16,12 @@ export default function VideoEditorPage() {
             filePath: 'file:///path/to/sample-media.MOV',
             proxyFilePath: 'file:///path/to/sample-media.mp4',
             metadata: {
-              size: 1000,
+              size: 95068160,
               createdAt: new Date().toISOString(),
+              duration: 1000 * 35,
+              frameRate: 30,
+              width: 1440,
+              height: 1920,
             },
           },
         ],
