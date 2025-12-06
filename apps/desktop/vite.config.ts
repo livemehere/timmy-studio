@@ -1,3 +1,5 @@
+/// <reference types="vitest" />
+
 import { defineConfig, type UserConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
@@ -13,9 +15,7 @@ const resolve: UserConfig['resolve'] = {
 };
 
 export default defineConfig({
-  test: {
-    globals: true,
-  },
+  test: {},
   /** 공통으로 merge 되는 설정 */
   resolve,
   plugins: [

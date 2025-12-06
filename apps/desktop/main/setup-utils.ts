@@ -24,7 +24,7 @@ export function setupTray() {
   return tray;
 }
 
-export function createWindow() {
+export async function createWindow() {
   const win = new BrowserWindow({
     width: 1920,
     height: 1080,
@@ -32,9 +32,11 @@ export function createWindow() {
       preload: getPreloadPath(),
       webSecurity: false,
     },
+
     frame: false,
     titleBarStyle: 'hiddenInset',
   });
-  loadWindow(win, 'video-editor');
+  await loadWindow(win, 'video-editor');
+
   return win;
 }
