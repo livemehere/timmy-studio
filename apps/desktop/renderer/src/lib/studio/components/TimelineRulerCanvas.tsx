@@ -1,6 +1,7 @@
 import { useEffectEvent, useRef } from 'react';
 import { useDocSettings, useEngineTimer, useResizeCanvas } from '../hooks';
 import { type MotionValue, useMotionValueEvent } from 'motion/react';
+import { formatTime } from '../utils/time';
 
 export function TimelineRulerCanvas({
   scrollXMotionValue,
@@ -78,7 +79,7 @@ export function TimelineRulerCanvas({
 
   return (
     <div className={'w-full h-[20px] select-none flex'}>
-      <div style={{ width: leftPadding }} className={'h-full'}></div>
+      <div style={{ width: leftPadding }} className={'h-full shrink-0'}></div>
       <div
         ref={containerRef}
         className={
@@ -162,7 +163,7 @@ function drawRuler({
 
     // label (major만, y축 가운데)
     if (isMajor) {
-      ctx.fillText(formatMs(t), x + 4, height / 2);
+      ctx.fillText(formatTime(t, { style: 'short' }), x + 4, height / 2);
       lastLabelEndX = x + 4 + labelWidth;
     }
   }
@@ -202,11 +203,4 @@ function isMultiple(value: number, step: number) {
   if (step === 0) return false;
   const q = value / step;
   return Math.abs(q - Math.round(q)) < 1e-6;
-}
-
-function formatMs(ms: number) {
-  const totalSec = Math.floor(ms / 1000);
-  const m = Math.floor(totalSec / 60);
-  const s = totalSec % 60;
-  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
