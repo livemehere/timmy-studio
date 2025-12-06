@@ -8,7 +8,9 @@ import {
   Type,
 } from 'lucide-react';
 import { AllAssets } from '@renderer/lib/studio/components/ResourceContent/AllAssets';
-import { VideoResourceContent } from '@renderer/lib/studio/components/ResourceContent/VideoResourceContent';
+import { VideoAssets } from '@renderer/lib/studio/components/ResourceContent/VideoAssets';
+import { ImageAssets } from '@renderer/lib/studio/components/ResourceContent/ImageAssets';
+import { AudioAssets } from '@renderer/lib/studio/components/ResourceContent/AudioAssets';
 
 export interface IResourceTab {
   name: string;
@@ -25,10 +27,10 @@ export const RESOURCE_TABS: IResourceTab[] = [
       {
         name: 'Videos',
         IconComp: Clapperboard,
-        ContentComp: VideoResourceContent,
+        ContentComp: VideoAssets,
       },
-      { name: 'Images', IconComp: Image, ContentComp: null },
-      { name: 'Audio', IconComp: Headphones, ContentComp: null },
+      { name: 'Images', IconComp: Image, ContentComp: ImageAssets },
+      { name: 'Audio', IconComp: Headphones, ContentComp: AudioAssets },
       { name: 'Text', IconComp: Type, ContentComp: null },
       { name: 'Shapes', IconComp: Pentagon, ContentComp: null },
     ],
