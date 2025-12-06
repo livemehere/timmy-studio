@@ -5,6 +5,7 @@ export default function HomePage() {
     queryKey: ['appinfo'],
     queryFn: async () => window.app.invoke('getAppInfo'),
   });
+
   return (
     <div style={{ padding: '20px' }}>
       <h1>Home Page</h1>

@@ -4,8 +4,9 @@ import fs from 'fs';
 import os from 'os';
 
 export const REACT_DEVELOPER_TOOLS = 'fmkadmapgofadopljbjfkapdkoienihi';
+export const REDUX_TOOLS = 'lmhkpmbekcpmknklioeibfkpmmfibljd'; // 설치친는되나, store 인식이 안됨
 
-export async function installExtension(extensionId: string) {
+async function loadSingleExtension(extensionId: string) {
   const basePath = path.join(
     os.homedir(),
     'Library/Application Support/Google/Chrome/Default/Extensions',
@@ -29,6 +30,16 @@ export async function installExtension(extensionId: string) {
     allowFileAccess: true,
   });
 
+  return extensionId;
+}
+
+export async function installExtension(extensionIds: string | string[]) {
+  const ids = Array.isArray(extensionIds) ? extensionIds : [extensionIds];
+  await Promise.all(ids.map(loadSingleExtension));
+  await checkExtensionServiceWorker();
+}
+
+export async function checkExtensionServiceWorker() {
   const allExtensions = session.defaultSession.extensions.getAllExtensions();
 
   for (const ext of allExtensions) {
@@ -38,7 +49,7 @@ export async function installExtension(extensionId: string) {
     if (!manifest.background?.service_worker) continue;
 
     console.log(
-      `Extension(${extensionId}) uses service worker:`,
+      `Extension(${ext.id}) uses service worker:`,
       manifest.background.service_worker
     );
 
