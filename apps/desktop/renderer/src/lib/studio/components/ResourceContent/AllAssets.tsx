@@ -2,6 +2,7 @@ import { useDocAssets } from '@renderer/lib/studio/hooks';
 import type { IAsset, IAssetMetadata } from '@renderer/lib/studio/types';
 import { formatTime } from '@renderer/lib/studio/utils/time';
 import { cn } from '@renderer/utils/cn';
+import { formatFileSize } from '@renderer/lib/studio/utils/size';
 
 const badgeClass =
   'absolute text-[9px] bg-black/60 px-1 py-0.5 rounded leading-none select-none';
@@ -27,6 +28,10 @@ function MetadataOverlay({ metadata }: { metadata: IAssetMetadata }) {
           {metadata.width}x{metadata.height}
         </span>
       )}
+      {/* 좌하단: File size */}
+      <span className={cn(badgeClass, 'bottom-1 left-1')}>
+        {formatFileSize(metadata.size)}
+      </span>
     </>
   );
 }
@@ -45,6 +50,7 @@ function AssetPreviewContent({ asset }: { asset: IAsset }) {
       return (
         <img
           src={asset.filePath}
+          alt={asset.name}
           className="w-full h-full object-cover rounded"
         />
       );
@@ -79,6 +85,7 @@ function AssetItem({ asset }: { asset: IAsset }) {
 
 export function AllAssets() {
   const assets = useDocAssets();
+  console.log(assets);
   return (
     <div className="overflow-y-auto grid auto-cols-[120px] gap-2 p-2">
       {assets.map((asset) => (

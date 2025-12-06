@@ -7,8 +7,8 @@ import {
   Pentagon,
   Type,
 } from 'lucide-react';
-import { AllAssets } from '@renderer/lib/studio/components/Resource/Contents/AllAssets';
-import { VideoResourceContent } from '@renderer/lib/studio/components/Resource/Contents/VideoResourceContent';
+import { AllAssets } from '@renderer/lib/studio/components/ResourceContent/AllAssets';
+import { VideoResourceContent } from '@renderer/lib/studio/components/ResourceContent/VideoResourceContent';
 
 export interface IResourceTab {
   name: string;

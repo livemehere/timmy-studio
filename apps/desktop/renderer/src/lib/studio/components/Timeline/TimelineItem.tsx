@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useDocClip, usePixiClipSprite } from '@renderer/lib/studio/hooks';
 import type { IVideoClip } from '../../types';
 import { msToSec } from '../../utils/time';
@@ -14,19 +13,6 @@ export function TimelineItem({
   const sprite = usePixiClipSprite(clipId);
   const width = clip ? msToSec(clip.endTime - clip.startTime) * pxPerSec : 0;
   const left = clip ? msToSec(clip.startTime) * pxPerSec : 0;
-
-  useEffect(() => {
-    if (sprite) {
-      console.debug(`[Clip] Sprite loaded for clip: ${clipId}`, {
-        label: sprite.label,
-        x: sprite.x,
-        y: sprite.y,
-        width: sprite.width,
-        height: sprite.height,
-        alpha: sprite.alpha,
-      });
-    }
-  }, [clipId, sprite]);
 
   if (!clip) {
     throw new Error(`Clip(${clipId}) not found`);
