@@ -3,6 +3,10 @@ import log from 'electron-log/main';
 import { isDev, debug } from '@timmy-studio/electron-utils/utils/main';
 import { ipc } from '@timmy-studio/electron-utils/ipc/main';
 import { createWindow, setupTray } from './setup-utils';
+import {
+  installExtension,
+  REACT_DEVELOPER_TOOLS,
+} from '@main/utils/installExtension';
 
 log.initialize();
 log.info('App starting...');
@@ -12,15 +16,22 @@ log.info('App starting...');
 // app.commandLine.appendSwitch('ignore-gpu-blocklist'); // Optional, but can help in some cases
 
 app.whenReady().then(async () => {
+  try {
+    await installExtension(REACT_DEVELOPER_TOOLS);
+    log.info(`Added Extension: react`);
+  } catch (err) {
+    log.info(`Error while installing extension: ${err}`);
+  }
+
   debug({
     isEnabled: true,
   });
   setupTray();
 
-  createWindow();
-  app.on('activate', () => {
+  await createWindow();
+  app.on('activate', async () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      await createWindow();
     }
   });
 
