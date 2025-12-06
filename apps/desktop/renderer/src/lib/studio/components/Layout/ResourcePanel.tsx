@@ -8,9 +8,9 @@ import {
   Type,
   type LucideIcon,
 } from 'lucide-react';
-import { VideoResourceContent } from './Contents/VideoResourceContent';
+import { VideoResourceContent } from '../Resource/Contents/VideoResourceContent';
 import { cn } from '@renderer/utils/cn';
-import { AllAssets } from './Contents/AllAssets';
+import { AllAssets } from '../Resource/Contents/AllAssets';
 
 interface IResourceTab {
   name: string;
@@ -39,7 +39,7 @@ const TABS: IResourceTab[] = [
   },
 ];
 
-export function Resources() {
+export function ResourcePanel() {
   const [activeTabIndex, setActiveTabIndex] = useState(0);
   const [activeSubTabIndex, setActiveSubTabIndex] = useState(0);
 
