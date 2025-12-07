@@ -6,10 +6,10 @@ import { createWindow, setupTray } from './setup-utils';
 import { checkExtensionServiceWorker } from '@main/utils/installExtension';
 import { userConfigStore } from '@main/store';
 
-const {
-  default: installExtension,
+import {
+  installExtension,
   REACT_DEVELOPER_TOOLS,
-} = require('electron-devtools-installer');
+} from 'electron-devtools-installer';
 
 log.initialize();
 log.info('App starting...');
