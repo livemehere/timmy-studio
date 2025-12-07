@@ -97,7 +97,7 @@ export function Assets({ assets, emptyMessage = 'No assets' }: AssetsProps) {
   }
 
   return (
-    <div className="overflow-y-auto grid auto-cols-[120px] gap-2 p-2">
+    <div className="overflow-y-auto grid auto-cols-[120px] gap-2">
       {assets.map((asset) => (
         <AssetItem key={asset.id} asset={asset} />
       ))}

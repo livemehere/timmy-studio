@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, dialog } from 'electron';
 import log from 'electron-log/main';
 import { isDev, debug } from '@timmy-studio/electron-utils/utils/main';
 import { ipc } from '@timmy-studio/electron-utils/ipc/main';
@@ -10,6 +10,7 @@ import {
   installExtension,
   REACT_DEVELOPER_TOOLS,
 } from 'electron-devtools-installer';
+import { ffprobePromise } from '@main/utils/ffmpeg';
 
 log.initialize();
 log.info('App starting...');
@@ -60,14 +61,7 @@ app.whenReady().then(async () => {
   app.on('window-all-closed', () => {
     app.quit();
   });
-
-  ipc.handle('getAppInfo', () => {
-    return {
-      isDev: isDev(),
-      isPackaged: app.isPackaged,
-      version: app.getVersion(),
-    };
-  });
+  ipcFasade();
 });
 
 process.on('uncaughtException', (error) => {
@@ -77,3 +71,21 @@ process.on('uncaughtException', (error) => {
 process.on('unhandledRejection', (reason, promise) => {
   log.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
+
+function ipcFasade() {
+  ipc.handle('getAppInfo', () => {
+    return {
+      isDev: isDev(),
+      isPackaged: app.isPackaged,
+      version: app.getVersion(),
+    };
+  });
+
+  ipc.handle('showOpenDialog', async (_, options) => {
+    return await dialog.showOpenDialog(options);
+  });
+
+  ipc.handle('getMediaMetadata', (_, filePath: string) => {
+    return ffprobePromise(filePath);
+  });
+}
