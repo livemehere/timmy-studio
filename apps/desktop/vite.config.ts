@@ -28,6 +28,10 @@ export default defineConfig({
     electron({
       main: {
         resolve,
+        ssr: {
+          /* ESM -> CJS 로 바꿔버리는 효과 */
+          noExternal: ['electron-store'],
+        },
       },
       preload: {
         resolve,
