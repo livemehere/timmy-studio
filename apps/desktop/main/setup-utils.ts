@@ -5,6 +5,10 @@ import {
 } from '@timmy-studio/electron-utils/utils/main';
 import { app, BrowserWindow, Menu, nativeImage, Tray } from 'electron';
 
+interface CreateWindowOptions {
+  bounds?: Electron.Rectangle;
+}
+
 export function setupTray() {
   const icon = nativeImage
     .createFromPath(toExtraResourcePath('tray.png'))
@@ -24,10 +28,11 @@ export function setupTray() {
   return tray;
 }
 
-export async function createWindow() {
+export async function createWindow(options: CreateWindowOptions) {
   const win = new BrowserWindow({
     width: 1920,
     height: 1080,
+    ...options.bounds,
     webPreferences: {
       preload: getPreloadPath(),
       webSecurity: false,

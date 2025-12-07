@@ -4,6 +4,7 @@ import { isDev, debug } from '@timmy-studio/electron-utils/utils/main';
 import { ipc } from '@timmy-studio/electron-utils/ipc/main';
 import { createWindow, setupTray } from './setup-utils';
 import { checkExtensionServiceWorker } from '@main/utils/installExtension';
+import { userConfigStore } from '@main/store';
 
 const {
   default: installExtension,
@@ -31,10 +32,28 @@ app.whenReady().then(async () => {
   });
   setupTray();
 
-  await createWindow();
+  console.log('useConfigStore value', userConfigStore.store);
+  const savedBounds = userConfigStore.get('bounds');
+
+  const win = await createWindow({
+    bounds: savedBounds,
+  });
+
+  win.on('moved', () => {
+    const bounds = win.getBounds();
+    userConfigStore.set('bounds', bounds);
+  });
+
+  win.on('resized', () => {
+    const bounds = win.getBounds();
+    userConfigStore.set('bounds', bounds);
+  });
+
   app.on('activate', async () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      await createWindow();
+      await createWindow({
+        bounds: savedBounds,
+      });
     }
   });
 
