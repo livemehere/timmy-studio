@@ -1,4 +1,4 @@
-/// <reference types="vitest" />
+/// <reference types="vitest/config" />
 
 import { defineConfig, type UserConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -30,7 +30,7 @@ export default defineConfig({
         resolve,
         ssr: {
           /* ESM -> CJS 로 바꿔버리는 효과 */
-          noExternal: ['electron-store'],
+          noExternal: ['electron-store', 'electron-devtools-installer'],
         },
       },
       preload: {
