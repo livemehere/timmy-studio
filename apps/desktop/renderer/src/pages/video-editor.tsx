@@ -1,6 +1,6 @@
 import { StudioProvider } from '@renderer/lib/studio/contexts/StudioProvider';
 import { uid } from 'uid';
-import { StudioApp } from '@renderer/lib/studio/components/StudioApp';
+import { StudioApp } from '@renderer/lib/studio/components';
 
 export default function VideoEditorPage() {
   return (

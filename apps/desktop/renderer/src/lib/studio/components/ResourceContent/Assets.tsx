@@ -1,7 +1,7 @@
-import type { IAsset, IAssetMetadata } from '@renderer/lib/studio/types';
 import { formatTime } from '@renderer/lib/studio/utils/time';
 import { cn } from '@renderer/utils/cn';
 import { formatFileSize } from '@renderer/lib/studio/utils/size';
+import type { IAsset, IAssetMetadata } from '@renderer/lib/studio/types/asset';
 
 const badgeClass =
   'absolute text-[9px] bg-black/60 px-1 py-0.5 rounded leading-none select-none';

@@ -1,5 +1,6 @@
-import type { ITrack, IVideoClip, IAudioClip, IAsset } from '../types';
+import type { ITrack, IVideoClip, IAudioClip } from '../types/types';
 import { useDocStore } from './useStudioStores';
+import type { IAsset } from '@renderer/lib/studio/types/asset';
 
 // ============================================================================
 // Document State Hooks (DocStore)

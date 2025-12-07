@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import type { IProject } from '../types';
+import type { IProject } from '../types/types';
 import { createDocStore } from '../stores/docStore';
 import { createEngineStore } from '../stores/engineStore';
 import { bindDocToEngine } from '../stores/bindDocToEngine';

@@ -1,4 +1,4 @@
-import type { IAudioTrack, IAudioClip } from '@renderer/lib/studio/types';
+import type { IAudioTrack, IAudioClip } from '@renderer/lib/studio/types/types';
 
 export class AudioManager {
   sampleRate: number;

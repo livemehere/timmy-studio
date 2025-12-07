@@ -1,5 +1,5 @@
 import { useDocClip, usePixiClipSprite } from '@renderer/lib/studio/hooks';
-import type { IVideoClip } from '../../types';
+import type { IVideoClip } from '../../types/types';
 import { msToSec } from '../../utils/time';
 
 export function TimelineItem({

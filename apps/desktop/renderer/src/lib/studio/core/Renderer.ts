@@ -4,7 +4,7 @@ import type {
   IVideoClip,
   ITransform,
   IVideoMediaClip,
-} from '@renderer/lib/studio/types';
+} from '@renderer/lib/studio/types/types';
 import type { Timer } from '@renderer/lib/studio/core/Timer';
 import type { AssetManager } from '@renderer/lib/studio/core/AssetManager';
 

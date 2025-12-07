@@ -1,9 +1,9 @@
 import type {
   IAsset,
-  IVideoAsset,
   IAudioAsset,
   IImageAsset,
-} from '@renderer/lib/studio/types';
+  IVideoAsset,
+} from '@renderer/lib/studio/types/asset';
 
 interface VideoElements {
   origin: HTMLVideoElement;
@@ -206,7 +206,7 @@ export class AssetManager {
       }
 
       // volume 변경 체크
-      const newVolume = asset.volume ?? 1.0;
+      const newVolume = 1.0;
       if (elements.origin.volume !== newVolume) {
         elements.origin.volume = newVolume;
       }
@@ -290,7 +290,7 @@ export class AssetManager {
     origin.src = asset.filePath;
     origin.crossOrigin = 'anonymous';
     origin.preload = 'auto';
-    origin.volume = asset.volume ?? 1.0;
+    origin.volume = 1.0;
     origin.playbackRate = asset.playbackRate ?? 1.0;
 
     await new Promise<void>((resolve, reject) => {
@@ -309,7 +309,7 @@ export class AssetManager {
       proxy.src = asset.proxyFilePath;
       proxy.crossOrigin = 'anonymous';
       proxy.preload = 'auto';
-      proxy.volume = asset.volume ?? 1.0;
+      proxy.volume = 1.0;
       proxy.playbackRate = asset.playbackRate ?? 1.0;
 
       await new Promise<void>((resolve) => {
@@ -367,7 +367,7 @@ export class AssetManager {
       }
 
       // volume 변경 체크
-      const newVolume = asset.volume ?? 1.0;
+      const newVolume = 1.0;
       if (audio.volume !== newVolume) {
         audio.volume = newVolume;
       }
@@ -397,7 +397,7 @@ export class AssetManager {
     audio.src = asset.filePath;
     audio.preload = 'auto';
     audio.crossOrigin = 'anonymous';
-    audio.volume = asset.volume ?? 1.0;
+    audio.volume = 1.0;
 
     await new Promise<void>((resolve, reject) => {
       audio.oncanplay = () => resolve();

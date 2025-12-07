@@ -6,6 +6,8 @@
 // Project
 // ============================================================================
 
+import type { IAsset } from '@renderer/lib/studio/types/asset';
+
 export interface IProject {
   id: string;
   name: string;
@@ -182,42 +184,6 @@ export interface ITextData {
 // ============================================================================
 // Asset
 // ============================================================================
-
-export interface IBaseAsset {
-  id: string;
-  name: string;
-  filePath: string;
-  metadata: IAssetMetadata;
-  thumbnail?: string;
-}
-
-export interface IVideoAsset extends IBaseAsset {
-  type: 'video';
-  proxyFilePath?: string;
-  playbackRate?: number;
-  volume?: number;
-}
-
-export interface IAudioAsset extends IBaseAsset {
-  type: 'audio';
-  volume?: number;
-}
-
-export interface IImageAsset extends IBaseAsset {
-  type: 'image';
-}
-
-export type IAsset = IVideoAsset | IAudioAsset | IImageAsset;
-
-export interface IAssetMetadata {
-  duration?: number;
-  width?: number;
-  height?: number;
-  frameRate?: number;
-  codec?: string;
-  size: number;
-  createdAt: string;
-}
 
 // ============================================================================
 // Effect

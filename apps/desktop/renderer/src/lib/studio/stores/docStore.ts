@@ -1,7 +1,8 @@
 import { createStore } from 'zustand/vanilla';
 import { devtools } from 'zustand/middleware';
-import type { IProject, ITrack, IAsset } from '../types';
+import type { IProject, ITrack } from '../types/types';
 import isEqual from 'fast-deep-equal';
+import type { IAsset } from '@renderer/lib/studio/types/asset';
 
 const DEFAULT_PROJECT: IProject = {
   id: 'default-project',

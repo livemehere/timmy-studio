@@ -3,7 +3,7 @@ import { Timer } from '../core/Timer';
 import { Renderer } from '../core/Renderer';
 import { AudioManager } from '../core/AudioManager';
 import { AssetManager } from '../core/AssetManager';
-import type { IProject } from '../types';
+import type { IProject } from '../types/types';
 import { createStore } from 'zustand/vanilla';
 
 export interface EngineState {
