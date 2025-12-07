@@ -16,8 +16,8 @@ export type ElectronPackageOptions = {
 };
 
 interface ElectronOptions {
-  main: Record<string, unknown>;
-  preload: Record<string, unknown>;
+  main: UserConfig;
+  preload: UserConfig;
   package: ElectronPackageOptions;
 }
 
@@ -42,6 +42,7 @@ export function electron(options: ElectronOptions): Plugin[] {
     const watcher = await viteBuild(
       mergeConfig(userConfig, {
         configFile: false, // 이걸 false 로 안하면, vite.config.ts 를 자동으로 불러와서, 무한루프에 빠진다.
+
         build: {
           emptyOutDir: !isServe,
           minify: !isServe, // 최소한의 난독화인데, TODO: 암호화나, 난독화 추가하기
@@ -75,7 +76,7 @@ export function electron(options: ElectronOptions): Plugin[] {
             },
           },
         ],
-      })
+      } as UserConfig)
     );
 
     // Watch 모드에서는 이벤트 리스너 등록
