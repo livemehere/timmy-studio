@@ -1,4 +1,3 @@
-import { devtools } from 'zustand/middleware';
 import { Timer } from '../core/Timer';
 import { Renderer } from '../core/Renderer';
 import { AudioManager } from '../core/AudioManager';
@@ -49,158 +48,151 @@ export type EngineStore = EngineState & EngineActions;
 
 export const createEngineStore = () => {
   console.debug('[EngineStore] createStore');
-  return createStore<EngineStore>()(
-    devtools(
-      (set, get) => ({
-        // Initial state
+  return createStore<EngineStore>()((set, get) => ({
+    // Initial state
+    timer: null,
+    renderer: null,
+    audioManager: null,
+    assetManager: null,
+    isInitialized: false,
+
+    // Renderer sync state
+    isRendererReady: false,
+    syncedTrackIds: [],
+    syncedClipIds: [],
+
+    // AudioManager sync state
+    isAudioReady: false,
+    syncedAudioTrackIds: [],
+    syncedAudioClipIds: [],
+
+    // Actions
+    init: (project) => {
+      const state = get();
+      if (state.isInitialized) {
+        console.debug('[EngineStore] init already, Skipping.');
+        return;
+      }
+
+      console.debug('[EngineStore] init called');
+
+      // Create engine instances
+      const assetManager = new AssetManager(project.assets);
+      const timer = new Timer(project.settings.duration);
+      const renderer = new Renderer(timer, assetManager);
+      const audioManager = new AudioManager(project.settings.sampleRate);
+
+      const videoTracks = project.tracks.filter(
+        (track) => track.type === 'video'
+      );
+
+      const audioTracks = project.tracks.filter(
+        (track) => track.type === 'audio'
+      );
+
+      /** 단 1회, 전체 로딩 및 동기화 */
+      assetManager.initialLoadAllAssets(() => {
+        renderer.syncTracks(videoTracks);
+        audioManager.syncTracks(audioTracks);
+
+        // Sync 완료 후 상태 업데이트 (Video)
+        const trackIds = videoTracks.map((t) => t.id);
+        const clipIds = videoTracks.flatMap((t) => t.clips.map((c) => c.id));
+
+        // Sync 완료 후 상태 업데이트 (Audio)
+        // TODO: AudioManager 구현 완료 후 실제 동작
+        const audioTrackIds = audioTracks.map((t) => t.id);
+        const audioClipIds = audioTracks.flatMap((t) =>
+          t.clips.map((c) => c.id)
+        );
+
+        set({
+          isRendererReady: true,
+          syncedTrackIds: trackIds,
+          syncedClipIds: clipIds,
+          isAudioReady: true,
+          syncedAudioTrackIds: audioTrackIds,
+          syncedAudioClipIds: audioClipIds,
+        });
+
+        console.debug(
+          `[EngineStore] Renderer synced - tracks: ${trackIds.length}, clips: ${clipIds.length}`
+        );
+      });
+
+      set({
+        timer,
+        renderer,
+        audioManager,
+        assetManager,
+        isInitialized: true,
+      });
+    },
+
+    destroy: () => {
+      console.debug('[EngineStore] Destroying engine instances');
+
+      const state = get();
+
+      // Cleanup renderer
+      if (state.renderer) {
+        state.renderer.destroy();
+      }
+
+      if (state.audioManager) {
+        state.audioManager.destroy();
+      }
+
+      // Cleanup timer
+      if (state.timer) {
+        state.timer.destroy();
+      }
+
+      if (state.assetManager) {
+        state.assetManager.destroy();
+      }
+
+      // Reset state
+      set({
         timer: null,
         renderer: null,
         audioManager: null,
         assetManager: null,
         isInitialized: false,
-
-        // Renderer sync state
         isRendererReady: false,
         syncedTrackIds: [],
         syncedClipIds: [],
-
-        // AudioManager sync state
         isAudioReady: false,
         syncedAudioTrackIds: [],
         syncedAudioClipIds: [],
+      });
+    },
 
-        // Actions
-        init: (project) => {
-          const state = get();
-          if (state.isInitialized) {
-            console.debug('[EngineStore] init already, Skipping.');
-            return;
-          }
+    // Renderer sync state management
+    setRendererReady: (ready) => {
+      set({ isRendererReady: ready });
+    },
 
-          console.debug('[EngineStore] init called');
+    setSyncedTrackIds: (trackIds) => {
+      set({ syncedTrackIds: trackIds });
+    },
 
-          // Create engine instances
-          const assetManager = new AssetManager(project.assets);
-          const timer = new Timer(project.settings.duration);
-          const renderer = new Renderer(timer, assetManager);
-          const audioManager = new AudioManager(project.settings.sampleRate);
+    setSyncedClipIds: (clipIds) => {
+      set({ syncedClipIds: clipIds });
+    },
 
-          const videoTracks = project.tracks.filter(
-            (track) => track.type === 'video'
-          );
+    // AudioManager sync state management
+    // TODO: AudioManager 구현 완료 후 사용
+    setAudioReady: (ready) => {
+      set({ isAudioReady: ready });
+    },
 
-          const audioTracks = project.tracks.filter(
-            (track) => track.type === 'audio'
-          );
+    setSyncedAudioTrackIds: (trackIds) => {
+      set({ syncedAudioTrackIds: trackIds });
+    },
 
-          /** 단 1회, 전체 로딩 및 동기화 */
-          assetManager.initialLoadAllAssets(() => {
-            renderer.syncTracks(videoTracks);
-            audioManager.syncTracks(audioTracks);
-
-            // Sync 완료 후 상태 업데이트 (Video)
-            const trackIds = videoTracks.map((t) => t.id);
-            const clipIds = videoTracks.flatMap((t) =>
-              t.clips.map((c) => c.id)
-            );
-
-            // Sync 완료 후 상태 업데이트 (Audio)
-            // TODO: AudioManager 구현 완료 후 실제 동작
-            const audioTrackIds = audioTracks.map((t) => t.id);
-            const audioClipIds = audioTracks.flatMap((t) =>
-              t.clips.map((c) => c.id)
-            );
-
-            set({
-              isRendererReady: true,
-              syncedTrackIds: trackIds,
-              syncedClipIds: clipIds,
-              isAudioReady: true,
-              syncedAudioTrackIds: audioTrackIds,
-              syncedAudioClipIds: audioClipIds,
-            });
-
-            console.debug(
-              `[EngineStore] Renderer synced - tracks: ${trackIds.length}, clips: ${clipIds.length}`
-            );
-          });
-
-          set({
-            timer,
-            renderer,
-            audioManager,
-            assetManager,
-            isInitialized: true,
-          });
-        },
-
-        destroy: () => {
-          console.debug('[EngineStore] Destroying engine instances');
-
-          const state = get();
-
-          // Cleanup renderer
-          if (state.renderer) {
-            state.renderer.destroy();
-          }
-
-          if (state.audioManager) {
-            state.audioManager.destroy();
-          }
-
-          // Cleanup timer
-          if (state.timer) {
-            state.timer.destroy();
-          }
-
-          if (state.assetManager) {
-            state.assetManager.destroy();
-          }
-
-          // Reset state
-          set({
-            timer: null,
-            renderer: null,
-            audioManager: null,
-            assetManager: null,
-            isInitialized: false,
-            isRendererReady: false,
-            syncedTrackIds: [],
-            syncedClipIds: [],
-            isAudioReady: false,
-            syncedAudioTrackIds: [],
-            syncedAudioClipIds: [],
-          });
-        },
-
-        // Renderer sync state management
-        setRendererReady: (ready) => {
-          set({ isRendererReady: ready });
-        },
-
-        setSyncedTrackIds: (trackIds) => {
-          set({ syncedTrackIds: trackIds });
-        },
-
-        setSyncedClipIds: (clipIds) => {
-          set({ syncedClipIds: clipIds });
-        },
-
-        // AudioManager sync state management
-        // TODO: AudioManager 구현 완료 후 사용
-        setAudioReady: (ready) => {
-          set({ isAudioReady: ready });
-        },
-
-        setSyncedAudioTrackIds: (trackIds) => {
-          set({ syncedAudioTrackIds: trackIds });
-        },
-
-        setSyncedAudioClipIds: (clipIds) => {
-          set({ syncedAudioClipIds: clipIds });
-        },
-      }),
-      { name: 'EngineStore' }
-    )
-  );
+    setSyncedAudioClipIds: (clipIds) => {
+      set({ syncedAudioClipIds: clipIds });
+    },
+  }));
 };

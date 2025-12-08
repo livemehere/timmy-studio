@@ -17,8 +17,6 @@ function parseFps(rFrameRate?: string): number | undefined {
 function isUnreliableFps(stream: FfprobeStream): boolean {
   const avg = parseFps(stream?.avg_frame_rate);
   const r = parseFps(stream?.r_frame_rate);
-  console.log('avg', avg);
-  console.log('r', r);
 
   // avg가 0/0 이거나 없음 -> 신뢰 낮음
   if (!avg) {
