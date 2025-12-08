@@ -1,4 +1,4 @@
-import { useDocClip, usePixiClipSprite } from '@renderer/lib/studio/hooks';
+import { useDocStore, useEngineStore } from '../../hooks/useStudioStores';
 import type { IVideoClip } from '../../types/types';
 import { msToSec } from '../../utils/time';
 
@@ -9,8 +9,21 @@ export function TimelineItem({
   clipId: string;
   pxPerSec: number;
 }) {
-  const clip = useDocClip<IVideoClip>(clipId);
-  const sprite = usePixiClipSprite(clipId);
+  const clip = useDocStore((state) => {
+    for (const track of state.tracks) {
+      const found = track.clips.find((c) => c.id === clipId);
+      if (found) return found as IVideoClip;
+    }
+    return undefined;
+  });
+
+  const renderer = useEngineStore((state) => state.renderer);
+  const isReady = useEngineStore((state) => state.isRendererReady);
+  const syncedClipIds = useEngineStore((state) => state.syncedClipIds);
+  const sprite =
+    isReady && renderer && syncedClipIds.includes(clipId)
+      ? renderer.getClipSprite(clipId) ?? null
+      : null;
   const width = clip ? msToSec(clip.endTime - clip.startTime) * pxPerSec : 0;
   const left = clip ? msToSec(clip.startTime) * pxPerSec : 0;
 
