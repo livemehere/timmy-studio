@@ -1,11 +1,11 @@
 export interface IAssetMetadata {
-  duration?: number;
+  durationMs?: number;
   width?: number;
   height?: number;
   frameRate?: number;
   codec?: string;
   size: number;
-  createdAt: string;
+  createdAt?: string;
 }
 
 export interface IBaseAsset {
@@ -28,5 +28,5 @@ export interface IAudioAsset extends IBaseAsset {
 export interface IImageAsset extends IBaseAsset {
   type: 'image';
 }
-
+export type AssetType = 'video' | 'audio' | 'image' | 'animated-image';
 export type IAsset = IVideoAsset | IAudioAsset | IImageAsset;

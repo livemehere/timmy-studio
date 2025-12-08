@@ -18,7 +18,7 @@ export default function VideoEditorPage() {
             metadata: {
               size: 95068160,
               createdAt: new Date().toISOString(),
-              duration: 1000 * 35,
+              durationMs: 1000 * 35,
               frameRate: 30,
               width: 1440,
               height: 1920,

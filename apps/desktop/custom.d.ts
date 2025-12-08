@@ -1,6 +1,6 @@
 /// <reference types="@timmy-studio/electron-utils/ipc/renderer" />
 
-import type { FfprobeData } from 'fluent-ffmpeg';
+import type { IAsset } from '@renderer/lib/studio/types/asset';
 
 /**
  * Extend the IPC channel interfaces with app-specific channels
@@ -22,9 +22,9 @@ declare module '@timmy-studio/electron-utils/ipc' {
       payload: [Electron.OpenDialogOptions];
       response: Electron.OpenDialogReturnValue;
     };
-    getMediaMetadata: {
+    createAsset: {
       payload: [filePath: string];
-      response: FfprobeData;
+      response: IAsset;
     };
   }
 

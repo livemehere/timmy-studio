@@ -28,7 +28,7 @@ export const IMAGE_FILE_EXTENSIONS = [
   '.gif',
   '.bmp',
   '.tiff',
-  '.svg',
+  // '.svg', // TODO: svg 는 나중에 지원 or 변환 기능 지원하기, ffmprobe 로 메타데이터 추출이 안됨
   '.webp',
 ];
 

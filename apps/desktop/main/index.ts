@@ -11,6 +11,7 @@ import {
   REACT_DEVELOPER_TOOLS,
 } from 'electron-devtools-installer';
 import { ffprobePromise } from '@main/utils/ffmpeg';
+import { createAssetData } from '@main/utils/ffprobe';
 
 log.initialize();
 log.info('App starting...');
@@ -61,7 +62,7 @@ app.whenReady().then(async () => {
   app.on('window-all-closed', () => {
     app.quit();
   });
-  ipcFasade();
+  ipcFacade();
 });
 
 process.on('uncaughtException', (error) => {
@@ -72,7 +73,7 @@ process.on('unhandledRejection', (reason, promise) => {
   log.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-function ipcFasade() {
+function ipcFacade() {
   ipc.handle('getAppInfo', () => {
     return {
       isDev: isDev(),
@@ -85,7 +86,8 @@ function ipcFasade() {
     return await dialog.showOpenDialog(options);
   });
 
-  ipc.handle('getMediaMetadata', (_, filePath: string) => {
-    return ffprobePromise(filePath);
+  ipc.handle('createAsset', async (_, filePath: string) => {
+    const res = await ffprobePromise(filePath);
+    return createAssetData(res);
   });
 }

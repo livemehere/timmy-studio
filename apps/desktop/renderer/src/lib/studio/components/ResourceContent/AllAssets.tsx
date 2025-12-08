@@ -19,8 +19,8 @@ export function AllAssets() {
     if (result.canceled) return;
 
     for (const filePath of result.filePaths) {
-      const meta = await window.app.invoke('getMediaMetadata', filePath);
-      console.log('File metadata:', meta);
+      const newAsset = await window.app.invoke('createAsset', filePath);
+      console.log('asset :', newAsset);
       // Here you would typically add the asset to your document/store
     }
   };

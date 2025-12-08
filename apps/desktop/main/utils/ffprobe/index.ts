@@ -1,0 +1,94 @@
+import type { FfprobeData } from 'fluent-ffmpeg';
+import type {
+  IAsset,
+  IVideoAsset,
+  IAudioAsset,
+  IImageAsset,
+} from '@renderer/lib/studio/types/asset';
+import { randomUUID } from 'crypto';
+import path from 'path';
+import {
+  createAudioAssetMetadata,
+  createVideoAssetMetadata,
+} from '@main/utils/ffprobe/createAssetMetadata';
+import {
+  getAudioStream,
+  getPrimaryVideoStream,
+} from '@main/utils/ffprobe/getStream';
+import { detectAssetType } from '@main/utils/ffprobe/detectAssetType';
+import { getCreatedAt } from './getCreatedAt';
+
+function createVideoAsset(data: FfprobeData, createdAt?: string): IVideoAsset {
+  const filePath = data.format.filename!;
+  const videoStream = getPrimaryVideoStream(data);
+
+  return {
+    id: randomUUID(),
+    name: path.basename(filePath),
+    filePath,
+    type: 'video',
+    metadata: {
+      ...createVideoAssetMetadata(data, videoStream),
+      createdAt,
+    },
+  };
+}
+
+function createAudioAsset(data: FfprobeData, createdAt?: string): IAudioAsset {
+  const filePath = data.format.filename!;
+  const audioStream = getAudioStream(data);
+
+  return {
+    id: randomUUID(),
+    name: path.basename(filePath),
+    filePath,
+    type: 'audio',
+    metadata: {
+      ...createAudioAssetMetadata(data, audioStream),
+      createdAt,
+    },
+  };
+}
+
+function createImageAsset(data: FfprobeData, createdAt?: string): IImageAsset {
+  const filePath = data.format.filename!;
+  const videoStream = getPrimaryVideoStream(data);
+
+  return {
+    id: randomUUID(),
+    name: path.basename(filePath),
+    filePath,
+    type: 'image',
+    metadata: {
+      ...createVideoAssetMetadata(data, videoStream),
+      createdAt,
+    },
+  };
+}
+
+/**
+ * animated-image를 video로 취급하려면
+ * 여기서 animated-image 케이스를 video로 매핑하면 됨.
+ */
+export function createAssetData(data: FfprobeData): IAsset {
+  if (!data.format.filename) {
+    throw new Error('File path is missing in ffprobe data');
+  }
+
+  const assetType = detectAssetType(data);
+  const createdAt = getCreatedAt(data);
+
+  switch (assetType) {
+    case 'video':
+      return createVideoAsset(data, createdAt);
+    case 'audio':
+      return createAudioAsset(data, createdAt);
+    case 'image':
+      return createImageAsset(data, createdAt);
+    case 'animated-image':
+      // 정책 1) animated-image를 별도 타입으로 쓰고 싶으면:
+      // return { ...createImageAsset(data), type: 'image', isAnimated: true } 처럼 확장
+      // 정책 2) 지금 당장은 비디오로 취급하고 싶으면:
+      return createVideoAsset(data, createdAt);
+  }
+}

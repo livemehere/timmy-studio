@@ -16,9 +16,9 @@ function MetadataOverlay({ metadata }: { metadata: IAssetMetadata }) {
         </span>
       )}
       {/* 우상단: Duration */}
-      {metadata.duration != null && (
+      {metadata.durationMs != null && (
         <span className={cn(badgeClass, 'top-1 right-1')}>
-          {formatTime(metadata.duration, { style: 'short', unit: 'ms' })}
+          {formatTime(metadata.durationMs, { style: 'short', unit: 'ms' })}
         </span>
       )}
       {/* 우하단: Resolution */}
