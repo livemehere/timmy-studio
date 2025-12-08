@@ -2,14 +2,14 @@ import { motion, useMotionValue, useScroll, useTransform } from 'motion/react';
 import { ActionBar } from '@renderer/lib/studio/components/ActionBar';
 import { TimelineRulerCanvas } from '@renderer/lib/studio/components/TimelineRulerCanvas';
 import { TimelineTracks } from '@renderer/lib/studio/components/Timeline/TimelineTracks';
-import { useDocSettings, useEngineTimer } from '@renderer/lib/studio/hooks';
+import { useDocStore, useEngineStore } from '../../hooks/useStudioStores';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 const MIN_PIXELS_PER_SECOND = 2;
 const MAX_PIXELS_PER_SECOND = 100;
 
 export function TimelinePanel() {
-  const { duration } = useDocSettings();
+  const { duration } = useDocStore((state) => state.settings);
   const totalTrackHeight = 2200;
 
   const trackTitleWidth = 120;
@@ -23,7 +23,7 @@ export function TimelinePanel() {
     return durationSec * pxPerSec;
   }, [duration, pxPerSec]);
 
-  const timer = useEngineTimer();
+  const timer = useEngineStore((state) => state.timer);
   const currentTimeMs = useMotionValue(timer?.currentMs ?? 0);
 
   useEffect(() => {

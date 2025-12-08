@@ -1,9 +1,9 @@
-import { useDocAssets } from '@renderer/lib/studio/hooks';
+import { useDocStore } from '../../../hooks/useStudioStores';
 import { AssetRenderer } from './AssetRenderer';
 import { ALL_FILE_EXTENSIONS } from '@renderer/lib/studio/utils/file-extension';
 
 export function AllAssets() {
-  const assets = useDocAssets();
+  const assets = useDocStore((state) => state.assets);
 
   const handleSelectFiles = async () => {
     const result = await window.app.invoke('showOpenDialog', {
