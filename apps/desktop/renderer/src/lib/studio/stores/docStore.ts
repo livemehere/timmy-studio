@@ -43,13 +43,13 @@ export interface DocActions {
   updateName: (name: string) => void;
 
   // Track actions
-  addTrack: (track: ITrack) => void;
-  removeTrack: (trackId: string) => void;
+  addTrack: (track: ITrack | ITrack[]) => void;
+  removeTrack: (trackId: string | string[]) => void;
   updateTrack: (trackId: string, updates: Partial<ITrack>) => void;
 
   // Asset actions
-  addAsset: (asset: IAsset) => void;
-  removeAsset: (assetId: string) => void;
+  addAsset: (asset: IAsset | IAsset[]) => void;
+  removeAsset: (assetId: string | string[]) => void;
   updateAsset: (assetId: string, updates: Partial<IAsset>) => void;
 
   // Reset
@@ -126,14 +126,16 @@ export const createDocStore = (initialProject?: IProject) => {
       },
 
       addTrack: (track) => {
+        const trackArr = Array.isArray(track) ? track : [track];
         const currentTracks = get().tracks;
-        set({ tracks: [...currentTracks, track] });
+        set({ tracks: [...currentTracks, ...trackArr] });
       },
 
       removeTrack: (trackId) => {
+        const trackIdArr = Array.isArray(trackId) ? trackId : [trackId];
         const currentTracks = get().tracks;
         set({
-          tracks: currentTracks.filter((t) => t.id !== trackId),
+          tracks: currentTracks.filter((t) => !trackIdArr.includes(t.id)),
         });
       },
 
@@ -147,14 +149,16 @@ export const createDocStore = (initialProject?: IProject) => {
       },
 
       addAsset: (asset) => {
+        const assetArr = Array.isArray(asset) ? asset : [asset];
         const currentAssets = get().assets;
-        set({ assets: [...currentAssets, asset] });
+        set({ assets: [...currentAssets, ...assetArr] });
       },
 
       removeAsset: (assetId) => {
+        const assetIdArr = Array.isArray(assetId) ? assetId : [assetId];
         const currentAssets = get().assets;
         set({
-          assets: currentAssets.filter((a) => a.id !== assetId),
+          assets: currentAssets.filter((a) => !assetIdArr.includes(a.id)),
         });
       },
 

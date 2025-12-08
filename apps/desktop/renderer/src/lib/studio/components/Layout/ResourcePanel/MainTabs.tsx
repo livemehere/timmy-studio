@@ -9,7 +9,7 @@ interface MainTabsProps {
 
 export function MainTabs({ tabs, activeIndex, onTabChange }: MainTabsProps) {
   return (
-    <div className="flex gap-1 p-1 border-b border-neutral-950 overflow-y-hidden overflow-x-auto">
+    <div className="shrink-0 flex gap-1 p-1 border-b border-neutral-950 overflow-y-hidden overflow-x-auto">
       {tabs.map((tab, i) => (
         <button
           key={tab.name}

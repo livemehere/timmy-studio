@@ -25,7 +25,7 @@ export function AllAssets() {
         window.app.invoke('createAsset', filePath)
       )
     );
-    assets.forEach((asset) => addAsset(asset));
+    addAsset(assets);
   };
 
   return (

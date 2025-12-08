@@ -24,7 +24,7 @@ export function ResourcePanel() {
         onTabChange={handleMainTabChange}
       />
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-h-0">
         {activeTab?.subTabs && (
           <SubTabs
             tabs={activeTab.subTabs}
