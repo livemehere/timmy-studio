@@ -101,7 +101,7 @@ export function AssetRenderer({
   }
 
   return (
-    <div className="overflow-y-auto grid auto-cols-[120px] gap-2">
+    <div className="overflow-y-auto grid [grid-template-columns:repeat(auto-fill,minmax(120px,1fr))] gap-2">
       {assets.map((asset) => (
         <AssetItem key={asset.id} asset={asset} />
       ))}

@@ -22,7 +22,7 @@ export function TimelineItem({
   const syncedClipIds = useEngineStore((state) => state.syncedClipIds);
   const sprite =
     isReady && renderer && syncedClipIds.includes(clipId)
-      ? renderer.getClipSprite(clipId) ?? null
+      ? (renderer.getClipSprite(clipId) ?? null)
       : null;
   const width = clip ? msToSec(clip.endTime - clip.startTime) * pxPerSec : 0;
   const left = clip ? msToSec(clip.startTime) * pxPerSec : 0;
