@@ -21,18 +21,18 @@ export interface IResourceTab {
 
 export const RESOURCE_TABS: IResourceTab[] = [
   {
-    name: 'Assets',
+    name: '에셋',
     subTabs: [
-      { name: 'All', IconComp: null, ContentComp: AllAssets },
+      { name: '전체', IconComp: null, ContentComp: AllAssets },
       {
-        name: 'Videos',
+        name: '비디오',
         IconComp: Clapperboard,
         ContentComp: VideoAssets,
       },
-      { name: 'Images', IconComp: Image, ContentComp: ImageAssets },
-      { name: 'Audio', IconComp: Headphones, ContentComp: AudioAssets },
-      { name: 'Text', IconComp: Type, ContentComp: null },
-      { name: 'Shapes', IconComp: Pentagon, ContentComp: null },
+      { name: '이미지', IconComp: Image, ContentComp: ImageAssets },
+      { name: '오디오', IconComp: Headphones, ContentComp: AudioAssets },
+      { name: '텍스트', IconComp: Type, ContentComp: null },
+      { name: '도형', IconComp: Pentagon, ContentComp: null },
     ],
     IconComp: Box,
     ContentComp: null,
