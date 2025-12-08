@@ -1,5 +1,5 @@
 import { useDocAssets } from '@renderer/lib/studio/hooks';
-import { Assets } from './Assets';
+import { AssetRenderer } from './AssetRenderer';
 import { ALL_FILE_EXTENSIONS } from '@renderer/lib/studio/utils/file-extension';
 
 export function AllAssets() {
@@ -35,7 +35,7 @@ export function AllAssets() {
           가져오기
         </button>
       </div>
-      <Assets assets={assets} emptyMessage="No assets" />
+      <AssetRenderer assets={assets} emptyMessage="No assets" />
     </div>
   );
 }

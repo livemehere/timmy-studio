@@ -87,7 +87,10 @@ interface AssetsProps {
   emptyMessage?: string;
 }
 
-export function Assets({ assets, emptyMessage = 'No assets' }: AssetsProps) {
+export function AssetRenderer({
+  assets,
+  emptyMessage = 'No assets',
+}: AssetsProps) {
   if (assets.length === 0) {
     return (
       <div className="w-full h-full flex justify-center items-center text-neutral-500 text-sm select-none">
