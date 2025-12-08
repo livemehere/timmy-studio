@@ -1,6 +1,6 @@
 import { formatTime } from '@renderer/lib/studio/utils/time';
 import { cn } from '@renderer/utils/cn';
-import { formatFileSize } from '@renderer/lib/studio/utils/size';
+// import { formatFileSize } from '@renderer/lib/studio/utils/size';
 import type { IAsset, IAssetMetadata } from '@renderer/lib/studio/types/asset';
 import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
 
@@ -11,11 +11,11 @@ function MetadataOverlay({ metadata }: { metadata: IAssetMetadata }) {
   return (
     <>
       {/* 좌상단: FPS */}
-      {metadata.frameRate != null && (
-        <span className={cn(badgeClass, 'top-1 left-1')}>
-          {metadata.frameRate}FPS
-        </span>
-      )}
+      {/*{metadata.frameRate != null && (*/}
+      {/*  <span className={cn(badgeClass, 'top-1 left-1')}>*/}
+      {/*    {metadata.frameRate}FPS*/}
+      {/*  </span>*/}
+      {/*)}*/}
       {/* 우상단: Duration */}
       {metadata.durationMs != null && (
         <span className={cn(badgeClass, 'top-1 right-1')}>
@@ -23,15 +23,15 @@ function MetadataOverlay({ metadata }: { metadata: IAssetMetadata }) {
         </span>
       )}
       {/* 우하단: Resolution */}
-      {metadata.width != null && metadata.height != null && (
-        <span className={cn(badgeClass, 'bottom-1 right-1')}>
-          {metadata.width}x{metadata.height}
-        </span>
-      )}
+      {/*{metadata.width != null && metadata.height != null && (*/}
+      {/*  <span className={cn(badgeClass, 'bottom-1 right-1')}>*/}
+      {/*    {metadata.width}x{metadata.height}*/}
+      {/*  </span>*/}
+      {/*)}*/}
       {/* 좌하단: File size */}
-      <span className={cn(badgeClass, 'bottom-1 left-1')}>
-        {formatFileSize(metadata.size)}
-      </span>
+      {/*<span className={cn(badgeClass, 'bottom-1 left-1')}>*/}
+      {/*  {formatFileSize(metadata.size)}*/}
+      {/*</span>*/}
     </>
   );
 }
