@@ -1,5 +1,6 @@
 import { useEffectEvent, useRef } from 'react';
-import { useDocSettings, useEngineTimer, useResizeCanvas } from '../hooks';
+import { useDocStore, useEngineStore } from '../hooks/useStudioStores';
+import { useResizeCanvas } from '../hooks/useResizeCanvas';
 import { type MotionValue, useMotionValueEvent } from 'motion/react';
 import { formatTime } from '../utils/time';
 
@@ -12,10 +13,10 @@ export function TimelineRulerCanvas({
   leftPadding: number;
   pixelPerSecond: number;
 }) {
-  const { duration } = useDocSettings(); // duration: ms 라고 가정
+  const duration = useDocStore((state) => state.settings.duration); // duration: ms 라고 가정
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const timer = useEngineTimer();
+  const timer = useEngineStore((state) => state.timer);
   const isDraggingRef = useRef(false);
 
   const redraw = useEffectEvent(() => {

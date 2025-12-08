@@ -9,7 +9,7 @@ import {
 import { cn } from '@renderer/utils/cn';
 import { useState } from 'react';
 import { TimelineItem } from '@renderer/lib/studio/components/Timeline/TimelineItem';
-import { useDocTrack } from '@renderer/lib/studio/hooks';
+import { useDocStore } from '../../hooks/useStudioStores';
 
 function TrackButton({
   icon: IconComp,
@@ -43,7 +43,9 @@ export function TimelineTrack({
   trackHeight: number;
   pxPerSec: number;
 }) {
-  const track = useDocTrack(trackId);
+  const track = useDocStore((state) =>
+    state.tracks.find((t) => t.id === trackId)
+  );
   if (!track) {
     throw new Error(`Track(${trackId}) not found`);
   }

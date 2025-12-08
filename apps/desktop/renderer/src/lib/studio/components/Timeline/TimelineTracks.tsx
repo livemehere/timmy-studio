@@ -1,4 +1,4 @@
-import { useDocTracks } from '@renderer/lib/studio/hooks';
+import { useDocStore } from '../../hooks/useStudioStores';
 import { TimelineTrack } from '@renderer/lib/studio/components/Timeline/TimelineTrack';
 
 export function TimelineTracks({
@@ -14,7 +14,7 @@ export function TimelineTracks({
   trackHeight: number;
   pxPerSec: number;
 }) {
-  const tracks = useDocTracks();
+  const tracks = useDocStore((state) => state.tracks);
   return (
     <div
       style={{

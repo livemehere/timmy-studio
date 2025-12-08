@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react';
-import { useDocSettings, useEngineRenderer } from '@renderer/lib/studio/hooks';
+import { useDocStore, useEngineStore } from '../hooks/useStudioStores';
 import { cn } from '@renderer/utils/cn';
 
 export function PreviewRenderer() {
-  const settings = useDocSettings();
-  const renderer = useEngineRenderer();
+  const settings = useDocStore((state) => state.settings);
+  const renderer = useEngineStore((state) => state.renderer);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {

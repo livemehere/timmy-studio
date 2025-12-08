@@ -1,10 +1,10 @@
-import { useEngineTimer } from '@renderer/lib/studio/hooks';
+import { useEngineStore } from '../hooks/useStudioStores';
 import { PauseIcon, PlayIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { formatTime } from '../utils/time';
 
 export function TimerActionBar() {
-  const timer = useEngineTimer();
+  const timer = useEngineStore((state) => state.timer);
   const [timerState, setTimerState] = useState({
     currentMs: 0,
     isPlaying: false,

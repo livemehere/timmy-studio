@@ -1,4 +1,4 @@
-import { useDocStore } from '@renderer/lib/studio/hooks';
+import { useDocStore } from '../hooks/useStudioStores';
 
 export function StudioDebugger() {
   const settings = useDocStore((state) => state.settings);
