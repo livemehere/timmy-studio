@@ -5,6 +5,8 @@ import { ALL_FILE_EXTENSIONS } from '@renderer/lib/studio/utils/file-extension';
 export function AllAssets() {
   const assets = useDocStore((state) => state.assets);
 
+  const addAsset = useDocStore((state) => state.addAsset);
+
   const handleSelectFiles = async () => {
     const result = await window.app.invoke('showOpenDialog', {
       title: '파일 선택',
@@ -18,11 +20,12 @@ export function AllAssets() {
     });
     if (result.canceled) return;
 
-    for (const filePath of result.filePaths) {
-      const newAsset = await window.app.invoke('createAsset', filePath);
-      console.log('asset :', newAsset);
-      // Here you would typically add the asset to your document/store
-    }
+    const assets = await Promise.all(
+      result.filePaths.map((filePath) =>
+        window.app.invoke('createAsset', filePath)
+      )
+    );
+    assets.forEach((asset) => addAsset(asset));
   };
 
   return (

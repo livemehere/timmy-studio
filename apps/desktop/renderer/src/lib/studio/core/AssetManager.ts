@@ -4,6 +4,7 @@ import type {
   IImageAsset,
   IVideoAsset,
 } from '@renderer/lib/studio/types/asset';
+import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
 
 interface VideoElements {
   origin: HTMLVideoElement;
@@ -201,7 +202,7 @@ export class AssetManager {
 
       // src 변경 체크
       if (elements.origin.src !== asset.filePath) {
-        elements.origin.src = asset.filePath;
+        elements.origin.src = toFilePath(asset.filePath);
         needsReload = true;
       }
 
@@ -212,7 +213,7 @@ export class AssetManager {
       }
 
       // playbackRate 변경 체크
-      const newPlaybackRate = asset.playbackRate ?? 1.0;
+      const newPlaybackRate = 1.0;
       if (elements.origin.playbackRate !== newPlaybackRate) {
         elements.origin.playbackRate = newPlaybackRate;
       }
@@ -222,7 +223,7 @@ export class AssetManager {
         if (asset.proxyFilePath) {
           // proxy src 변경 체크
           if (elements.proxy.src !== asset.proxyFilePath) {
-            elements.proxy.src = asset.proxyFilePath;
+            elements.proxy.src = toFilePath(asset.proxyFilePath);
             needsReload = true;
           }
           if (elements.proxy.volume !== newVolume) {
@@ -241,7 +242,7 @@ export class AssetManager {
       } else if (asset.proxyFilePath) {
         // 새로운 proxy 추가
         const proxy = document.createElement('video');
-        proxy.src = asset.proxyFilePath;
+        proxy.src = toFilePath(asset.proxyFilePath);
         proxy.crossOrigin = 'anonymous';
         proxy.preload = 'auto';
         proxy.volume = newVolume;
@@ -287,11 +288,11 @@ export class AssetManager {
 
     // Origin video 로드
     const origin = document.createElement('video');
-    origin.src = asset.filePath;
+    origin.src = toFilePath(asset.filePath);
     origin.crossOrigin = 'anonymous';
     origin.preload = 'auto';
     origin.volume = 1.0;
-    origin.playbackRate = asset.playbackRate ?? 1.0;
+    origin.playbackRate = 1.0;
 
     await new Promise<void>((resolve, reject) => {
       origin.oncanplay = () => resolve();
@@ -306,11 +307,11 @@ export class AssetManager {
     // Proxy video 로드 (있는 경우)
     if (asset.proxyFilePath) {
       const proxy = document.createElement('video');
-      proxy.src = asset.proxyFilePath;
+      proxy.src = toFilePath(asset.proxyFilePath);
       proxy.crossOrigin = 'anonymous';
       proxy.preload = 'auto';
       proxy.volume = 1.0;
-      proxy.playbackRate = asset.playbackRate ?? 1.0;
+      proxy.playbackRate = 1.0;
 
       await new Promise<void>((resolve) => {
         proxy.oncanplay = () => resolve();
@@ -362,7 +363,7 @@ export class AssetManager {
 
       // src 변경 체크
       if (audio.src !== asset.filePath) {
-        audio.src = asset.filePath;
+        audio.src = toFilePath(asset.filePath);
         needsReload = true;
       }
 
@@ -394,7 +395,7 @@ export class AssetManager {
     }
 
     const audio = document.createElement('audio');
-    audio.src = asset.filePath;
+    audio.src = toFilePath(asset.filePath);
     audio.preload = 'auto';
     audio.crossOrigin = 'anonymous';
     audio.volume = 1.0;
@@ -437,7 +438,7 @@ export class AssetManager {
           img.onerror = () => {
             reject(new Error(`Failed to reload image: ${asset.filePath}`));
           };
-          img.src = asset.filePath;
+          img.src = toFilePath(asset.filePath);
         });
         console.debug(`[AssetManager] Image reloaded: ${assetId}`);
       } else {
@@ -459,7 +460,7 @@ export class AssetManager {
       img.onerror = () => {
         reject(new Error(`Failed to load image: ${asset.filePath}`));
       };
-      img.src = asset.filePath;
+      img.src = toFilePath(asset.filePath);
     });
 
     this.imageElements.set(assetId, img);

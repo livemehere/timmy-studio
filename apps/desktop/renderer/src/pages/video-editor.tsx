@@ -13,8 +13,8 @@ export default function VideoEditorPage() {
             id: 'sample-video-asset',
             name: 'Sample Video',
             type: 'video',
-            filePath: 'file:///path/to/sample-media.MOV',
-            proxyFilePath: 'file:///path/to/sample-media.mp4',
+            filePath: '/path/to/sample-media.MOV',
+            proxyFilePath: '/path/to/sample-media.mp4',
             metadata: {
               size: 95068160,
               createdAt: new Date().toISOString(),

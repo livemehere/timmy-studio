@@ -2,6 +2,7 @@ import { formatTime } from '@renderer/lib/studio/utils/time';
 import { cn } from '@renderer/utils/cn';
 import { formatFileSize } from '@renderer/lib/studio/utils/size';
 import type { IAsset, IAssetMetadata } from '@renderer/lib/studio/types/asset';
+import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
 
 const badgeClass =
   'absolute text-[9px] bg-black/60 px-1 py-0.5 rounded leading-none select-none';
@@ -40,7 +41,7 @@ function AssetPreviewContent({ asset }: { asset: IAsset }) {
     case 'video':
       return (
         <video
-          src={asset.proxyFilePath || asset.filePath}
+          src={toFilePath(asset.proxyFilePath || asset.filePath)}
           className="w-full h-full object-fit"
           muted
         />
@@ -48,7 +49,7 @@ function AssetPreviewContent({ asset }: { asset: IAsset }) {
     case 'image':
       return (
         <img
-          src={asset.filePath}
+          src={toFilePath(asset.filePath)}
           alt={asset.name}
           className="w-full h-full object-cover rounded"
         />
