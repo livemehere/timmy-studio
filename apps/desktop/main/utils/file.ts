@@ -1,8 +1,11 @@
 import fs from 'fs';
-import { THUMBNAILS_DIR } from '@main/constants/paths';
+import { THUMBNAILS_DIR, PROXIES_DIR } from '@main/constants/paths';
 
 export function ensureFiles() {
   if (!fs.existsSync(THUMBNAILS_DIR)) {
     fs.mkdirSync(THUMBNAILS_DIR, { recursive: true });
+  }
+  if (!fs.existsSync(PROXIES_DIR)) {
+    fs.mkdirSync(PROXIES_DIR, { recursive: true });
   }
 }

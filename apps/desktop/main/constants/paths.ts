@@ -8,3 +8,5 @@ export const THUMBNAILS_DIR = path.join(
   'contents-cache',
   'thumbnails'
 );
+
+export const PROXIES_DIR = path.join(APP_DATA_DIR, 'contents-cache', 'proxies');

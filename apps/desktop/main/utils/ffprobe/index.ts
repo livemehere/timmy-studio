@@ -18,11 +18,13 @@ import {
 import { detectAssetType } from '@main/utils/ffprobe/detectAssetType';
 import { getCreatedAt } from './getCreatedAt';
 import { createVideoThumbnail } from '@main/utils/ffmpeg/createThumbnail';
+import { createProxy } from '../ffmpeg/createProxy';
 
 function createVideoAsset(
   data: FfprobeData,
   createdAt: string | undefined,
-  thumbnailPath: string
+  thumbnailPath: string,
+  proxyPath?: string
 ): IVideoAsset {
   const filePath = data.format.filename!;
   const videoStream = getPrimaryVideoStream(data);
@@ -33,6 +35,7 @@ function createVideoAsset(
     filePath,
     type: 'video',
     thumbnailPath,
+    proxyFilePath: proxyPath,
     metadata: {
       ...createVideoAssetMetadata(data, videoStream),
       createdAt,
@@ -87,7 +90,8 @@ export async function createAssetData(data: FfprobeData): Promise<IAsset> {
   switch (assetType) {
     case 'video':
       const thumbnailPath = await createVideoThumbnail(data.format.filename);
-      return createVideoAsset(data, createdAt, thumbnailPath);
+      const proxyPath = await createProxy(data.format.filename);
+      return createVideoAsset(data, createdAt, thumbnailPath, proxyPath);
     case 'audio':
       return createAudioAsset(data, createdAt);
     case 'image':

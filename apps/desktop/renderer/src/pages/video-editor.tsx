@@ -16,6 +16,8 @@ export default function VideoEditorPage() {
             type: 'video',
             thumbnailPath:
               '/path/to/sample-media.jpg',
+            proxyFilePath:
+              '/path/to/sample-media.mp4',
             metadata: {
               width: 640,
               height: 360,
