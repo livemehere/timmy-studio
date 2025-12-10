@@ -1,7 +1,6 @@
 import { Timer } from '../core/Timer';
 import { Renderer } from '../core/Renderer';
 import { AudioManager } from '../core/AudioManager';
-import { AssetManager } from '../core/AssetManager';
 import type { IProject } from '../types/types';
 import { createStore } from 'zustand/vanilla';
 
@@ -10,7 +9,6 @@ export interface EngineState {
   timer: Timer | null;
   renderer: Renderer | null;
   audioManager: AudioManager | null;
-  assetManager: AssetManager | null;
 
   // Lifecycle state
   isInitialized: boolean;
@@ -53,7 +51,6 @@ export const createEngineStore = () => {
     timer: null,
     renderer: null,
     audioManager: null,
-    assetManager: null,
     isInitialized: false,
 
     // Renderer sync state
@@ -76,10 +73,24 @@ export const createEngineStore = () => {
 
       console.debug('[EngineStore] init called');
 
+      // Note: project.assets is captured in closure and won't auto-update.
+      // For real-time asset updates, the caller should pass a fresh getAsset function
+      // or we rely on bindDocToEngine to manage tracks/clips changes.
+
       // Create engine instances
-      const assetManager = new AssetManager(project.assets);
       const timer = new Timer(project.settings.duration);
-      const renderer = new Renderer(timer, assetManager);
+
+      // Create Renderer with getAsset function that accesses project.assets snapshot
+      const getAsset = <
+        T extends
+          import('../types/asset').IAsset = import('../types/asset').IAsset,
+      >(
+        assetId: string
+      ): T | undefined => {
+        return project.assets.find((a) => a.id === assetId) as T | undefined;
+      };
+      const renderer = new Renderer(timer, getAsset);
+
       const audioManager = new AudioManager(project.settings.sampleRate);
 
       const videoTracks = project.tracks.filter(
@@ -90,43 +101,35 @@ export const createEngineStore = () => {
         (track) => track.type === 'audio'
       );
 
-      /** 단 1회, 전체 로딩 및 동기화 */
-      assetManager.initialLoadAllAssets(() => {
-        renderer.syncTracks(videoTracks);
-        audioManager.syncTracks(audioTracks);
+      // Directly sync tracks (no asset loading needed anymore)
+      renderer.syncTracks(videoTracks);
+      audioManager.syncTracks(audioTracks);
 
-        // Sync 완료 후 상태 업데이트 (Video)
-        const trackIds = videoTracks.map((t) => t.id);
-        const clipIds = videoTracks.flatMap((t) => t.clips.map((c) => c.id));
+      // Sync 완료 후 상태 업데이트 (Video)
+      const trackIds = videoTracks.map((t) => t.id);
+      const clipIds = videoTracks.flatMap((t) => t.clips.map((c) => c.id));
 
-        // Sync 완료 후 상태 업데이트 (Audio)
-        // TODO: AudioManager 구현 완료 후 실제 동작
-        const audioTrackIds = audioTracks.map((t) => t.id);
-        const audioClipIds = audioTracks.flatMap((t) =>
-          t.clips.map((c) => c.id)
-        );
-
-        set({
-          isRendererReady: true,
-          syncedTrackIds: trackIds,
-          syncedClipIds: clipIds,
-          isAudioReady: true,
-          syncedAudioTrackIds: audioTrackIds,
-          syncedAudioClipIds: audioClipIds,
-        });
-
-        console.debug(
-          `[EngineStore] Renderer synced - tracks: ${trackIds.length}, clips: ${clipIds.length}`
-        );
-      });
+      // Sync 완료 후 상태 업데이트 (Audio)
+      // TODO: AudioManager 구현 완료 후 실제 동작
+      const audioTrackIds = audioTracks.map((t) => t.id);
+      const audioClipIds = audioTracks.flatMap((t) => t.clips.map((c) => c.id));
 
       set({
         timer,
         renderer,
         audioManager,
-        assetManager,
         isInitialized: true,
+        isRendererReady: true,
+        syncedTrackIds: trackIds,
+        syncedClipIds: clipIds,
+        isAudioReady: true,
+        syncedAudioTrackIds: audioTrackIds,
+        syncedAudioClipIds: audioClipIds,
       });
+
+      console.debug(
+        `[EngineStore] Renderer synced - tracks: ${trackIds.length}, clips: ${clipIds.length}`
+      );
     },
 
     destroy: () => {
@@ -148,16 +151,11 @@ export const createEngineStore = () => {
         state.timer.destroy();
       }
 
-      if (state.assetManager) {
-        state.assetManager.destroy();
-      }
-
       // Reset state
       set({
         timer: null,
         renderer: null,
         audioManager: null,
-        assetManager: null,
         isInitialized: false,
         isRendererReady: false,
         syncedTrackIds: [],

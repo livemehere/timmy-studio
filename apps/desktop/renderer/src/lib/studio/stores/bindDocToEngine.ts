@@ -2,7 +2,6 @@ import type { StoreApi } from 'zustand/vanilla';
 import type { DocStore } from './docStore';
 import type { EngineStore } from './engineStore';
 import isEqual from 'fast-deep-equal';
-import { deepDiffArrays } from '@renderer/lib/studio/utils/deepDiffArrays';
 
 /**
  * docStore의 변경사항을 engineStore에 자동으로 반영하는 바인딩 로직
@@ -92,62 +91,10 @@ export function bindDocToEngine(
       engine.audioManager.sampleRate = state.settings.sampleRate;
     }
 
-    /** assets sync */
-    const assetsChanged = state.assets !== prevState.assets;
-    if (assetsChanged) {
-      if (!engine.assetManager) {
-        throw new Error(
-          '[bindDocToEngine] AssetManager is not initialized in engine.'
-        );
-      }
-
-      const {
-        added: addedAssets,
-        removed: removedAssets,
-        updated: updatedAssets,
-      } = deepDiffArrays(prevState.assets, state.assets);
-
-      const totalChanges =
-        addedAssets.length + removedAssets.length + updatedAssets.length;
-      if (totalChanges === 0) {
-        console.debug('[bindDocToEngine] No actual asset changes detected.');
-        return;
-      }
-
-      console.debug(
-        '[bindDocToEngine] Assets changed. Added:',
-        addedAssets.length,
-        'Removed:',
-        removedAssets.length,
-        'Updated:',
-        updatedAssets.length
-      );
-
-      engine.assetManager.beginToLoading(totalChanges, () => {
-        syncTracks();
-        syncAudioTracks(); // TODO: AudioManager 구현 완료 후 동작 확인
-      });
-
-      for (const asset of removedAssets) {
-        console.debug(`[bindDocToEngine] Removing asset: ${asset.id}`);
-        engine.assetManager.removeAssetById(asset.id);
-      }
-      for (const asset of updatedAssets) {
-        console.debug(`[bindDocToEngine] Updating asset: ${asset.id}`);
-        engine.assetManager.updateAsset(asset.id, asset);
-      }
-      for (const asset of addedAssets) {
-        console.debug(`[bindDocToEngine] Adding asset: ${asset.id}`);
-        engine.assetManager.addAsset(asset);
-      }
-    }
-
-    // Tracks만 변경 시 renderer에 반영 (assets 변경과 동시에 일어나지 않은 경우)
+    /** tracks sync - clip-based instantiation */
     const tracksChanged = state.tracks !== prevState.tracks;
-    if (tracksChanged && !assetsChanged) {
-      if (!engine.assetManager!.isAllLoaded) {
-        throw new Error('[bindDocToEngine] Assets are not fully loaded yet.');
-      }
+    if (tracksChanged) {
+      console.debug('[bindDocToEngine] Tracks changed - syncing to renderer');
       syncTracks();
       syncAudioTracks(); // TODO: AudioManager 구현 완료 후 동작 확인
     }

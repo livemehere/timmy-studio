@@ -4,13 +4,21 @@ import type {
   IVideoClip,
   ITransform,
   IVideoMediaClip,
+  IImageClip,
 } from '@renderer/lib/studio/types/types';
 import type { Timer } from '@renderer/lib/studio/core/Timer';
-import type { AssetManager } from '@renderer/lib/studio/core/AssetManager';
+import type {
+  IAsset,
+  IVideoAsset,
+  IImageAsset,
+} from '@renderer/lib/studio/types/asset';
+import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
 
 interface ClipState {
   clip: IVideoClip;
   trackId: string;
+  element: HTMLVideoElement | HTMLImageElement; // clip별 DOM element
+  proxyElement?: HTMLVideoElement; // video clip의 proxy element (optional)
   isUsingProxy: boolean; // 현재 proxy texture 사용 중인지
   lastSeekTime: number; // 마지막 seeking 시간
   pendingProxySwap: boolean; // origin → proxy 스왑 대기 중 (seeked 이벤트 대기)
@@ -36,7 +44,9 @@ export class Renderer {
 
   // 외부 의존성
   private timer: Timer;
-  private assetManager: AssetManager;
+  private getAsset: <T extends IAsset = IAsset>(
+    assetId: string
+  ) => T | undefined;
 
   static readonly LABELS = {
     SCENE_CONTAINER: 'SCENE_CONTAINER',
@@ -56,10 +66,13 @@ export class Renderer {
   // Constructor
   // ============================================================================
 
-  constructor(timer: Timer, assetManager: AssetManager) {
+  constructor(
+    timer: Timer,
+    getAsset: <T extends IAsset = IAsset>(assetId: string) => T | undefined
+  ) {
     console.debug('[Renderer] Constructor called');
     this.timer = timer;
-    this.assetManager = assetManager;
+    this.getAsset = getAsset;
     this.app = new Application();
     this.sceneContainer = new Container();
     this.sceneContainer.label = Renderer.LABELS.SCENE_CONTAINER;
@@ -188,6 +201,82 @@ export class Renderer {
   }
 
   // ============================================================================
+  // Element Creation Helpers
+  // ============================================================================
+
+  private async createVideoElement(
+    asset: IVideoAsset
+  ): Promise<HTMLVideoElement> {
+    const video = document.createElement('video');
+    video.src = toFilePath(asset.filePath);
+    video.crossOrigin = 'anonymous';
+    video.preload = 'auto';
+    video.volume = 1.0;
+    video.playbackRate = 1.0;
+
+    await new Promise<void>((resolve, reject) => {
+      video.oncanplay = () => resolve();
+      video.onerror = () => {
+        console.error(video.error?.message);
+        reject(new Error(`Failed to load video: ${asset.filePath}`));
+      };
+    });
+
+    return video;
+  }
+
+  private async createProxyVideoElement(
+    asset: IVideoAsset
+  ): Promise<HTMLVideoElement | undefined> {
+    if (!asset.proxyFilePath) return undefined;
+
+    const proxy = document.createElement('video');
+    proxy.src = toFilePath(asset.proxyFilePath);
+    proxy.crossOrigin = 'anonymous';
+    proxy.preload = 'auto';
+    proxy.volume = 1.0;
+    proxy.playbackRate = 1.0;
+
+    await new Promise<void>((resolve) => {
+      proxy.oncanplay = () => resolve();
+      proxy.onerror = () => {
+        console.error(proxy.error?.message);
+        console.warn(`[Renderer] Failed to load proxy: ${asset.proxyFilePath}`);
+        resolve(); // proxy 로드 실패해도 계속 진행
+      };
+    });
+
+    return proxy;
+  }
+
+  private createImageElement(asset: IImageAsset): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = () =>
+        reject(new Error(`Failed to load image: ${asset.filePath}`));
+      img.src = toFilePath(asset.filePath);
+    });
+  }
+
+  private cleanupVideoElement(video: HTMLVideoElement): void {
+    video.pause();
+    video.oncanplay = null;
+    video.onerror = null;
+    video.src = '';
+    video.removeAttribute('src');
+    video.load();
+  }
+
+  private cleanupImageElement(img: HTMLImageElement): void {
+    img.onload = null;
+    img.onerror = null;
+    img.src = '';
+    img.removeAttribute('src');
+  }
+
+  // ============================================================================
   // Clip Management
   // ============================================================================
 
@@ -222,49 +311,102 @@ export class Renderer {
 
     if (clip.type !== 'video' && clip.type !== 'image') return;
 
-    const element =
-      clip.type === 'video'
-        ? this.assetManager.getVideoOrigin(clip.assetId)
-        : this.assetManager.getImage(clip.assetId);
-
-    if (!element) {
-      console.warn(`[Renderer] Asset not found for clip: ${clip.id}`);
+    // Get asset metadata from docStore
+    const asset = this.getAsset(clip.assetId);
+    if (!asset) {
+      console.warn(`[Renderer] Asset metadata not found for clip: ${clip.id}`);
       return;
     }
 
-    const texture = Texture.from(element);
-
-    // 비디오의 경우 자동 재생 비활성화 (Texture.from이 자동재생 시킬 수 있음)
-    if (clip.type === 'video') {
-      (element as HTMLVideoElement).pause();
-      (element as HTMLVideoElement).currentTime = 0;
-
-      const proxy = this.assetManager.getVideoProxy(clip.assetId);
-      if (proxy) {
-        proxy.pause();
-        proxy.currentTime = 0;
-      }
+    if (clip.type === 'video' && asset.type === 'video') {
+      this.addVideoClip(trackId, clip, asset, container);
+    } else if (clip.type === 'image' && asset.type === 'image') {
+      this.addImageClip(trackId, clip, asset, container);
     }
+  }
 
-    const sprite = new Sprite(texture);
-    sprite.label = `${Renderer.LABELS.CLIP_PREFIX}${clip.id}`;
+  private async addVideoClip(
+    trackId: string,
+    clip: IVideoMediaClip,
+    asset: IVideoAsset,
+    container: Container
+  ): Promise<void> {
+    try {
+      // Create clip-specific video element
+      const element = await this.createVideoElement(asset);
+      element.pause();
+      element.currentTime = 0;
 
-    this.applyTransform(sprite, clip.transforms);
+      // Create proxy element if available
+      const proxyElement = await this.createProxyVideoElement(asset);
+      if (proxyElement) {
+        proxyElement.pause();
+        proxyElement.currentTime = 0;
+      }
 
-    container.addChild(sprite);
-    this.clipSprites.set(clip.id, sprite);
+      // Create sprite with video texture
+      const texture = Texture.from(element);
+      const sprite = new Sprite(texture);
+      sprite.label = `${Renderer.LABELS.CLIP_PREFIX}${clip.id}`;
 
-    // 클립 상태 초기화
-    this.clipStates.set(clip.id, {
-      clip,
-      trackId,
-      isUsingProxy: false,
-      lastSeekTime: -1,
-      pendingProxySwap: false,
-      pendingOriginSwap: false,
-    });
+      this.applyTransform(sprite, clip.transforms);
 
-    console.debug(`[Renderer] Clip added: ${clip.id}`);
+      container.addChild(sprite);
+      this.clipSprites.set(clip.id, sprite);
+
+      // Initialize clip state with elements
+      this.clipStates.set(clip.id, {
+        clip,
+        trackId,
+        element,
+        proxyElement,
+        isUsingProxy: false,
+        lastSeekTime: -1,
+        pendingProxySwap: false,
+        pendingOriginSwap: false,
+      });
+
+      console.debug(`[Renderer] Video clip added: ${clip.id}`);
+    } catch (error) {
+      console.error(`[Renderer] Failed to add video clip: ${clip.id}`, error);
+    }
+  }
+
+  private async addImageClip(
+    trackId: string,
+    clip: IImageClip,
+    asset: IImageAsset,
+    container: Container
+  ): Promise<void> {
+    try {
+      // Create clip-specific image element
+      const element = await this.createImageElement(asset);
+
+      // Create sprite with image texture
+      const texture = Texture.from(element);
+      const sprite = new Sprite(texture);
+      sprite.label = `${Renderer.LABELS.CLIP_PREFIX}${clip.id}`;
+
+      this.applyTransform(sprite, clip.transforms);
+
+      container.addChild(sprite);
+      this.clipSprites.set(clip.id, sprite);
+
+      // Initialize clip state with element
+      this.clipStates.set(clip.id, {
+        clip,
+        trackId,
+        element,
+        isUsingProxy: false,
+        lastSeekTime: -1,
+        pendingProxySwap: false,
+        pendingOriginSwap: false,
+      });
+
+      console.debug(`[Renderer] Image clip added: ${clip.id}`);
+    } catch (error) {
+      console.error(`[Renderer] Failed to add image clip: ${clip.id}`, error);
+    }
   }
 
   private updateClip(clip: IVideoClip): void {
@@ -289,12 +431,29 @@ export class Renderer {
 
   private clearClipSprite(clipId: string): void {
     const sprite = this.clipSprites.get(clipId);
-    if (!sprite) return;
+    const state = this.clipStates.get(clipId);
 
-    sprite.parent?.removeChild(sprite);
-    sprite.destroy();
-    this.clipSprites.delete(clipId);
-    this.clipStates.delete(clipId);
+    if (sprite) {
+      sprite.parent?.removeChild(sprite);
+      sprite.destroy();
+      this.clipSprites.delete(clipId);
+    }
+
+    // Cleanup clip-specific elements
+    if (state) {
+      const { element, proxyElement } = state;
+
+      if (element instanceof HTMLVideoElement) {
+        this.cleanupVideoElement(element);
+        if (proxyElement) {
+          this.cleanupVideoElement(proxyElement);
+        }
+      } else if (element instanceof HTMLImageElement) {
+        this.cleanupImageElement(element);
+      }
+
+      this.clipStates.delete(clipId);
+    }
   }
 
   // ============================================================================
@@ -403,7 +562,6 @@ export class Renderer {
     this.app = null as any;
     this.sceneContainer = null as any;
     this.timer = null as any;
-    this.assetManager = null as any;
     this._isInitialized = false;
   }
 
@@ -482,8 +640,9 @@ export class Renderer {
     playStateChanged: boolean,
     isSeeking: boolean
   ): void {
-    const origin = this.assetManager.getVideoOrigin(clip.assetId);
-    const proxy = this.assetManager.getVideoProxy(clip.assetId);
+    // Get elements from ClipState
+    const origin = state.element as HTMLVideoElement;
+    const proxy = state.proxyElement ?? null;
     if (!origin) return;
 
     // 클립 내 상대 시간 계산 (trimStart 고려)
@@ -758,14 +917,17 @@ export class Renderer {
    * 비디오 클립 일시정지 (클립이 화면 밖일 때)
    */
   private pauseVideoClip(clip: IVideoMediaClip): void {
-    const videos = this.assetManager.getVideo(clip.assetId);
-    if (!videos) return;
+    const state = this.clipStates.get(clip.id);
+    if (!state) return;
 
-    if (!videos.origin.paused) {
-      videos.origin.pause();
+    const origin = state.element as HTMLVideoElement;
+    const proxy = state.proxyElement ?? null;
+
+    if (origin && !origin.paused) {
+      origin.pause();
     }
-    if (videos.proxy && !videos.proxy.paused) {
-      videos.proxy.pause();
+    if (proxy && !proxy.paused) {
+      proxy.pause();
     }
   }
 
