@@ -115,8 +115,8 @@ export function createVideoClip(
       scaleY: 1,
       rotation: 0,
       opacity: 1,
-      anchorX: 0.5,
-      anchorY: 0.5,
+      anchorX: 0,
+      anchorY: 0,
     },
   };
 }
@@ -148,8 +148,8 @@ export function createImageClip(options: CreateImageClipOptions): IImageClip {
       scaleY: 1,
       rotation: 0,
       opacity: 1,
-      anchorX: 0.5,
-      anchorY: 0.5,
+      anchorX: 0,
+      anchorY: 0,
     },
   };
 }
@@ -202,8 +202,8 @@ export function createShapeClip(options: CreateShapeClipOptions): IShapeClip {
       scaleY: 1,
       rotation: 0,
       opacity: 1,
-      anchorX: 0.5,
-      anchorY: 0.5,
+      anchorX: 0,
+      anchorY: 0,
     },
   };
 }
@@ -227,8 +227,8 @@ export function createTextClip(options: CreateTextClipOptions): ITextClip {
       scaleY: 1,
       rotation: 0,
       opacity: 1,
-      anchorX: 0.5,
-      anchorY: 0.5,
+      anchorX: 0,
+      anchorY: 0,
     },
   };
 }

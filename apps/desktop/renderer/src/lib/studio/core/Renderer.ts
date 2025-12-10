@@ -323,7 +323,7 @@ export class Renderer {
       sprite.alpha = transforms.opacity;
     }
     if (transforms.anchorX !== undefined || transforms.anchorY !== undefined) {
-      sprite.anchor.set(transforms.anchorX ?? 0.5, transforms.anchorY ?? 0.5);
+      sprite.anchor.set(transforms.anchorX, transforms.anchorY);
     }
   }
 
