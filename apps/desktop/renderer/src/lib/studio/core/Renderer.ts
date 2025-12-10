@@ -1,4 +1,4 @@
-import { Application, Container, Sprite, Texture } from 'pixi.js';
+import { Application, Container, Sprite, Texture, VideoSource } from 'pixi.js';
 import type {
   IVideoTrack,
   IVideoClip,
@@ -19,6 +19,8 @@ interface ClipState {
   trackId: string;
   element: HTMLVideoElement | HTMLImageElement; // clip별 DOM element
   proxyElement?: HTMLVideoElement; // video clip의 proxy element (optional)
+  videoSource?: VideoSource; // video clip의 PixiJS VideoSource (메모리 관리용)
+  proxyVideoSource?: VideoSource; // proxy video의 PixiJS VideoSource (메모리 관리용)
   isUsingProxy: boolean; // 현재 proxy texture 사용 중인지
   lastSeekTime: number; // 마지막 seeking 시간
   pendingProxySwap: boolean; // origin → proxy 스왑 대기 중 (seeked 이벤트 대기)
@@ -344,22 +346,38 @@ export class Renderer {
         proxyElement.currentTime = 0;
       }
 
-      // Create sprite with video texture
-      const texture = Texture.from(element);
+      // Create VideoSource with autoPlay disabled
+      const videoSource = new VideoSource({
+        resource: element,
+        autoPlay: false,
+      });
+      const texture = Texture.from(videoSource);
       const sprite = new Sprite(texture);
       sprite.label = `${Renderer.LABELS.CLIP_PREFIX}${clip.id}`;
+
+      // Create proxy VideoSource if available
+      let proxyVideoSource: VideoSource | undefined;
+      if (proxyElement) {
+        proxyVideoSource = new VideoSource({
+          resource: proxyElement,
+          autoPlay: false,
+        });
+      }
 
       this.applyTransform(sprite, clip.transforms);
 
       container.addChild(sprite);
+
       this.clipSprites.set(clip.id, sprite);
 
-      // Initialize clip state with elements
+      // Initialize clip state with elements and VideoSources
       this.clipStates.set(clip.id, {
         clip,
         trackId,
         element,
         proxyElement,
+        videoSource,
+        proxyVideoSource,
         isUsingProxy: false,
         lastSeekTime: -1,
         pendingProxySwap: false,
@@ -435,13 +453,21 @@ export class Renderer {
 
     if (sprite) {
       sprite.parent?.removeChild(sprite);
-      sprite.destroy();
+      sprite.destroy({ texture: true, textureSource: true }); // Texture와 VideoSource도 함께 destroy
       this.clipSprites.delete(clipId);
     }
 
-    // Cleanup clip-specific elements
+    // Cleanup clip-specific elements and VideoSources
     if (state) {
-      const { element, proxyElement } = state;
+      const { element, proxyElement, videoSource, proxyVideoSource } = state;
+
+      // Destroy VideoSources to prevent memory leak
+      if (videoSource) {
+        videoSource.destroy();
+      }
+      if (proxyVideoSource) {
+        proxyVideoSource.destroy();
+      }
 
       if (element instanceof HTMLVideoElement) {
         this.cleanupVideoElement(element);
@@ -778,7 +804,7 @@ export class Renderer {
 
       // 아직 스왑 대기 중이고, proxy 사용 중이면 스왑 실행
       if (state.pendingOriginSwap && state.isUsingProxy) {
-        this.swapVideoTexture(sprite, origin);
+        this.swapVideoTexture(sprite, origin, clip.id);
         state.isUsingProxy = false;
         state.pendingOriginSwap = false;
         proxy.pause();
@@ -874,7 +900,7 @@ export class Renderer {
 
       // 아직 재생 시작 안했고, 스왑 대기 중이면 스왑 실행
       if (!this.timer.isPlaying && state.pendingProxySwap) {
-        this.swapVideoTexture(sprite, proxy);
+        this.swapVideoTexture(sprite, proxy, clip.id);
         state.isUsingProxy = true;
         state.pendingProxySwap = false;
 
@@ -933,14 +959,37 @@ export class Renderer {
 
   /**
    * 스프라이트의 비디오 텍스처 교체
+   * ClipState에 저장된 VideoSource를 재사용
    */
   private swapVideoTexture(
     sprite: Sprite,
-    videoElement: HTMLVideoElement
+    videoElement: HTMLVideoElement,
+    clipId: string
   ): void {
-    sprite.texture = Texture.from(videoElement);
+    const state = this.clipStates.get(clipId);
+    if (!state) return;
 
-    // Texture.from()이 video를 자동 재생시킬 수 있으므로 즉시 pause
+    // Destroy previous texture (but not the source, we'll reuse it)
+    const oldTexture = sprite.texture;
+    if (oldTexture) {
+      oldTexture.destroy(false); // false = keep the source
+    }
+
+    // Determine which VideoSource to use based on which element we're swapping to
+    const isSwappingToOrigin = videoElement === state.element;
+    const videoSource = isSwappingToOrigin
+      ? state.videoSource
+      : state.proxyVideoSource;
+
+    if (!videoSource) {
+      console.warn(`[Renderer] VideoSource not found for swap: ${clipId}`);
+      return;
+    }
+
+    // Create new texture from existing VideoSource
+    sprite.texture = Texture.from(videoSource);
+
+    // Ensure video is paused if not playing
     if (!this.timer.isPlaying) {
       videoElement.pause();
     }
