@@ -13,7 +13,7 @@ export interface IBaseAsset {
   name: string;
   filePath: string;
   metadata: IAssetMetadata;
-  thumbnail?: string;
+  thumbnailPath?: string;
 }
 
 export interface IVideoAsset extends IBaseAsset {

@@ -40,10 +40,9 @@ function AssetPreviewContent({ asset }: { asset: IAsset }) {
   switch (asset.type) {
     case 'video':
       return (
-        <video
-          src={toFilePath(asset.proxyFilePath || asset.filePath)}
-          className="w-full h-full object-fit"
-          muted
+        <img
+          src={toFilePath(asset.thumbnailPath!)}
+          className="w-full h-full object-cover rounded"
         />
       );
     case 'image':

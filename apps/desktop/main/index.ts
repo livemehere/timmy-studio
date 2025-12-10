@@ -12,9 +12,12 @@ import {
 } from 'electron-devtools-installer';
 import { ffprobePromise } from '@main/utils/ffmpeg';
 import { createAssetData } from '@main/utils/ffprobe';
+import { ensureFiles } from '@main/utils/file';
 
 log.initialize();
 log.info('App starting...');
+
+console.log();
 
 // app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder');
 // app.commandLine.appendSwitch('enable-accelerated-video-decode');
@@ -28,6 +31,8 @@ app.whenReady().then(async () => {
   } catch (err) {
     log.info(`Error while installing extension: ${err}`);
   }
+
+  ensureFiles();
 
   debug({
     isEnabled: true,

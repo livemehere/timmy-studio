@@ -17,8 +17,13 @@ import {
 } from '@main/utils/ffprobe/getStream';
 import { detectAssetType } from '@main/utils/ffprobe/detectAssetType';
 import { getCreatedAt } from './getCreatedAt';
+import { createVideoThumbnail } from '@main/utils/ffmpeg/createThumbnail';
 
-function createVideoAsset(data: FfprobeData, createdAt?: string): IVideoAsset {
+function createVideoAsset(
+  data: FfprobeData,
+  createdAt: string | undefined,
+  thumbnailPath: string
+): IVideoAsset {
   const filePath = data.format.filename!;
   const videoStream = getPrimaryVideoStream(data);
 
@@ -27,6 +32,7 @@ function createVideoAsset(data: FfprobeData, createdAt?: string): IVideoAsset {
     name: path.basename(filePath),
     filePath,
     type: 'video',
+    thumbnailPath,
     metadata: {
       ...createVideoAssetMetadata(data, videoStream),
       createdAt,
@@ -70,7 +76,7 @@ function createImageAsset(data: FfprobeData, createdAt?: string): IImageAsset {
  * animated-image를 video로 취급하려면
  * 여기서 animated-image 케이스를 video로 매핑하면 됨.
  */
-export function createAssetData(data: FfprobeData): IAsset {
+export async function createAssetData(data: FfprobeData): Promise<IAsset> {
   if (!data.format.filename) {
     throw new Error('File path is missing in ffprobe data');
   }
@@ -80,15 +86,17 @@ export function createAssetData(data: FfprobeData): IAsset {
 
   switch (assetType) {
     case 'video':
-      return createVideoAsset(data, createdAt);
+      const thumbnailPath = await createVideoThumbnail(data.format.filename);
+      return createVideoAsset(data, createdAt, thumbnailPath);
     case 'audio':
       return createAudioAsset(data, createdAt);
     case 'image':
       return createImageAsset(data, createdAt);
     case 'animated-image':
+      const thumbPath = await createVideoThumbnail(data.format.filename);
       // 정책 1) animated-image를 별도 타입으로 쓰고 싶으면:
       // return { ...createImageAsset(data), type: 'image', isAnimated: true } 처럼 확장
       // 정책 2) 지금 당장은 비디오로 취급하고 싶으면:
-      return createVideoAsset(data, createdAt);
+      return createVideoAsset(data, createdAt, thumbPath);
   }
 }
