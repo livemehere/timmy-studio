@@ -67,6 +67,7 @@ export type ITrack = IVideoTrack | IAudioTrack;
 // Clip
 // ============================================================================
 
+export type IClip = IVideoClip | IAudioClip;
 export interface IBaseClip {
   id: string;
   name: string;
