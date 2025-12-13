@@ -1,5 +1,10 @@
 import { ipcRenderer, type IpcRendererEvent } from 'electron';
-import type { IpcInvokeChannels, IpcSendChannels } from './types';
+import type {
+  IpcInvokeChannels,
+  IpcPostMessageChannels,
+  IpcSendChannels,
+} from './types';
+import { Transferable } from 'node:worker_threads';
 
 type AnyListener = (...args: any[]) => void;
 type WrappedListener = (event: IpcRendererEvent, ...args: any[]) => void;
@@ -37,6 +42,25 @@ export function createAppApi() {
         : never
     ): Promise<IpcInvokeChannels[K]['response']> {
       return ipcRenderer.invoke(channel as string, ...args);
+    },
+
+    /**
+     * Send a typed one-way IPC message to main process with optional transferables.
+     * This uses Electron's ipcRenderer.postMessage to allow zero-copy ArrayBuffer transfer.
+     */
+    postMessage<K extends keyof IpcPostMessageChannels>(
+      channel: K,
+      ...args: ExtractPayload<IpcPostMessageChannels[K]> extends readonly [
+        ...infer P,
+      ]
+        ? P
+        : never
+    ) {
+      const payload = args[0];
+      const transfer = (args.length > 1 ? (args[1] as any) : undefined) as
+        | Transferable[]
+        | undefined;
+      ipcRenderer.postMessage(channel as string, payload, transfer);
     },
 
     /**

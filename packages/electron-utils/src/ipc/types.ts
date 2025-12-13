@@ -34,3 +34,9 @@ export interface IpcInvokeChannels {}
  * ```
  */
 export interface IpcSendChannels {}
+
+/**
+ * Base interface for IPC PostMessage Channels (Renderer -> Main, one-way, supports transferables)
+ * Extend this interface in your app to define custom channels.
+ */
+export interface IpcPostMessageChannels {}
