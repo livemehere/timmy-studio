@@ -57,16 +57,11 @@ export function bindDocToEngine(
 
   const unsubscribe = docStore.subscribe((state, prevState) => {
     if (!isEqual(state.settings, prevState.settings)) {
-      if (!engine.renderer || !engine.timer || !engine.audioManager) {
-        throw new Error(
-          '[Binding] Engine components are not initialized properly.'
-        );
-      }
-      engine.renderer.resize(state.settings.width, state.settings.height);
-      engine.renderer.background = state.settings.background;
-      engine.renderer.frameRate = state.settings.frameRate;
-      engine.timer.durationMs = state.settings.duration;
-      engine.audioManager.sampleRate = state.settings.sampleRate;
+      engine.renderer!.resize(state.settings.width, state.settings.height);
+      engine.renderer!.background = state.settings.background;
+      engine.renderer!.frameRate = state.settings.frameRate;
+      engine.timer!.durationMs = state.settings.duration;
+      engine.audioManager!.sampleRate = state.settings.sampleRate;
     }
 
     const videoTracks = state.tracks.filter((track) => track.type === 'video');
