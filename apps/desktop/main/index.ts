@@ -90,6 +90,9 @@ type ExportSession = {
   totalFrames: number;
   writtenFrames: number;
   frameSizeBytes: number;
+  startedAtMs: number;
+  drainCount: number;
+  drainWaitMsTotal: number;
 };
 
 let exportSession: ExportSession | null = null;
@@ -175,6 +178,20 @@ function ipcFacade(win: BrowserWindow) {
       const outputPath = path.join(app.getPath('downloads'), 'output.mp4');
       const frameSizeBytes = width * height * 4;
 
+      const isMac = process.platform === 'darwin';
+
+      const videoFilter = 'pad=ceil(iw/2)*2:ceil(ih/2)*2,format=yuv420p';
+
+      const encoderArgs = isMac
+        ? [
+            '-c:v',
+            'h264_videotoolbox',
+            // Reasonable default bitrate; tune later if needed.
+            '-b:v',
+            '8M',
+          ]
+        : ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23'];
+
       const args = [
         '-y',
         '-f',
@@ -187,12 +204,11 @@ function ipcFacade(win: BrowserWindow) {
         String(fps),
         '-i',
         'pipe:0',
-        // H.264 + yuv420p requires even dimensions. Pad when needed.
+        // H.264 requires even dimensions; also convert to yuv420p for compatibility.
         '-vf',
-        'pad=ceil(iw/2)*2:ceil(ih/2)*2',
+        videoFilter,
         '-an',
-        '-c:v',
-        'libx264',
+        ...encoderArgs,
         '-pix_fmt',
         'yuv420p',
         '-movflags',
@@ -205,22 +221,33 @@ function ipcFacade(win: BrowserWindow) {
       });
 
       proc.on('error', (err) => {
-        log.error('[export] ffmpeg spawn error', err);
+        console.error('[export] ffmpeg spawn error', err);
         failExport(win, String(err));
       });
 
       proc.stderr.on('data', (chunk: Buffer) => {
         const text = chunk.toString('utf8');
         // keep logs lightweight; stderr is useful for debugging export failures
-        log.info(`[export] ffmpeg: ${text.trimEnd()}`);
+        console.log(`[export] ffmpeg: ${text.trimEnd()}`);
       });
 
       proc.on('close', (code, signal) => {
         if (!exportSession || exportSession.proc !== proc) return;
 
+        const elapsedSec = (Date.now() - exportSession.startedAtMs) / 1000;
+        const effectiveFps =
+          elapsedSec > 0 ? exportSession.writtenFrames / elapsedSec : 0;
+        console.log(
+          `[export] done frames=${exportSession.writtenFrames}/${exportSession.totalFrames} elapsed=${elapsedSec.toFixed(
+            2
+          )}s effectiveFps=${effectiveFps.toFixed(2)} drainCount=${exportSession.drainCount} drainWaitMs=${exportSession.drainWaitMsTotal.toFixed(
+            1
+          )}`
+        );
+
         if (code !== 0) {
           const msg = `[export] ffmpeg exited code=${code} signal=${signal}`;
-          log.error(msg);
+          console.error(msg);
           failExport(win, msg);
         }
 
@@ -236,6 +263,9 @@ function ipcFacade(win: BrowserWindow) {
         totalFrames,
         writtenFrames: 0,
         frameSizeBytes,
+        startedAtMs: Date.now(),
+        drainCount: 0,
+        drainWaitMsTotal: 0,
       };
 
       sendExportProgress(win, exportSession);
@@ -255,6 +285,8 @@ function ipcFacade(win: BrowserWindow) {
 
     const ok = session.proc.stdin.write(Buffer.from(frameRgba));
     if (!ok) {
+      session.drainCount += 1;
+      const waitStart = Date.now();
       await new Promise<void>((resolve, reject) => {
         const onError = (err: unknown) => {
           cleanup();
@@ -272,6 +304,8 @@ function ipcFacade(win: BrowserWindow) {
         session.proc.stdin.on('error', onError);
         session.proc.stdin.on('drain', onDrain);
       });
+
+      session.drainWaitMsTotal += Date.now() - waitStart;
     }
 
     session.writtenFrames += 1;
