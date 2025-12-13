@@ -149,6 +149,12 @@ export class Renderer {
    * - 비디오가 아닌 클립은 dirty로 잡지 않음
    */
   waitForSeekSettled(targetMs: number): Promise<void> {
+    // 이미 해당 시간에 멈춰있는 경우(예: 시작이 0ms이고 현재도 0ms)에는
+    // isSeeking이 false라 started가 never-set 되는 문제가 있어 즉시 resolve.
+    if (!this.timer.isPlaying && this.timer.currentMs === targetMs) {
+      return Promise.resolve();
+    }
+
     const id = ++this.seekSessionId;
     return new Promise<void>((resolve) => {
       this.activeSeekWait = {
@@ -784,8 +790,11 @@ export class Renderer {
     if (!wait) return;
 
     // timer.seek로 인해 시킹 상태에 진입했고, 목표 시간이 현재 타임라인과 같아지면 시작 처리
-    if (isSeeking && this.timer.currentMs === wait.targetMs) {
-      wait.started = true;
+    // (단, targetMs가 현재 시간과 이미 같을 때는 isSeeking이 false일 수 있으므로 보완)
+    if (!this.timer.isPlaying && this.timer.currentMs === wait.targetMs) {
+      if (isSeeking || !wait.started) {
+        wait.started = true;
+      }
     }
 
     // 시작이 확인된 뒤, 남은 dirty가 없으면 완료
