@@ -75,7 +75,12 @@ export function TimelineTrack({
 
       <div className={'bg-neutral-800 flex-1 relative'}>
         {track.clips.map((clip) => (
-          <TimelineItem key={clip.id} clipId={clip.id} pxPerSec={pxPerSec} />
+          <TimelineItem
+            key={clip.id}
+            trackId={track.id}
+            clipId={clip.id}
+            pxPerSec={pxPerSec}
+          />
         ))}
       </div>
     </div>

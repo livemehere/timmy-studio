@@ -5,31 +5,24 @@ import { msToSec } from '../../utils/time';
 export function TimelineItem({
   clipId,
   pxPerSec,
+  trackId,
 }: {
   clipId: string;
   pxPerSec: number;
+  trackId: string;
 }) {
-  const clip = useDocStore((state) => {
-    for (const track of state.tracks) {
-      const found = track.clips.find((c) => c.id === clipId);
-      if (found) return found as IVideoClip;
-    }
-    return undefined;
-  });
-
-  const renderer = useEngineStore((state) => state.renderer);
-  const isReady = useEngineStore((state) => state.isRendererReady);
-  const syncedClipIds = useEngineStore((state) => state.syncedVideoClipIds);
-  const sprite =
-    isReady && renderer && syncedClipIds.includes(clipId)
-      ? (renderer.getClipSprite(clipId) ?? null)
-      : null;
-  const width = clip ? msToSec(clip.endTime - clip.startTime) * pxPerSec : 0;
-  const left = clip ? msToSec(clip.startTime) * pxPerSec : 0;
+  const getClipById = useDocStore((state) => state.getClipById);
+  const clip = getClipById<IVideoClip>(trackId, clipId);
 
   if (!clip) {
     throw new Error(`Clip(${clipId}) not found`);
   }
+
+  const syncedClipIds = useEngineStore((state) => state.syncedVideoClipIds);
+  const isLoaded = syncedClipIds.includes(clipId);
+
+  const width = msToSec(clip.endTime - clip.startTime) * pxPerSec;
+  const left = msToSec(clip.startTime) * pxPerSec;
 
   return (
     <div
@@ -40,7 +33,7 @@ export function TimelineItem({
       className="absolute h-full bg-cyan-700 px-2 py-1 rounded"
     >
       {clip.name}
-      {sprite && <span className="ml-1 text-xs opacity-70">(loaded)</span>}
+      {isLoaded && <span className="ml-1 text-xs opacity-70">(loaded)</span>}
       {/* <input
         type="number"
         defaultValue={clip.transforms.position!.x}

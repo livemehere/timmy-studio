@@ -62,6 +62,11 @@ export interface DocActions {
   setAsset: (asset: IAsset) => void;
   getAssetById: AssetGetter;
 
+  getClipById: <T extends IClip = IClip>(
+    trackId: string,
+    clipId: string
+  ) => T | undefined;
+
   // Reset
   reset: () => void;
 }
@@ -219,6 +224,17 @@ export const createDocStore = (initialProject?: IProject) => {
       getAssetById: <T extends IAsset = IAsset>(assetId: string) => {
         const currentAssets = get().assets;
         return currentAssets.find((a) => a.id === assetId) as T | undefined;
+      },
+
+      getClipById: <T extends IClip = IClip>(
+        trackId: string,
+        clipId: string
+      ): T | undefined => {
+        const currentTracks = get().tracks;
+        const track = currentTracks.find((t) => t.id === trackId);
+        if (!track) return undefined;
+        const clip = (track.clips as IClip[]).find((c) => c.id === clipId);
+        return clip as T | undefined;
       },
 
       reset: () => {
