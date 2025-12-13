@@ -528,6 +528,7 @@ export class Renderer {
     }
 
     // 3) base scale 계산 (size -> scale)
+    // NOTE: 비율(aspect ratio) 고려 없이, width/height 각각에 맞게 스케일을 적용한다.
     let baseScaleX = 1;
     let baseScaleY = 1;
 
@@ -539,17 +540,8 @@ export class Renderer {
       const srcH = tex?.orig?.height || tex?.height || 0;
 
       if (srcW > 0 && srcH > 0) {
-        const scaleX = transforms.size.width / srcW;
-        const scaleY = transforms.size.height / srcH;
-
-        // contain: 박스 안에 전부 들어오게(비율 유지)
-        const s = Math.min(scaleX, scaleY);
-
-        // cover로 하고 싶으면 Math.max로 바꾸면 됨
-        // const s = Math.max(scaleX, scaleY);
-
-        baseScaleX = s;
-        baseScaleY = s;
+        baseScaleX = transforms.size.width / srcW;
+        baseScaleY = transforms.size.height / srcH;
       }
     }
 
