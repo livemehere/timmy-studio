@@ -1,36 +1,10 @@
 import { useDocStore } from '../../../hooks/useStudioStores';
 import { AssetRenderer } from './AssetRenderer';
-import { ALL_FILE_EXTENSIONS } from '@renderer/lib/studio/utils/file-extension';
+import { useSelectAssets } from '@renderer/lib/studio/hooks/asset/useSelectAssets';
 
 export function AllAssets() {
   const assets = useDocStore((state) => state.assets);
-
-  const addAsset = useDocStore((state) => state.addAsset);
-
-  const handleSelectFiles = async () => {
-    const result = await window.app.invoke('showOpenDialog', {
-      title: '파일 선택',
-      properties: ['openFile', 'multiSelections'],
-      filters: [
-        {
-          extensions: ALL_FILE_EXTENSIONS,
-          name: '사용가능',
-        },
-      ],
-    });
-    if (result.canceled) return;
-
-    const assets = await Promise.all(
-      result.filePaths.map((filePath) =>
-        window.app.invoke('createAsset', filePath)
-      )
-    );
-    addAsset(assets);
-  };
-
-  // useEffect(() => {
-  //   console.log('assets', assets);
-  // }, [assets]);
+  const handleSelectFiles = useSelectAssets();
 
   return (
     <div className="flex flex-col gap-3">

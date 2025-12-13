@@ -94,12 +94,13 @@ function ipcFacade(win: BrowserWindow) {
 
   ipc.handle('createAsset', async (_, filePath: string) => {
     const meta = await ffprobePromise(filePath);
-    const asset = await createAssetData(meta, { createProxy: false });
+    const asset = await createAssetData(meta, { createProxy: false }); // proxy 파일 생성 없이 순수, 메타데이터만 생성
 
     if (asset.type === 'video' && asset.isProxyReady === false) {
-      // Proxy creation is slow; do it in background and notify renderer when ready.
+      // 프록시파일이 이미 존재하는 경우 true, 아닌경우, 비동기로 proxy 비디오 생성
       createProxy(filePath)
         .then((proxyFilePath) => {
+          // 생성이 끝나면, 렌더러 프로세스에 업데이트된 에셋 정보를 보냄
           win.webContents.send('updateAsset', {
             ...asset,
             proxyFilePath,

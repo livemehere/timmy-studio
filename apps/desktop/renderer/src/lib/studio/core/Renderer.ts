@@ -462,18 +462,8 @@ export class Renderer {
       this.clipSprites.delete(clipId);
     }
 
-    // TODO: 위에서 true 를 주었을때 아마 아래 코드가 에러나는지 나중에 확인하고, 중복 destroy 방지 고민
-    // Cleanup clip-specific elements and VideoSources
     if (state) {
-      const { element, proxyElement, videoSource, proxyVideoSource } = state;
-
-      // Destroy VideoSources to prevent memory leak
-      if (videoSource) {
-        videoSource.destroy();
-      }
-      if (proxyVideoSource) {
-        proxyVideoSource.destroy();
-      }
+      const { element, proxyElement } = state;
 
       if (element instanceof HTMLVideoElement) {
         this.cleanupVideoElement(element);
