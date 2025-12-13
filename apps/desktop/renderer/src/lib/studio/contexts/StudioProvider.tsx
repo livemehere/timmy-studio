@@ -2,6 +2,7 @@ import { useRef, useEffect, type ReactNode } from 'react';
 import type { IProject } from '../types/types';
 import { createDocStore } from '../stores/docStore';
 import { createEngineStore } from '../stores/engineStore';
+import { createInteractionStore } from '../stores/interactionStore';
 import { bindDocToEngine } from '../stores/bindDocToEngine';
 import { StudioContext, type StudioStores } from '../hooks/useStudioStores';
 
@@ -18,10 +19,12 @@ export function StudioProvider({
   if (!storesRef.current) {
     const docStore = createDocStore(initialProject);
     const engineStore = createEngineStore(() => docStore.getState());
+    const interactionStore = createInteractionStore();
 
     storesRef.current = {
       docStore,
       engineStore,
+      interactionStore,
     };
 
     unbindRef.current = bindDocToEngine(docStore, engineStore);

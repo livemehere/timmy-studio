@@ -3,10 +3,12 @@ import { useStore } from 'zustand';
 import type { StoreApi } from 'zustand/vanilla';
 import type { DocStore } from '../stores/docStore';
 import type { EngineStore } from '../stores/engineStore';
+import type { InteractionStore } from '../stores/interactionStore';
 
 export interface StudioStores {
   docStore: StoreApi<DocStore>;
   engineStore: StoreApi<EngineStore>;
+  interactionStore: StoreApi<InteractionStore>;
 }
 
 export const StudioContext = createContext<StudioStores | null>(null);
@@ -27,4 +29,11 @@ export function useDocStore<T>(selector: (state: DocStore) => T): T {
 export function useEngineStore<T>(selector: (state: EngineStore) => T): T {
   const { engineStore } = useStudioStores();
   return useStore(engineStore, selector);
+}
+
+export function useInteractionStore<T>(
+  selector: (state: InteractionStore) => T
+): T {
+  const { interactionStore } = useStudioStores();
+  return useStore(interactionStore, selector);
 }
