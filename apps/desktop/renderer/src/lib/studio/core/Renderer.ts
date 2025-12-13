@@ -84,7 +84,7 @@ export class Renderer {
 
   async init(canvas: HTMLCanvasElement): Promise<void> {
     const { settings } = this.getDoc();
-    console.log(`[Renderer] init(${settings.width},${settings.height})`);
+    console.log(`[Renderer] 바인딩 완료(${settings.width},${settings.height})`);
     await this.app.init({
       canvas,
       width: settings.width,

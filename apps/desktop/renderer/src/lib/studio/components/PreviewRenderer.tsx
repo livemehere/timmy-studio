@@ -1,22 +1,12 @@
-import { useEffect, useRef } from 'react';
-import { useDocStore, useEngineStore } from '../hooks/useStudioStores';
+import { useRef } from 'react';
+import { useDocStore } from '../hooks/useStudioStores';
 import { cn } from '@renderer/utils/cn';
+import { useBindRenderer } from '@renderer/lib/studio/hooks/useBindRenderer';
 
 export function PreviewRenderer() {
   const settings = useDocStore((state) => state.settings);
-  const renderer = useEngineStore((state) => state.renderer);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    if (!renderer || !canvasRef.current) return;
-
-    renderer.init(canvasRef.current).catch((e) => {
-      console.error('[PreviewRenderer] renderer init error', e);
-    });
-    return () => {
-      renderer.destroy();
-    };
-  }, [renderer]);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  useBindRenderer(canvasRef);
 
   return (
     <div className="relative w-full h-[calc(100%-26px)] flex items-center justify-center">
