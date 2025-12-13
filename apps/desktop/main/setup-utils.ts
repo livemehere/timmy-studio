@@ -36,6 +36,7 @@ export async function createWindow(options: CreateWindowOptions) {
     webPreferences: {
       preload: getPreloadPath(),
       webSecurity: false,
+      nodeIntegrationInWorker: true,
     },
 
     frame: false,

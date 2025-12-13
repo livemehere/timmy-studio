@@ -54,26 +54,9 @@ export function TimerActionBar() {
     // export: pause 상태에서 0s~10s 프레임을 RGBA로 뽑아 ffmpeg로 mp4 생성
     timer.pause();
 
-    const unsubscribeProgress = window.app.on(
-      'exportVideoProgress',
-      (progress) => {
-        setExportState((prev) => ({
-          ...prev,
-          writtenFrames: progress.writtenFrames,
-          totalFrames: progress.totalFrames,
-          percent: progress.percent,
-          outputPath: progress.outputPath,
-        }));
-      }
-    );
-
-    const unsubscribeError = window.app.on('exportVideoError', (message) => {
-      setExportState((prev) => ({
-        ...prev,
-        isExporting: false,
-        error: message,
-      }));
-    });
+    // Worker-based export: progress/error comes from worker messages
+    const unsubscribeProgress = () => {};
+    const unsubscribeError = () => {};
 
     try {
       const exportStartPerf = performance.now();
@@ -93,6 +76,8 @@ export function TimerActionBar() {
 
       const exportWidth = settings.width;
       const exportHeight = settings.height;
+
+      const outputPath = '~/Downloads/output.mp4';
 
       setExportState({
         isExporting: true,
@@ -115,18 +100,115 @@ export function TimerActionBar() {
         seekMsMax = Math.max(seekMsMax, dt);
       }
 
+      const worker = new Worker('/node-worker.js');
+
+      const waitForWorker = <T,>(predicate: (data: any) => T | null) => {
+        return new Promise<T>((resolve, reject) => {
+          const onMessage = (e: MessageEvent) => {
+            try {
+              const out = predicate(e.data);
+              if (out != null) {
+                cleanup();
+                resolve(out);
+              }
+            } catch (err) {
+              cleanup();
+              reject(err);
+            }
+          };
+          const onError = (e: ErrorEvent) => {
+            cleanup();
+            reject(new Error(e.message || 'Worker error'));
+          };
+          const cleanup = () => {
+            worker.removeEventListener('message', onMessage);
+            worker.removeEventListener('error', onError);
+          };
+          worker.addEventListener('message', onMessage);
+          worker.addEventListener('error', onError);
+        });
+      };
+
+      worker.addEventListener('message', (e) => {
+        const data = e.data;
+        if (data?.type === 'progress') {
+          const p = data.data || {};
+          // racy but good enough for UI
+          setExportState((prev) => ({
+            ...prev,
+            percent: typeof p.progress === 'number' ? p.progress : prev.percent,
+          }));
+        }
+        if (data?.type === 'error') {
+          setExportState((prev) => ({
+            ...prev,
+            isExporting: false,
+            error: String(data.message || 'Worker export error'),
+          }));
+        }
+      });
+
+      const ffmpegPath = await window.app.invoke('getFfmpegPath');
+
       {
         const t0 = performance.now();
-        await window.app.invoke('exportVideoStart', {
+        worker.postMessage({ type: 'set-ffmpeg-path', path: ffmpegPath });
+        worker.postMessage({
+          type: 'spawn-ffmpeg',
           width: exportWidth,
           height: exportHeight,
           fps,
-          totalFrames,
+          output: outputPath,
+          durationMs: endMs - startMs,
         });
+        await waitForWorker((d) =>
+          d?.type === 'ffmpeg-is-spawned' && d?.data === true ? true : null
+        );
         const dt = performance.now() - t0;
         invokeMsTotal += dt;
         invokeMsMax = Math.max(invokeMsMax, dt);
       }
+
+      const frameSizeBytes = exportWidth * exportHeight * 4;
+      const maxBatchBytes = 16 * 1024 * 1024;
+      const batchSize = Math.min(
+        16,
+        Math.max(1, Math.floor(maxBatchBytes / frameSizeBytes))
+      );
+
+      const toTransferableBuffer = (data: Uint8Array): ArrayBuffer => {
+        if (
+          data.buffer instanceof ArrayBuffer &&
+          data.byteOffset === 0 &&
+          data.byteLength === data.buffer.byteLength
+        ) {
+          return data.buffer;
+        }
+        const copy = new Uint8Array(data.byteLength);
+        copy.set(data);
+        return copy.buffer;
+      };
+
+      let batch: ArrayBuffer[] = [];
+
+      const flushBatch = () => {
+        if (batch.length === 0) return;
+        const t0 = performance.now();
+        const transfer: ArrayBuffer[] = batch.slice();
+        worker.postMessage(
+          {
+            type: 'ffmpeg-write-batch',
+            buffers: batch,
+            frameSizeBytes,
+          },
+          transfer
+        );
+        const dt = performance.now() - t0;
+        invokeMsTotal += dt;
+        invokeMsMax = Math.max(invokeMsMax, dt);
+        framesSent += batch.length;
+        batch = [];
+      };
 
       {
         const tExtract0 = performance.now();
@@ -135,12 +217,8 @@ export function TimerActionBar() {
         extractMsTotal += extractDt;
         extractMsMax = Math.max(extractMsMax, extractDt);
 
-        const tInvoke0 = performance.now();
-        await window.app.invoke('exportVideoFrame', data);
-        const invokeDt = performance.now() - tInvoke0;
-        invokeMsTotal += invokeDt;
-        invokeMsMax = Math.max(invokeMsMax, invokeDt);
-        framesSent += 1;
+        batch.push(toTransferableBuffer(data));
+        if (batch.length >= batchSize) flushBatch();
       }
 
       for (let ms = startMs + stepMs; ms <= endMs; ms += stepMs) {
@@ -158,16 +236,17 @@ export function TimerActionBar() {
         extractMsTotal += extractDt;
         extractMsMax = Math.max(extractMsMax, extractDt);
 
-        const tInvoke0 = performance.now();
-        await window.app.invoke('exportVideoFrame', data);
-        const invokeDt = performance.now() - tInvoke0;
-        invokeMsTotal += invokeDt;
-        invokeMsMax = Math.max(invokeMsMax, invokeDt);
-        framesSent += 1;
+        batch.push(toTransferableBuffer(data));
+        if (batch.length >= batchSize) flushBatch();
       }
 
+      flushBatch();
+
       const finishInvoke0 = performance.now();
-      const { outputPath } = await window.app.invoke('exportVideoFinish');
+      worker.postMessage({ type: 'ffmpeg-close' });
+      const doneOutput = await waitForWorker((d) =>
+        d?.type === 'done' ? String(d.output || outputPath) : null
+      );
       const finishInvokeDt = performance.now() - finishInvoke0;
       invokeMsTotal += finishInvokeDt;
       invokeMsMax = Math.max(invokeMsMax, finishInvokeDt);
@@ -192,9 +271,11 @@ export function TimerActionBar() {
       setExportState((prev) => ({
         ...prev,
         isExporting: false,
-        outputPath,
+        outputPath: doneOutput,
         percent: 100,
       }));
+
+      worker.terminate();
     } catch (err) {
       setExportState((prev) => ({
         ...prev,

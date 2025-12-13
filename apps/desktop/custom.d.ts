@@ -27,6 +27,10 @@ declare module '@timmy-studio/electron-utils/ipc' {
       response: IAsset;
     };
 
+    getFfmpegPath: {
+      response: string;
+    };
+
     exportVideoStart: {
       payload: [
         options: {

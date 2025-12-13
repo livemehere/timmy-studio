@@ -129,6 +129,10 @@ function ipcFacade(win: BrowserWindow) {
     };
   });
 
+  ipc.handle('getFfmpegPath', () => {
+    return ffmpegPath;
+  });
+
   ipc.handle('showOpenDialog', async (_, options) => {
     return await dialog.showOpenDialog(options);
   });
