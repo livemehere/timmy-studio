@@ -129,10 +129,29 @@ export function TimerActionBar() {
         });
       };
 
+      let lastProgressLoggedAt = 0;
+      let lastProgressPercentLogged = -1;
+
       worker.addEventListener('message', (e) => {
         const data = e.data;
         if (data?.type === 'progress') {
           const p = data.data || {};
+
+          // Log progress for visibility (throttled)
+          const now = performance.now();
+          const percent =
+            typeof p.progress === 'number' ? Number(p.progress) : null;
+          const shouldLog =
+            (percent != null &&
+              Math.floor(percent) !== lastProgressPercentLogged) ||
+            now - lastProgressLoggedAt > 1000;
+          if (shouldLog) {
+            lastProgressLoggedAt = now;
+            if (percent != null)
+              lastProgressPercentLogged = Math.floor(percent);
+            console.log('[export][ffmpeg][progress]', p);
+          }
+
           // racy but good enough for UI
           setExportState((prev) => ({
             ...prev,
