@@ -1,5 +1,5 @@
 import { useEngineStore } from '../hooks/useStudioStores';
-import { PauseIcon, PlayIcon } from 'lucide-react';
+import { PauseIcon, PlayIcon, HardDriveUploadIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { formatTime } from '../utils/time';
 
@@ -27,19 +27,34 @@ export function TimerActionBar() {
     }
   };
 
+  const handleExport = async () => {
+    // 1. timer 를 0으로 설정
+    // 2.
+  };
+
   return (
-    <div className={'h-[26px] flex items-center justify-between'}>
+    <div className={'grid grid-cols-3 items-center p-2'}>
       <div className="tabular-nums">
         {formatTime(timerState.currentMs)} / {formatTime(timerState.durationMs)}
       </div>
-      <button onClick={handlePlay}>
-        {timerState.isPlaying ? (
-          <PauseIcon size={16} />
-        ) : (
-          <PlayIcon size={16} />
-        )}
-      </button>
-      <div></div>
+      <div className="flex justify-center">
+        <button onClick={handlePlay}>
+          {timerState.isPlaying ? (
+            <PauseIcon size={16} />
+          ) : (
+            <PlayIcon size={16} />
+          )}
+        </button>
+      </div>
+      <div className="flex justify-end">
+        <button
+          className="flex items-center gap-2 bg-neutral-700 rounded px-2 py-0.5 hover:bg-neutral-600 cursor-pointer"
+          onClick={handleExport}
+        >
+          <HardDriveUploadIcon size={16} />
+          <span>내보내기</span>
+        </button>
+      </div>
     </div>
   );
 }
