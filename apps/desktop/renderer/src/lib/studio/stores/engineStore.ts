@@ -1,9 +1,7 @@
 import { Timer } from '../core/Timer';
-import { Renderer } from '../core/Renderer';
+import { type DocGetter, Renderer } from '../core/Renderer';
 import { AudioManager } from '../core/AudioManager';
-import type { IProject } from '../types/types';
 import { createStore } from 'zustand/vanilla';
-import type { AssetGetter } from '../types/asset';
 
 export interface EngineState {
   // Engine instances (런타임 인스턴스 소유)
@@ -44,14 +42,12 @@ export interface EngineActions {
 
 export type EngineStore = EngineState & EngineActions;
 
-export const createEngineStore = (
-  project: IProject,
-  assetGetter: AssetGetter
-) => {
+export const createEngineStore = (docGetter: DocGetter) => {
   console.group('[EngineStore] Engine 스토어 생성됨.');
 
+  const project = docGetter();
   const timer = new Timer(project.settings.duration);
-  const renderer = new Renderer(timer, assetGetter);
+  const renderer = new Renderer(timer, docGetter);
   const audioManager = new AudioManager(project.settings.sampleRate);
 
   console.groupEnd();
@@ -75,7 +71,7 @@ export const createEngineStore = (
     // ...existing code...
 
     destroy: () => {
-      console.log('[EngineStore] Destroying engine instances');
+      console.log('[EngineStore] destroy 호출됨. 엔진을 정리합니다.');
 
       const state = get();
 

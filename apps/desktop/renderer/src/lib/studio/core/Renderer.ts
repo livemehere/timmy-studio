@@ -5,14 +5,16 @@ import type {
   ITransform,
   IVideoMediaClip,
   IImageClip,
+  IProject,
 } from '@renderer/lib/studio/types/types';
 import type { Timer } from '@renderer/lib/studio/core/Timer';
 import type {
   IVideoAsset,
   IImageAsset,
-  AssetGetter,
 } from '@renderer/lib/studio/types/asset';
 import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
+
+export type DocGetter = () => IProject;
 
 interface ClipState {
   clip: IVideoClip;
@@ -46,7 +48,7 @@ export class Renderer {
 
   // 외부 의존성
   private timer: Timer;
-  private readonly getAsset: AssetGetter;
+  private readonly getDoc: DocGetter;
 
   static readonly LABELS = {
     SCENE_CONTAINER: 'SCENE_CONTAINER',
@@ -66,10 +68,10 @@ export class Renderer {
   // Constructor
   // ============================================================================
 
-  constructor(timer: Timer, assetGetter: AssetGetter) {
+  constructor(timer: Timer, docGetter: DocGetter) {
     console.log('[Renderer] 생성됨');
     this.timer = timer;
-    this.getAsset = assetGetter;
+    this.getDoc = docGetter;
     this.app = new Application();
     this.sceneContainer = new Container();
     this.sceneContainer.label = Renderer.LABELS.SCENE_CONTAINER;
@@ -80,22 +82,17 @@ export class Renderer {
   // Initialization
   // ============================================================================
 
-  async init(
-    canvas: HTMLCanvasElement,
-    width: number,
-    height: number,
-    background: string,
-    frameRate: number
-  ): Promise<void> {
-    console.log(`[Renderer] init(${width},${height}) called`);
+  async init(canvas: HTMLCanvasElement): Promise<void> {
+    const { settings } = this.getDoc();
+    console.log(`[Renderer] init(${settings.width},${settings.height})`);
     await this.app.init({
       canvas,
-      width,
-      height,
-      background,
+      width: settings.width,
+      height: settings.height,
+      background: settings.background,
       resizeTo: undefined,
     });
-    this.app.ticker.maxFPS = frameRate;
+    this.app.ticker.maxFPS = settings.frameRate;
     this.startLoop();
     this._isInitialized = true;
   }
@@ -323,7 +320,7 @@ export class Renderer {
     if (clip.type !== 'video' && clip.type !== 'image') return;
 
     // Get asset metadata from docStore
-    const asset = this.getAsset(clip.assetId);
+    const asset = this.getDoc().assets.find((a) => a.id === clip.assetId);
     if (!asset) {
       console.warn(`[Renderer] Asset metadata not found for clip: ${clip.id}`);
       return;

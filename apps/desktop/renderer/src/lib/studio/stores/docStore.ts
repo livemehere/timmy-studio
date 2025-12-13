@@ -1,6 +1,5 @@
 import { createStore } from 'zustand/vanilla';
 import type { IClip, IProject, ITrack } from '../types/types';
-import isEqual from 'fast-deep-equal';
 import type { AssetGetter, IAsset } from '@renderer/lib/studio/types/asset';
 import { produce } from 'immer';
 
@@ -37,7 +36,6 @@ export interface DocState {
 
 export interface DocActions {
   // Project actions
-  loadProject: (project: IProject) => void;
   getProject: () => IProject; // 현재 상태를 IProject로 조합해서 반환
   updateSettings: (settings: Partial<IProject['settings']>) => void;
   updateMetadata: (metadata: Partial<IProject['metadata']>) => void;
@@ -81,26 +79,6 @@ export const createDocStore = (initialProject?: IProject) => {
       metadata: project.metadata,
       tracks: project.tracks,
       assets: project.assets,
-
-      // Actions
-      loadProject: (newProject) => {
-        if (isEqual(get().getProject(), newProject)) {
-          console.log(`[DocStore] loadProject - 변화가 없음으로 스킵`);
-          return;
-        }
-        console.log(
-          `[DocStore] loadProject - 새로운 프로젝트 로드`,
-          newProject
-        );
-        set({
-          id: newProject.id,
-          name: newProject.name,
-          settings: newProject.settings,
-          metadata: newProject.metadata,
-          tracks: newProject.tracks,
-          assets: newProject.assets,
-        });
-      },
 
       getProject: () => {
         const state = get();

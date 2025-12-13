@@ -15,36 +15,17 @@ export function StudioProvider({
   const storesRef = useRef<StudioStores | null>(null);
   const unbindRef = useRef<(() => void) | null>(null);
 
-  /** 스토어 최초 생성 */
   if (!storesRef.current) {
     const docStore = createDocStore(initialProject);
-    const engineStore = createEngineStore(
-      initialProject,
-      docStore.getState().getAssetById.bind(docStore.getState())
-    );
+    const engineStore = createEngineStore(() => docStore.getState());
 
     storesRef.current = {
       docStore,
       engineStore,
     };
 
-    // Bind doc changes to engine
     unbindRef.current = bindDocToEngine(docStore, engineStore);
   }
-
-  // useEffect(() => {
-  // TODO: 이건 지원할지 고민, initialProject 를 reactive 하게 반영할것인가?
-  // if (storesRef.current) {
-  //   storesRef.current.docStore.getState().loadProject(initialProject);
-  //   storesRef.current.engineStore
-  //     .getState()
-  //     .init(initialProject, <T extends IAsset = IAsset>(assetId: string) => {
-  //       return storesRef
-  //         .current!.docStore.getState()
-  //         .assets.find((a) => a.id === assetId) as T | undefined;
-  //     });
-  // }
-  // }, [initialProject]);
 
   useEffect(() => {
     return () => {

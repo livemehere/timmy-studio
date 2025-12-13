@@ -10,12 +10,9 @@ export function PreviewRenderer() {
   useEffect(() => {
     if (!renderer || !canvasRef.current) return;
 
-    const { width, height, background, frameRate } = settings;
-    renderer
-      .init(canvasRef.current, width, height, background, frameRate)
-      .catch((e) => {
-        console.error('[PreviewRenderer] renderer init error', e);
-      });
+    renderer.init(canvasRef.current).catch((e) => {
+      console.error('[PreviewRenderer] renderer init error', e);
+    });
     return () => {
       renderer.destroy();
     };
