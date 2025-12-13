@@ -96,6 +96,43 @@ export class Renderer {
     this.app.stage.addChild(this.sceneContainer);
   }
 
+  async exportCurrentFrame() {
+    return this.app.renderer.extract.canvas(this.app.stage);
+  }
+
+  exportCurrentPixels(): { width: number; height: number; data: Uint8Array } {
+    const raw = this.app.renderer.extract.pixels(this.app.stage) as unknown;
+    const maybe = raw as any;
+    const data: Uint8Array =
+      raw instanceof Uint8Array
+        ? raw
+        : ((maybe?.pixels as Uint8Array) ?? new Uint8Array());
+
+    // Prefer explicit width/height if the extractor provides them.
+    const extractedWidth =
+      typeof maybe?.width === 'number' ? (maybe.width as number) : undefined;
+    const extractedHeight =
+      typeof maybe?.height === 'number' ? (maybe.height as number) : undefined;
+
+    // Fallback: backing canvas pixel size (best for rawvideo).
+    const rendererAny = this.app.renderer as any;
+    const view: HTMLCanvasElement | undefined =
+      rendererAny.canvas ?? rendererAny.view ?? (this.app as any).canvas;
+
+    const width =
+      extractedWidth ??
+      (typeof view?.width === 'number'
+        ? view.width
+        : Math.round((this.app.renderer as any).width ?? 0));
+    const height =
+      extractedHeight ??
+      (typeof view?.height === 'number'
+        ? view.height
+        : Math.round((this.app.renderer as any).height ?? 0));
+
+    return { width, height, data };
+  }
+
   setSeekingRenderMode(mode: SeekingRenderMode): void {
     this.seekingRenderMode = mode;
   }

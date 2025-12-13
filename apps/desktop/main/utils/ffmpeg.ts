@@ -9,6 +9,9 @@ ensureExecutable(ffprobe.path);
 FfmpegCmd.setFfmpegPath(ffmpeg.path);
 FfmpegCmd.setFfprobePath(ffprobe.path);
 
+export const ffmpegPath = ffmpeg.path;
+export const ffprobePath = ffprobe.path;
+
 export function ffprobePromise(filePath: string): Promise<FfprobeData> {
   return new Promise<any>((resolve, reject) => {
     FfmpegCmd.ffprobe(filePath, (err, metadata) => {

@@ -26,11 +26,53 @@ declare module '@timmy-studio/electron-utils/ipc' {
       payload: [filePath: string];
       response: IAsset;
     };
+
+    exportVideoStart: {
+      payload: [
+        options: {
+          width: number;
+          height: number;
+          fps: number;
+          totalFrames: number;
+        },
+      ];
+      response: {
+        outputPath: string;
+      };
+    };
+
+    exportVideoFrame: {
+      payload: [frameRgba: Uint8Array];
+      response: {
+        writtenFrames: number;
+      };
+    };
+
+    exportVideoFinish: {
+      response: {
+        outputPath: string;
+      };
+    };
   }
 
   interface IpcSendChannels {
     updateAsset: {
       payload: [asset: IAsset];
+    };
+
+    exportVideoProgress: {
+      payload: [
+        progress: {
+          writtenFrames: number;
+          totalFrames: number;
+          percent: number;
+          outputPath: string;
+        },
+      ];
+    };
+
+    exportVideoError: {
+      payload: [message: string];
     };
   }
 }
