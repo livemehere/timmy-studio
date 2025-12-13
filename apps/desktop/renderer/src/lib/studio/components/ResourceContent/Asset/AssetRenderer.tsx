@@ -4,13 +4,12 @@ import { cn } from '@renderer/utils/cn';
 import type { IAsset, IAssetMetadata } from '@renderer/lib/studio/types/asset';
 import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
 import { Plus } from 'lucide-react';
-import { useDocStore } from '../../../hooks/useStudioStores';
+import { useCreateAssetToClip } from '@renderer/lib/studio/hooks/asset/useCreateAssetToClip';
+import { useDocStore } from '@renderer/lib/studio/hooks/useStudioStores';
 import {
-  createEmptyAudioTrack,
-  createEmptyVideoTrack,
-} from '@renderer/lib/studio/utils/track';
-import { createClip } from '@renderer/lib/studio/utils/clip';
-import type { IClip } from '@renderer/lib/studio/types/types';
+  ASSET_PLACEMENT_PRESETS,
+  computeTransformFromPreset,
+} from '@renderer/lib/studio/utils/transformPresets';
 
 const badgeClass =
   'absolute text-[9px] bg-black/60 px-1 py-0.5 rounded leading-none select-none';
@@ -70,109 +69,52 @@ function AssetPreviewContent({ asset }: { asset: IAsset }) {
   }
 }
 
-function AssetPreview({ asset }: { asset: IAsset }) {
-  return (
-    <div className="relative w-full h-full">
-      <AssetPreviewContent asset={asset} />
-      <MetadataOverlay metadata={asset.metadata} />
-    </div>
-  );
-}
-
 function AssetItem({ asset }: { asset: IAsset }) {
-  const tracks = useDocStore((state) => state.tracks);
-  const addTrack = useDocStore((state) => state.addTrack);
-  const updateTrack = useDocStore((state) => state.updateTrack);
-
-  const isVideoProxyReady =
-    asset.type !== 'video' || (asset as any).isProxyReady !== false;
-
-  const handleAddClip = async () => {
-    const { type: assetType, name, id: assetId, metadata } = asset;
-
-    // Video clips must not be created until the proxy is ready.
-    if (assetType === 'video' && (asset as any).isProxyReady === false) {
-      return;
-    }
-    const durationMs = metadata.durationMs || 3000;
-    const trackType = assetType === 'audio' ? 'audio' : 'video';
-
-    // 트랙 찾거나 생성
-    let track = tracks.find((t) => t.type === trackType);
-    if (!track) {
-      const existingCount = tracks.filter((t) => t.type === trackType).length;
-      track =
-        trackType === 'video'
-          ? createEmptyVideoTrack(`videoTrack-${existingCount}`, existingCount)
-          : createEmptyAudioTrack(`audioTrack-${existingCount}`, existingCount);
-      addTrack(track);
-    }
-
-    // 클립 생성 및 추가
-    const startTime =
-      track.clips.length > 0
-        ? Math.max(...track.clips.map((c) => c.endTime))
-        : 0;
-    const endTime = startTime + durationMs;
-
-    let newClip: IClip;
-    if (assetType === 'video') {
-      newClip = createClip({
-        type: 'video',
-        name,
-        assetId,
-        startTime,
-        endTime,
-        width: metadata.width,
-        height: metadata.height,
-        trimStart: 0,
-        trimEnd: durationMs,
-      });
-    } else if (assetType === 'image') {
-      newClip = createClip({
-        type: 'image',
-        name,
-        assetId,
-        startTime,
-        endTime,
-        width: metadata.width,
-        height: metadata.height,
-      });
-    } else {
-      newClip = createClip({
-        type: 'audio',
-        name,
-        assetId,
-        startTime,
-        endTime,
-        trimStart: 0,
-        trimEnd: durationMs,
-      });
-    }
-
-    updateTrack(track.id, {
-      clips: [...track.clips, newClip] as any,
-    });
-  };
+  const settings = useDocStore((state) => state.settings);
+  const { addClip, isDisabled } = useCreateAssetToClip(asset);
 
   return (
     <div className="flex flex-col gap-1">
       <div
         className={cn(
           'group h-[70px] bg-neutral-800 rounded overflow-hidden relative',
-          !isVideoProxyReady && 'opacity-60'
+          isDisabled && 'opacity-60'
         )}
       >
-        <AssetPreview asset={asset} />
-
+        <AssetPreviewContent asset={asset} />
+        <MetadataOverlay metadata={asset.metadata} />
         {asset.type === 'video' && (
           <span className={cn(badgeClass, 'bottom-1 left-1')}>
-            {isVideoProxyReady ? 'PROXY' : 'PROXY…'}
+            {!isDisabled ? 'PROXY' : 'PROXY…'}
           </span>
         )}
         <button
           className="absolute bottom-2.5 right-2.5 bg-[dodgerblue] rounded-full p-1 group-hover:block hidden cursor-pointer"
-          onClick={handleAddClip}
+          onClick={async () => {
+            if (asset.type === 'audio') {
+              await addClip();
+              return;
+            }
+
+            const assetWidth = asset.metadata.width;
+            const assetHeight = asset.metadata.height;
+            if (assetWidth == null || assetHeight == null) {
+              await addClip();
+              return;
+            }
+
+            const transforms = computeTransformFromPreset({
+              total: { width: settings.width, height: settings.height },
+              target: { width: assetWidth, height: assetHeight },
+              preset: ASSET_PLACEMENT_PRESETS.containCenter,
+            });
+
+            await addClip({
+              clipOptions: {
+                transforms,
+              },
+            });
+          }}
         >
           <Plus className=" text-white" size={14} />
         </button>

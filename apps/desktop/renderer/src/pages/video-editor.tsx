@@ -28,6 +28,7 @@ export default function VideoEditorPage() {
               frameRate: 23.976023976023978,
               createdAt: '2025-05-12T02:13:10.000000Z',
             },
+            isProxyReady: true,
           },
         ],
         metadata: {
@@ -55,21 +56,21 @@ export default function VideoEditorPage() {
             zIndex: 0,
             opacity: 1,
             clips: [
-              {
-                id: uid(4),
-                name: 'Video1',
-                type: 'video',
-                startTime: 0,
-                endTime: 30000,
-                assetId: '78286a02-c72b-4f18-b786-b3593414ddd2',
-                transforms: {
-                  position: { x: 0, y: 0 },
-                  size: {
-                    width: 720,
-                    height: 360,
-                  },
-                },
-              },
+              // {
+              //   id: uid(4),
+              //   name: 'Video1',
+              //   type: 'video',
+              //   startTime: 0,
+              //   endTime: 30000,
+              //   assetId: '78286a02-c72b-4f18-b786-b3593414ddd2',
+              //   transforms: {
+              //     position: { x: 0, y: 0 },
+              //     size: {
+              //       width: 720,
+              //       height: 360,
+              //     },
+              //   },
+              // },
             ],
           },
         ],
