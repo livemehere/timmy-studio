@@ -19,22 +19,11 @@ export function useStudioStores(): StudioStores {
   return stores;
 }
 
-/**
- * docStore에 접근하는 base hook
- * @example
- * const tracks = useDocStore((state) => state.tracks);
- * const addTrack = useDocStore((state) => state.addTrack);
- */
 export function useDocStore<T>(selector: (state: DocStore) => T): T {
   const { docStore } = useStudioStores();
   return useStore(docStore, selector);
 }
 
-/**
- * engineStore에 접근하는 base hook
- * @example
- * const renderer = useEngineStore((state) => state.renderer);
- */
 export function useEngineStore<T>(selector: (state: EngineStore) => T): T {
   const { engineStore } = useStudioStores();
   return useStore(engineStore, selector);

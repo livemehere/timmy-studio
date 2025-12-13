@@ -3,6 +3,7 @@ import { Renderer } from '../core/Renderer';
 import { AudioManager } from '../core/AudioManager';
 import type { IProject } from '../types/types';
 import { createStore } from 'zustand/vanilla';
+import type { IAsset } from '../types/asset';
 
 export interface EngineState {
   // Engine instances (런타임 인스턴스 소유)
@@ -27,7 +28,12 @@ export interface EngineState {
 
 export interface EngineActions {
   // Initialization
-  init: (project: IProject) => void;
+  init: (
+    project: IProject,
+    getAssetFromDoc: <T extends IAsset = IAsset>(
+      assetId: string
+    ) => T | undefined
+  ) => void;
   destroy: () => void;
 
   // Renderer sync state management
@@ -64,7 +70,7 @@ export const createEngineStore = () => {
     syncedAudioClipIds: [],
 
     // Actions
-    init: (project) => {
+    init: (project, getAssetFromDoc) => {
       const state = get();
       if (state.isInitialized) {
         console.debug('[EngineStore] init already, Skipping.');
@@ -73,23 +79,11 @@ export const createEngineStore = () => {
 
       console.debug('[EngineStore] init called');
 
-      // Note: project.assets is captured in closure and won't auto-update.
-      // For real-time asset updates, the caller should pass a fresh getAsset function
-      // or we rely on bindDocToEngine to manage tracks/clips changes.
-
       // Create engine instances
       const timer = new Timer(project.settings.duration);
 
-      // Create Renderer with getAsset function that accesses project.assets snapshot
-      const getAsset = <
-        T extends
-          import('../types/asset').IAsset = import('../types/asset').IAsset,
-      >(
-        assetId: string
-      ): T | undefined => {
-        return project.assets.find((a) => a.id === assetId) as T | undefined;
-      };
-      const renderer = new Renderer(timer, getAsset);
+      // Use the getAsset function from docStore (live updates)
+      const renderer = new Renderer(timer, getAssetFromDoc);
 
       const audioManager = new AudioManager(project.settings.sampleRate);
 

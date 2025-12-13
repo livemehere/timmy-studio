@@ -4,6 +4,7 @@ import { createDocStore } from '../stores/docStore';
 import { createEngineStore } from '../stores/engineStore';
 import { bindDocToEngine } from '../stores/bindDocToEngine';
 import { StudioContext, type StudioStores } from '../hooks/useStudioStores';
+import type { IAsset } from '@renderer/lib/studio/types/asset';
 
 export function StudioProvider({
   children,
@@ -15,7 +16,7 @@ export function StudioProvider({
   const storesRef = useRef<StudioStores | null>(null);
   const unbindRef = useRef<(() => void) | null>(null);
 
-  // Initialize stores once
+  /** 스토어 최초 생성 */
   if (!storesRef.current) {
     const docStore = createDocStore(initialProject);
     const engineStore = createEngineStore();
@@ -26,29 +27,36 @@ export function StudioProvider({
     };
 
     // Initialize engine with project
-    engineStore.getState().init(initialProject);
+    engineStore
+      .getState()
+      .init(initialProject, <T extends IAsset = IAsset>(assetId: string) => {
+        return docStore.getState().assets.find((a) => a.id === assetId) as
+          | T
+          | undefined;
+      });
 
     // Bind doc changes to engine
     unbindRef.current = bindDocToEngine(docStore, engineStore);
   }
 
-  // Update project when initialProject changes
-  useEffect(() => {
-    if (storesRef.current) {
-      storesRef.current.docStore.getState().loadProject(initialProject);
-      storesRef.current.engineStore.getState().init(initialProject);
-    }
-  }, [initialProject]);
+  // useEffect(() => {
+  // TODO: 이건 지원할지 고민, initialProject 를 reactive 하게 반영할것인가?
+  // if (storesRef.current) {
+  //   storesRef.current.docStore.getState().loadProject(initialProject);
+  //   storesRef.current.engineStore
+  //     .getState()
+  //     .init(initialProject, <T extends IAsset = IAsset>(assetId: string) => {
+  //       return storesRef
+  //         .current!.docStore.getState()
+  //         .assets.find((a) => a.id === assetId) as T | undefined;
+  //     });
+  // }
+  // }, [initialProject]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (unbindRef.current) {
-        unbindRef.current();
-      }
-      if (storesRef.current) {
-        storesRef.current.engineStore.getState().destroy();
-      }
+      unbindRef.current?.();
+      storesRef.current?.engineStore.getState().destroy();
     };
   }, []);
 

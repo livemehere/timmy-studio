@@ -1,7 +1,8 @@
 import { createStore } from 'zustand/vanilla';
-import type { IProject, ITrack } from '../types/types';
+import type { IClip, IProject, ITrack } from '../types/types';
 import isEqual from 'fast-deep-equal';
 import type { IAsset } from '@renderer/lib/studio/types/asset';
+import { produce } from 'immer';
 
 const DEFAULT_PROJECT: IProject = {
   id: 'default-project',
@@ -47,6 +48,15 @@ export interface DocActions {
   removeTrack: (trackId: string | string[]) => void;
   updateTrack: (trackId: string, updates: Partial<ITrack>) => void;
 
+  // Clip actions
+  addClipToTrack: (trackId: string, clip: IClip) => void;
+  removeClipFromTrack: (trackId: string, clipId: string) => void;
+  updateClipInTrack: (
+    trackId: string,
+    clipId: string,
+    updates: Partial<IClip>
+  ) => void;
+
   // Asset actions
   addAsset: (asset: IAsset | IAsset[]) => void;
   removeAsset: (assetId: string | string[]) => void;
@@ -61,10 +71,9 @@ export type DocStore = DocState & DocActions;
 export const createDocStore = (initialProject?: IProject) => {
   const project = initialProject ?? DEFAULT_PROJECT;
 
-  console.debug(`[DocStore] createStore ${project.id}`);
+  console.debug(`[DocStore] Doc 스토어 생성됨`);
   return createStore<DocStore>()((set, get) => {
     return {
-      // Initial state - 개별 필드로 펼침
       id: project.id,
       name: project.name,
       settings: project.settings,
@@ -75,12 +84,13 @@ export const createDocStore = (initialProject?: IProject) => {
       // Actions
       loadProject: (newProject) => {
         if (isEqual(get().getProject(), newProject)) {
-          console.debug(
-            `[DocStore] loadProject ${newProject.id} is already loaded. Skipping.`
-          );
+          console.debug(`[DocStore] loadProject - 변화가 없음으로 스킵`);
           return;
         }
-        console.debug(`[DocStore] loadProject ${newProject.id} called`);
+        console.debug(
+          `[DocStore] loadProject - 새로운 프로젝트 로드`,
+          newProject
+        );
         set({
           id: newProject.id,
           name: newProject.name,
@@ -148,6 +158,52 @@ export const createDocStore = (initialProject?: IProject) => {
         });
       },
 
+      addClipToTrack: (trackId: string, clip: IClip) => {
+        const currentTracks = get().tracks;
+        const newTracks = produce(currentTracks, (draft) => {
+          const track = draft.find((t) => t.id === trackId);
+          if (track) {
+            (track.clips as IClip[]).push(clip);
+          }
+        });
+        set({ tracks: newTracks });
+      },
+
+      removeClipFromTrack: (trackId: string, clipId: string) => {
+        const currentTracks = get().tracks;
+        const newTracks = produce(currentTracks, (draft) => {
+          const track = draft.find((t) => t.id === trackId);
+          if (track) {
+            const trackWithClips = track as any;
+            trackWithClips.clips = trackWithClips.clips.filter(
+              (clip: IClip) => clip.id !== clipId
+            );
+          }
+        });
+        set({ tracks: newTracks });
+      },
+
+      updateClipInTrack: (
+        trackId: string,
+        clipId: string,
+        updates: Partial<IClip>
+      ) => {
+        const currentTracks = get().tracks;
+        const newTracks = produce(currentTracks, (draft) => {
+          const track = draft.find((t) => t.id === trackId);
+          if (track) {
+            const trackWithClips = track as any;
+            const clip = trackWithClips.clips.find(
+              (c: IClip) => c.id === clipId
+            );
+            if (clip) {
+              Object.assign(clip, updates);
+            }
+          }
+        });
+        set({ tracks: newTracks });
+      },
+
       addAsset: (asset) => {
         const assetArr = Array.isArray(asset) ? asset : [asset];
         const currentAssets = get().assets;
@@ -172,14 +228,14 @@ export const createDocStore = (initialProject?: IProject) => {
       },
 
       reset: () => {
-        console.debug(`[DocStore] reset to default project`);
+        console.debug(`[DocStore] 초기값으로 리셋`);
         set({
-          id: DEFAULT_PROJECT.id,
-          name: DEFAULT_PROJECT.name,
-          settings: DEFAULT_PROJECT.settings,
-          metadata: DEFAULT_PROJECT.metadata,
-          tracks: DEFAULT_PROJECT.tracks,
-          assets: DEFAULT_PROJECT.assets,
+          id: project.id,
+          name: project.name,
+          settings: project.settings,
+          metadata: project.metadata,
+          tracks: project.tracks,
+          assets: project.assets,
         });
       },
     };
