@@ -1,4 +1,11 @@
-import { Application, Container, Sprite, Texture, VideoSource } from 'pixi.js';
+import {
+  Application,
+  Container,
+  Rectangle,
+  Sprite,
+  Texture,
+  VideoSource,
+} from 'pixi.js';
 import type {
   IVideoTrack,
   IVideoClip,
@@ -101,34 +108,29 @@ export class Renderer {
   }
 
   exportCurrentPixels(): { width: number; height: number; data: Uint8Array } {
-    const raw = this.app.renderer.extract.pixels(this.app.stage) as unknown;
-    const maybe = raw as any;
-    const data: Uint8Array =
-      raw instanceof Uint8Array
-        ? raw
-        : ((maybe?.pixels as Uint8Array) ?? new Uint8Array());
+    const { settings } = this.getDoc();
+    const width = settings.width;
+    const height = settings.height;
 
-    // Prefer explicit width/height if the extractor provides them.
-    const extractedWidth =
-      typeof maybe?.width === 'number' ? (maybe.width as number) : undefined;
-    const extractedHeight =
-      typeof maybe?.height === 'number' ? (maybe.height as number) : undefined;
+    const out = this.app.renderer.extract.pixels({
+      target: this.app.stage,
+      frame: new Rectangle(0, 0, width, height),
+      resolution: 1,
+    });
 
-    // Fallback: backing canvas pixel size (best for rawvideo).
-    const rendererAny = this.app.renderer as any;
-    const view: HTMLCanvasElement | undefined =
-      rendererAny.canvas ?? rendererAny.view ?? (this.app as any).canvas;
+    // zero-copy view over the clamped array
+    const data = new Uint8Array(
+      out.pixels.buffer,
+      out.pixels.byteOffset,
+      out.pixels.byteLength
+    );
 
-    const width =
-      extractedWidth ??
-      (typeof view?.width === 'number'
-        ? view.width
-        : Math.round((this.app.renderer as any).width ?? 0));
-    const height =
-      extractedHeight ??
-      (typeof view?.height === 'number'
-        ? view.height
-        : Math.round((this.app.renderer as any).height ?? 0));
+    const expectedBytes = width * height * 4;
+    if (data.byteLength !== expectedBytes) {
+      throw new Error(
+        `[Renderer.exportCurrentPixels] byteLength mismatch: got ${data.byteLength} (out ${out.width}x${out.height}), expected ${expectedBytes} (${width}x${height})`
+      );
+    }
 
     return { width, height, data };
   }
@@ -171,6 +173,8 @@ export class Renderer {
       width: settings.width,
       height: settings.height,
       background: settings.background,
+      resolution: 1,
+      autoDensity: false,
       resizeTo: undefined,
     });
     this.app.ticker.maxFPS = settings.frameRate;

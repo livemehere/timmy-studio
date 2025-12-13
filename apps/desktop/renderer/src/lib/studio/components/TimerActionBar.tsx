@@ -82,6 +82,9 @@ export function TimerActionBar() {
       const stepMs = Math.max(1, Math.round(1000 / fps));
       const totalFrames = Math.floor((endMs - startMs) / stepMs) + 1;
 
+      const exportWidth = settings.width;
+      const exportHeight = settings.height;
+
       setExportState({
         isExporting: true,
         writtenFrames: 0,
@@ -96,14 +99,17 @@ export function TimerActionBar() {
       }
 
       await timer.seekAndWait(startMs);
-      const first = renderer.exportCurrentPixels();
       await window.app.invoke('exportVideoStart', {
-        width: first.width,
-        height: first.height,
+        width: exportWidth,
+        height: exportHeight,
         fps,
         totalFrames,
       });
-      await window.app.invoke('exportVideoFrame', first.data);
+
+      {
+        const { data } = renderer.exportCurrentPixels();
+        await window.app.invoke('exportVideoFrame', data);
+      }
 
       for (let ms = startMs + stepMs; ms <= endMs; ms += stepMs) {
         await timer.seekAndWait(ms);
