@@ -13,6 +13,7 @@ import {
 import { ffprobePromise } from '@main/utils/ffmpeg';
 import { createAssetData } from '@main/utils/ffprobe';
 import { ensureFiles } from '@main/utils/file';
+import { createProxy } from '@main/utils/ffmpeg/createProxy';
 
 log.initialize();
 log.info('App starting...');
@@ -67,7 +68,7 @@ app.whenReady().then(async () => {
   app.on('window-all-closed', () => {
     app.quit();
   });
-  ipcFacade();
+  ipcFacade(win);
 });
 
 process.on('uncaughtException', (error) => {
@@ -78,7 +79,7 @@ process.on('unhandledRejection', (reason, promise) => {
   log.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-function ipcFacade() {
+function ipcFacade(win: BrowserWindow) {
   ipc.handle('getAppInfo', () => {
     return {
       isDev: isDev(),
@@ -93,6 +94,23 @@ function ipcFacade() {
 
   ipc.handle('createAsset', async (_, filePath: string) => {
     const meta = await ffprobePromise(filePath);
-    return createAssetData(meta);
+    const asset = await createAssetData(meta, { createProxy: false });
+
+    if (asset.type === 'video' && asset.isProxyReady === false) {
+      // Proxy creation is slow; do it in background and notify renderer when ready.
+      createProxy(filePath)
+        .then((proxyFilePath) => {
+          win.webContents.send('updateAsset', {
+            ...asset,
+            proxyFilePath,
+            isProxyReady: true,
+          });
+        })
+        .catch((err) => {
+          log.error('[updateAsset] Failed to create proxy:', err);
+        });
+    }
+
+    return asset;
   });
 }

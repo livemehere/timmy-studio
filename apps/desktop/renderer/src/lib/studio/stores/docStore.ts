@@ -59,6 +59,7 @@ export interface DocActions {
   addAsset: (asset: IAsset | IAsset[]) => void;
   removeAsset: (assetId: string | string[]) => void;
   updateAsset: (assetId: string, updates: Partial<IAsset>) => void;
+  setAsset: (asset: IAsset) => void;
   getAssetById: AssetGetter;
 
   // Reset
@@ -202,6 +203,15 @@ export const createDocStore = (initialProject?: IProject) => {
         set({
           assets: currentAssets.map((asset) =>
             asset.id === assetId ? ({ ...asset, ...updates } as IAsset) : asset
+          ),
+        });
+      },
+
+      setAsset: (nextAsset) => {
+        const currentAssets = get().assets;
+        set({
+          assets: currentAssets.map((asset) =>
+            asset.id === nextAsset.id ? nextAsset : asset
           ),
         });
       },

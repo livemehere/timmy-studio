@@ -84,8 +84,16 @@ function AssetItem({ asset }: { asset: IAsset }) {
   const addTrack = useDocStore((state) => state.addTrack);
   const updateTrack = useDocStore((state) => state.updateTrack);
 
+  const isVideoProxyReady =
+    asset.type !== 'video' || (asset as any).isProxyReady !== false;
+
   const handleAddClip = async () => {
     const { type: assetType, name, id: assetId, metadata } = asset;
+
+    // Video clips must not be created until the proxy is ready.
+    if (assetType === 'video' && (asset as any).isProxyReady === false) {
+      return;
+    }
     const durationMs = metadata.durationMs || 3000;
     const trackType = assetType === 'audio' ? 'audio' : 'video';
 
@@ -149,8 +157,19 @@ function AssetItem({ asset }: { asset: IAsset }) {
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="group h-[70px] bg-neutral-800 rounded overflow-hidden relative">
+      <div
+        className={cn(
+          'group h-[70px] bg-neutral-800 rounded overflow-hidden relative',
+          !isVideoProxyReady && 'opacity-60'
+        )}
+      >
         <AssetPreview asset={asset} />
+
+        {asset.type === 'video' && (
+          <span className={cn(badgeClass, 'bottom-1 left-1')}>
+            {isVideoProxyReady ? 'PROXY' : 'PROXY…'}
+          </span>
+        )}
         <button
           className="absolute bottom-2.5 right-2.5 bg-[dodgerblue] rounded-full p-1 group-hover:block hidden cursor-pointer"
           onClick={handleAddClip}

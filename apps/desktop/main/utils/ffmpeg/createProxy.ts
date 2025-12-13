@@ -2,11 +2,15 @@ import path from 'path';
 import { createFfmpeg } from '../ffmpeg';
 import { PROXIES_DIR } from '@main/constants/paths';
 
+export function getProxyPath(filePath: string) {
+  const filename = path.basename(filePath, path.extname(filePath));
+  const proxyFilename = `proxy.${filename}.mp4`;
+  return path.join(PROXIES_DIR, proxyFilename);
+}
+
 export function createProxy(filePath: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const filename = path.basename(filePath, path.extname(filePath));
-    const proxyFilename = `proxy.${filename}.mp4`;
-    const proxyPath = path.join(PROXIES_DIR, proxyFilename);
+    const proxyPath = getProxyPath(filePath);
 
     createFfmpeg(filePath)
       .on('end', () => resolve(proxyPath))

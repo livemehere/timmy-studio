@@ -19,6 +19,12 @@ export interface IBaseAsset {
 export interface IVideoAsset extends IBaseAsset {
   type: 'video';
   proxyFilePath?: string;
+  /**
+   * `false` while proxy generation is in progress.
+   * `true` once main process confirms proxy file exists.
+   * `undefined` for legacy assets created before this flag existed.
+   */
+  isProxyReady?: boolean;
 }
 
 export interface IAudioAsset extends IBaseAsset {

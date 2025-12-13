@@ -28,7 +28,11 @@ declare module '@timmy-studio/electron-utils/ipc' {
     };
   }
 
-  interface IpcSendChannels {}
+  interface IpcSendChannels {
+    updateAsset: {
+      payload: [asset: IAsset];
+    };
+  }
 }
 
 export {};

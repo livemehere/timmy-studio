@@ -1,6 +1,7 @@
 import { StudioProvider } from '@renderer/lib/studio/contexts/StudioProvider';
 import { uid } from 'uid';
 import { StudioApp } from '@renderer/lib/studio/components';
+import { AssetIpcSync } from '@renderer/lib/studio/components/AssetIpcSync';
 
 export default function VideoEditorPage() {
   return (
@@ -74,6 +75,7 @@ export default function VideoEditorPage() {
         ],
       }}
     >
+      <AssetIpcSync />
       <StudioApp />
     </StudioProvider>
   );

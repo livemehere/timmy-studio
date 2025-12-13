@@ -1,7 +1,6 @@
 import { useDocStore } from '../../../hooks/useStudioStores';
 import { AssetRenderer } from './AssetRenderer';
 import { ALL_FILE_EXTENSIONS } from '@renderer/lib/studio/utils/file-extension';
-// import { useEffect } from 'react';
 
 export function AllAssets() {
   const assets = useDocStore((state) => state.assets);
