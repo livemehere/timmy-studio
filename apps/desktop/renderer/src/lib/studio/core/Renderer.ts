@@ -16,6 +16,8 @@ import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
 
 export type DocGetter = () => IProject;
 
+export type SeekingRenderMode = 'proxy' | 'origin';
+
 interface ClipState {
   clip: IVideoClip;
   trackId: string;
@@ -25,6 +27,9 @@ interface ClipState {
   proxyVideoSource?: VideoSource; // proxy video의 PixiJS VideoSource (메모리 관리용)
   isUsingProxy: boolean; // 현재 proxy texture 사용 중인지
   lastSeekTime: number; // 마지막 seeking 시간
+  lastSeekTarget: 'origin' | 'proxy' | null; // 마지막 seeking 대상
+  dirty: boolean; // 비디오 시킹/디코딩 대기 상태
+  dirtySessionId: number | null; // 현재 dirty가 속한 seek 세션
   pendingProxySwap: boolean; // origin → proxy 스왑 대기 중 (seeked 이벤트 대기)
   pendingOriginSwap: boolean; // proxy → origin 스왑 대기 중 (seeked 이벤트 대기)
 }
@@ -32,6 +37,9 @@ interface ClipState {
 export class Renderer {
   // 초기화 상태
   private _isInitialized = false;
+
+  // Seeking 시 렌더링 소스 선택 (기본: proxy)
+  private seekingRenderMode: SeekingRenderMode = 'proxy';
 
   // Pixi.js 인스턴스
   private app: Application;
@@ -49,6 +57,16 @@ export class Renderer {
   // 외부 의존성
   private timer: Timer;
   private readonly getDoc: DocGetter;
+
+  // seekAndWait 지원: 현재 seek 세션(타임라인 시킹)에서 dirty clip이 모두 해제될 때 resolve
+  private seekSessionId = 0;
+  private activeSeekWait: {
+    id: number;
+    targetMs: number;
+    remainingDirty: number;
+    started: boolean;
+    resolve: () => void;
+  } | null = null;
 
   static readonly LABELS = {
     SCENE_CONTAINER: 'SCENE_CONTAINER',
@@ -76,6 +94,32 @@ export class Renderer {
     this.sceneContainer = new Container();
     this.sceneContainer.label = Renderer.LABELS.SCENE_CONTAINER;
     this.app.stage.addChild(this.sceneContainer);
+  }
+
+  setSeekingRenderMode(mode: SeekingRenderMode): void {
+    this.seekingRenderMode = mode;
+  }
+
+  getSeekingRenderMode(): SeekingRenderMode {
+    return this.seekingRenderMode;
+  }
+
+  /**
+   * timer.seek(ms) 이후, 해당 시간에 필요한 비디오 시킹(seeked)이 모두 끝날 때까지 대기
+   * - 여러 비디오 클립이 동시에 시킹될 수 있음
+   * - 비디오가 아닌 클립은 dirty로 잡지 않음
+   */
+  waitForSeekSettled(targetMs: number): Promise<void> {
+    const id = ++this.seekSessionId;
+    return new Promise<void>((resolve) => {
+      this.activeSeekWait = {
+        id,
+        targetMs,
+        remainingDirty: 0,
+        started: false,
+        resolve,
+      };
+    });
   }
 
   // ============================================================================
@@ -386,6 +430,9 @@ export class Renderer {
         proxyVideoSource,
         isUsingProxy: false,
         lastSeekTime: -1,
+        lastSeekTarget: null,
+        dirty: false,
+        dirtySessionId: null,
         pendingProxySwap: false,
         pendingOriginSwap: false,
       });
@@ -426,6 +473,9 @@ export class Renderer {
         element,
         isUsingProxy: false,
         lastSeekTime: -1,
+        lastSeekTarget: null,
+        dirty: false,
+        dirtySessionId: null,
         pendingProxySwap: false,
         pendingOriginSwap: false,
       });
@@ -679,10 +729,72 @@ export class Renderer {
         }
       }
 
+      // seekAndWait: 시킹 시작/완료 감지
+      this.maybeResolveSeekWait(isSeeking);
+
       // 상태 저장
       this.lastIsPlaying = isPlaying;
       this.lastCurrentMs = currentTime;
     });
+  }
+
+  private maybeResolveSeekWait(isSeeking: boolean): void {
+    const wait = this.activeSeekWait;
+    if (!wait) return;
+
+    // timer.seek로 인해 시킹 상태에 진입했고, 목표 시간이 현재 타임라인과 같아지면 시작 처리
+    if (isSeeking && this.timer.currentMs === wait.targetMs) {
+      wait.started = true;
+    }
+
+    // 시작이 확인된 뒤, 남은 dirty가 없으면 완료
+    if (wait.started && wait.remainingDirty === 0) {
+      this.activeSeekWait = null;
+      wait.resolve();
+    }
+  }
+
+  private markClipDirty(state: ClipState, sessionId: number | null): void {
+    // 이미 dirty면 카운트 중복 방지
+    if (!state.dirty) {
+      state.dirty = true;
+      state.dirtySessionId = sessionId;
+
+      const wait = this.activeSeekWait;
+      if (wait && sessionId != null && wait.id === sessionId) {
+        wait.remainingDirty += 1;
+      }
+      return;
+    }
+
+    // 이미 dirty지만 세션이 바뀐 경우(새로운 seek)라면 세션만 갱신
+    if (state.dirtySessionId !== sessionId) {
+      state.dirtySessionId = sessionId;
+    }
+  }
+
+  private clearClipDirty(state: ClipState, sessionId: number | null): void {
+    if (!state.dirty) return;
+
+    // 세션이 있는 경우: 해당 세션에 속한 dirty만 카운트 감소
+    const wait = this.activeSeekWait;
+    if (
+      wait &&
+      sessionId != null &&
+      wait.id === sessionId &&
+      state.dirtySessionId === sessionId
+    ) {
+      wait.remainingDirty = Math.max(0, wait.remainingDirty - 1);
+    }
+
+    state.dirty = false;
+    state.dirtySessionId = null;
+
+    // seeked 이벤트로 dirty가 해제되는 케이스는 isSeeking 플래그와 무관하게 즉시 resolve 가능
+    if (wait && wait.started && wait.remainingDirty === 0) {
+      this.activeSeekWait = null;
+      wait.resolve();
+    }
   }
 
   // ============================================================================
@@ -833,6 +945,9 @@ export class Renderer {
     proxy: HTMLVideoElement
   ): void {
     state.pendingOriginSwap = true;
+    const sessionId = this.activeSeekWait?.id ?? null;
+    this.markClipDirty(state, sessionId);
+
     origin.currentTime = proxy.currentTime;
 
     const onSeeked = () => {
@@ -845,6 +960,8 @@ export class Renderer {
         state.pendingOriginSwap = false;
         proxy.pause();
 
+        this.clearClipDirty(state, sessionId);
+
         console.log(
           `[Renderer] Swap to origin (seeked): ${clip.id} (time: ${origin.currentTime.toFixed(3)})`
         );
@@ -855,7 +972,50 @@ export class Renderer {
         }
       } else {
         state.pendingOriginSwap = false;
+        this.clearClipDirty(state, sessionId);
       }
+    };
+
+    origin.addEventListener('seeked', onSeeked, { once: true });
+  }
+
+  /**
+   * (Paused Seeking) proxy → origin 스왑 요청 + 원하는 시킹 시간으로 origin을 이동
+   * seeked 이벤트 후 실제 스왑 실행 (깜빡임 방지)
+   */
+  private requestSwapToOriginAtTime(
+    clip: IVideoMediaClip,
+    sprite: Sprite,
+    state: ClipState,
+    origin: HTMLVideoElement,
+    proxy: HTMLVideoElement,
+    targetTime: number
+  ): void {
+    state.pendingOriginSwap = true;
+    const sessionId = this.activeSeekWait?.id ?? null;
+    this.markClipDirty(state, sessionId);
+    origin.currentTime = targetTime;
+
+    const onSeeked = () => {
+      origin.removeEventListener('seeked', onSeeked);
+
+      if (!state.pendingOriginSwap) return;
+
+      if (state.isUsingProxy) {
+        this.swapVideoTexture(sprite, origin, clip.id);
+        state.isUsingProxy = false;
+      }
+
+      state.pendingOriginSwap = false;
+
+      proxy.pause();
+      proxy.currentTime = origin.currentTime;
+
+      console.log(
+        `[Renderer] Swap to origin (seeking): ${clip.id} (time: ${origin.currentTime.toFixed(3)})`
+      );
+
+      this.clearClipDirty(state, sessionId);
     };
 
     origin.addEventListener('seeked', onSeeked, { once: true });
@@ -908,13 +1068,87 @@ export class Renderer {
     proxy: HTMLVideoElement | null,
     clipRelativeTime: number
   ): void {
-    // proxy로 스왑 요청 (아직 스왑 안 됐고, 대기 중도 아닐 때)
-    if (proxy && !state.isUsingProxy && !state.pendingProxySwap) {
-      this.requestSwapToProxy(clip, sprite, state, origin, proxy);
+    const mode: SeekingRenderMode =
+      proxy && this.seekingRenderMode === 'proxy' ? 'proxy' : 'origin';
+
+    if (mode === 'proxy') {
+      // 현재 렌더링 중인 엘리먼트 시간 업데이트 (스왑 전에는 origin, 스왑 후에는 proxy)
+      if (state.isUsingProxy && proxy) {
+        this.updateVideoCurrentTimeIfNeeded(
+          state,
+          proxy,
+          clipRelativeTime,
+          'proxy'
+        );
+      } else {
+        this.updateVideoCurrentTimeIfNeeded(
+          state,
+          origin,
+          clipRelativeTime,
+          'origin'
+        );
+      }
+
+      // proxy로 스왑 요청 (아직 스왑 안 됐고, 대기 중도 아닐 때)
+      if (proxy && !state.isUsingProxy && !state.pendingProxySwap) {
+        this.requestSwapToProxy(clip, sprite, state, origin, proxy);
+      }
+      return;
     }
 
-    // 시간 업데이트 (proxy만)
-    this.updateSeekTime(state, proxy, clipRelativeTime);
+    // origin 모드: proxy 스왑 금지, origin만 시킹
+    this.cancelPendingSwaps(state, 'proxy');
+
+    // proxy를 사용 중이면 origin으로 되돌린 뒤(origin seeked 후) 스왑
+    if (proxy && state.isUsingProxy && !state.pendingOriginSwap) {
+      this.requestSwapToOriginAtTime(
+        clip,
+        sprite,
+        state,
+        origin,
+        proxy,
+        clipRelativeTime
+      );
+      return;
+    }
+
+    this.updateVideoCurrentTimeIfNeeded(
+      state,
+      origin,
+      clipRelativeTime,
+      'origin'
+    );
+  }
+
+  private updateVideoCurrentTimeIfNeeded(
+    state: ClipState,
+    video: HTMLVideoElement,
+    targetTime: number,
+    target: 'origin' | 'proxy'
+  ): void {
+    const EPSILON = 0.001;
+    if (Math.abs(video.currentTime - targetTime) < EPSILON) return;
+
+    if (
+      state.lastSeekTarget === target &&
+      Math.abs(state.lastSeekTime - targetTime) < EPSILON
+    ) {
+      return;
+    }
+
+    state.lastSeekTime = targetTime;
+    state.lastSeekTarget = target;
+
+    const sessionId = this.activeSeekWait?.id ?? null;
+    this.markClipDirty(state, sessionId);
+
+    const onSeeked = () => {
+      video.removeEventListener('seeked', onSeeked);
+      this.clearClipDirty(state, sessionId);
+    };
+
+    video.addEventListener('seeked', onSeeked, { once: true });
+    video.currentTime = targetTime;
   }
 
   /**
@@ -929,6 +1163,8 @@ export class Renderer {
     proxy: HTMLVideoElement
   ): void {
     state.pendingProxySwap = true;
+    const sessionId = this.activeSeekWait?.id ?? null;
+    this.markClipDirty(state, sessionId);
     proxy.currentTime = origin.currentTime;
 
     const onSeeked = () => {
@@ -940,11 +1176,14 @@ export class Renderer {
         state.isUsingProxy = true;
         state.pendingProxySwap = false;
 
+        this.clearClipDirty(state, sessionId);
+
         console.log(
           `[Renderer] Swap to proxy: ${clip.id} (time: ${proxy.currentTime.toFixed(3)})`
         );
       } else {
         state.pendingProxySwap = false;
+        this.clearClipDirty(state, sessionId);
       }
     };
 
@@ -952,19 +1191,8 @@ export class Renderer {
   }
 
   /**
-   * Seeking 시 시간 업데이트
-   * proxy만 업데이트 (origin은 재생 시작 시 seeked 기반으로 동기화)
+   * Seeking 시 시간 업데이트는 `handleSeeking()` 내부에서 모드에 따라 처리한다.
    */
-  private updateSeekTime(
-    state: ClipState,
-    proxy: HTMLVideoElement | null,
-    clipRelativeTime: number
-  ): void {
-    // proxy만 시간 업데이트 (origin은 재생 시작 시 seeked 기반 스왑)
-    if (state.isUsingProxy && proxy) {
-      proxy.currentTime = clipRelativeTime;
-    }
-  }
 
   /**
    * proxy 확실히 정지

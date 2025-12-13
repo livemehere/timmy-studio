@@ -50,6 +50,8 @@ export const createEngineStore = (docGetter: DocGetter) => {
   const renderer = new Renderer(timer, docGetter);
   const audioManager = new AudioManager(project.settings.sampleRate);
 
+  timer.setSeekWaiter((ms) => renderer.waitForSeekSettled(ms));
+
   console.groupEnd();
 
   return createStore<EngineStore>()((set, get) => ({

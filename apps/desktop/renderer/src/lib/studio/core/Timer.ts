@@ -14,6 +14,8 @@ export class Timer {
   private animationFrameId: number | null = null;
   private lastTimestamp: number | null = null;
 
+  private seekWaiter: ((ms: number) => Promise<void>) | null = null;
+
   constructor(duration: number) {
     this.durationMs$.next(duration);
     console.log(
@@ -86,6 +88,18 @@ export class Timer {
       this.pause();
     }
     this.currentMs$.next(ms);
+  }
+
+  setSeekWaiter(waiter: ((ms: number) => Promise<void>) | null): void {
+    this.seekWaiter = waiter;
+  }
+
+  async seekAndWait(ms: number): Promise<void> {
+    const waitPromise = this.seekWaiter ? this.seekWaiter(ms) : null;
+    this.seek(ms);
+    if (waitPromise) {
+      await waitPromise;
+    }
   }
 
   reset() {
