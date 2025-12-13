@@ -79,28 +79,28 @@ function createImageAsset(data: FfprobeData, createdAt?: string): IImageAsset {
  * animated-image를 video로 취급하려면
  * 여기서 animated-image 케이스를 video로 매핑하면 됨.
  */
-export async function createAssetData(data: FfprobeData): Promise<IAsset> {
-  if (!data.format.filename) {
+export async function createAssetData(meta: FfprobeData): Promise<IAsset> {
+  if (!meta.format.filename) {
     throw new Error('File path is missing in ffprobe data');
   }
 
-  const assetType = detectAssetType(data);
-  const createdAt = getCreatedAt(data);
+  const assetType = detectAssetType(meta);
+  const createdAt = getCreatedAt(meta);
 
   switch (assetType) {
     case 'video':
-      const thumbnailPath = await createVideoThumbnail(data.format.filename);
-      const proxyPath = await createProxy(data.format.filename);
-      return createVideoAsset(data, createdAt, thumbnailPath, proxyPath);
+      const thumbnailPath = await createVideoThumbnail(meta.format.filename);
+      const proxyPath = await createProxy(meta.format.filename);
+      return createVideoAsset(meta, createdAt, thumbnailPath, proxyPath);
     case 'audio':
-      return createAudioAsset(data, createdAt);
+      return createAudioAsset(meta, createdAt);
     case 'image':
-      return createImageAsset(data, createdAt);
+      return createImageAsset(meta, createdAt);
     case 'animated-image':
-      const thumbPath = await createVideoThumbnail(data.format.filename);
+      const thumbPath = await createVideoThumbnail(meta.format.filename);
       // 정책 1) animated-image를 별도 타입으로 쓰고 싶으면:
       // return { ...createImageAsset(data), type: 'image', isAnimated: true } 처럼 확장
       // 정책 2) 지금 당장은 비디오로 취급하고 싶으면:
-      return createVideoAsset(data, createdAt, thumbPath);
+      return createVideoAsset(meta, createdAt, thumbPath);
   }
 }

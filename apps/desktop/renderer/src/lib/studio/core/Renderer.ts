@@ -490,29 +490,91 @@ export class Renderer {
     console.log(`[Renderer] Clip(${clipId})이 제거되었습니다`);
   }
 
+  // private applyTransform(sprite: Sprite, transforms: ITransform): void {
+  //   if (transforms.position) {
+  //     sprite.x = transforms.position.x;
+  //     sprite.y = transforms.position.y;
+  //   }
+  //   if (transforms.size) {
+  //     sprite.width = transforms.size.width;
+  //     sprite.height = transforms.size.height;
+  //   }
+  //   if (transforms.scaleX !== undefined) {
+  //     sprite.scale.x = transforms.scaleX;
+  //   }
+  //   if (transforms.scaleY !== undefined) {
+  //     sprite.scale.y = transforms.scaleY;
+  //   }
+  //   if (transforms.rotation !== undefined) {
+  //     sprite.rotation = transforms.rotation;
+  //   }
+  //   if (transforms.opacity !== undefined) {
+  //     sprite.alpha = transforms.opacity;
+  //   }
+  //   if (transforms.anchorX !== undefined || transforms.anchorY !== undefined) {
+  //     sprite.anchor.set(transforms.anchorX, transforms.anchorY);
+  //   }
+  // }
+
+  /**
+   * texture 는 부모에 맞게 resizing 되지 않아서, scale 로 처리를 해야됨 (gpt 피셜로 일단 교체)
+   * @param sprite
+   * @param transforms
+   * @private
+   */
   private applyTransform(sprite: Sprite, transforms: ITransform): void {
+    // 1) anchor 먼저 (기준점 고정)
+    if (transforms.anchorX !== undefined || transforms.anchorY !== undefined) {
+      sprite.anchor.set(
+        transforms.anchorX ?? sprite.anchor.x,
+        transforms.anchorY ?? sprite.anchor.y
+      );
+    }
+
+    // 2) position
     if (transforms.position) {
       sprite.x = transforms.position.x;
       sprite.y = transforms.position.y;
     }
+
+    // 3) base scale 계산 (size -> scale)
+    let baseScaleX = 1;
+    let baseScaleY = 1;
+
     if (transforms.size) {
-      sprite.width = transforms.size.width;
-      sprite.height = transforms.size.height;
+      const tex = sprite.texture;
+
+      // VideoTexture는 준비 전 0일 수 있으니 orig 우선
+      const srcW = tex?.orig?.width || tex?.width || 0;
+      const srcH = tex?.orig?.height || tex?.height || 0;
+
+      if (srcW > 0 && srcH > 0) {
+        const scaleX = transforms.size.width / srcW;
+        const scaleY = transforms.size.height / srcH;
+
+        // contain: 박스 안에 전부 들어오게(비율 유지)
+        const s = Math.min(scaleX, scaleY);
+
+        // cover로 하고 싶으면 Math.max로 바꾸면 됨
+        // const s = Math.max(scaleX, scaleY);
+
+        baseScaleX = s;
+        baseScaleY = s;
+      }
     }
-    if (transforms.scaleX !== undefined) {
-      sprite.scale.x = transforms.scaleX;
-    }
-    if (transforms.scaleY !== undefined) {
-      sprite.scale.y = transforms.scaleY;
-    }
+
+    // 4) user scale(추가 배율) 적용: multiplier로 처리
+    const userScaleX = transforms.scaleX ?? 1;
+    const userScaleY = transforms.scaleY ?? 1;
+
+    sprite.scale.set(baseScaleX * userScaleX, baseScaleY * userScaleY);
+
+    // 5) rotation / alpha
     if (transforms.rotation !== undefined) {
       sprite.rotation = transforms.rotation;
     }
     if (transforms.opacity !== undefined) {
       sprite.alpha = transforms.opacity;
-    }
-    if (transforms.anchorX !== undefined || transforms.anchorY !== undefined) {
-      sprite.anchor.set(transforms.anchorX, transforms.anchorY);
     }
   }
 

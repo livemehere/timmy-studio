@@ -92,7 +92,7 @@ function ipcFacade() {
   });
 
   ipc.handle('createAsset', async (_, filePath: string) => {
-    const res = await ffprobePromise(filePath);
-    return createAssetData(res);
+    const meta = await ffprobePromise(filePath);
+    return createAssetData(meta);
   });
 }
