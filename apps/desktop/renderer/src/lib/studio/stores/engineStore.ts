@@ -54,12 +54,6 @@ export const createEngineStore = (
   const renderer = new Renderer(timer, assetGetter);
   const audioManager = new AudioManager(project.settings.sampleRate);
 
-  const videoTracks = project.tracks.filter((track) => track.type === 'video');
-  const audioTracks = project.tracks.filter((track) => track.type === 'audio');
-
-  const syncedVideoTrackIds = renderer.syncTracks(videoTracks);
-  const syncedAudioTrackIds = audioManager.syncTracks(audioTracks);
-
   console.groupEnd();
 
   return createStore<EngineStore>()((set, get) => ({
@@ -70,13 +64,13 @@ export const createEngineStore = (
 
     // Renderer sync state
     isRendererReady: true,
-    syncedVideoTrackIds: syncedVideoTrackIds,
-    syncedVideoClipIds: [], // TODO: clip 별로 개별 업데이트 후 완료되면 push 처리
+    syncedVideoTrackIds: [],
+    syncedVideoClipIds: [],
 
     // AudioManager sync state
     isAudioReady: true,
-    syncedAudioTrackIds: syncedAudioTrackIds,
-    syncedAudioClipIds: [], // TODO: clip 별로 개별 업데이트 후 완료되면 push 처리
+    syncedAudioTrackIds: [],
+    syncedAudioClipIds: [],
 
     // ...existing code...
 

@@ -118,13 +118,11 @@ export class Renderer {
     ) as Container | undefined;
   }
 
-  // ============================================================================
-  // Track Management
-  // ============================================================================
-
-  syncTracks(newTracks: IVideoTrack[]): string[] {
+  async syncTracks(newTracks: IVideoTrack[]) {
     console.group(`[Renderer] ${newTracks.length}개 트랙 동기화 시작`);
     const newTrackIds = new Set(newTracks.map((t) => t.id));
+
+    const syncedClipIds: string[] = [];
 
     // 제거된 트랙 PIXI 에서 제거
     for (const trackId of this.trackContainers.keys()) {
@@ -136,19 +134,28 @@ export class Renderer {
     // 트랙 추가 또는 업데이트
     for (const track of newTracks) {
       if (this.trackContainers.has(track.id)) {
-        this.updateTrack(track);
+        const updatedClipIds = await this.updateTrack(track);
+        syncedClipIds.push(...updatedClipIds);
       } else {
-        this.addTrack(track);
+        const addedClipIds = await this.addTrack(track);
+        syncedClipIds.push(...addedClipIds);
       }
     }
 
     this.sceneContainer.sortChildren();
     console.groupEnd();
 
-    return Array.from(this.trackContainers.keys());
+    return {
+      syncedTrackIds: Array.from(this.trackContainers.keys()),
+      syncedClipIds,
+    };
   }
 
-  private addTrack(track: IVideoTrack): void {
+  /**
+   * @param track - 새로 추가 할 트랙
+   * @returns 추가된 트랙의 동기화 완료된 클립 ID 배열
+   */
+  private async addTrack(track: IVideoTrack) {
     const container = new Container();
     container.label = `${Renderer.LABELS.TRACK_PREFIX}${track.id}`;
     container.visible = track.enabled;
@@ -159,13 +166,16 @@ export class Renderer {
     this.trackContainers.set(track.id, container);
     console.log(`[Renderer] Track(${track.id})가 추가되었습니다`);
 
-    // 클립도 함께 추가
-    this.syncClips(track.id, track.clips);
+    return this.syncClips(track.id, track.clips);
   }
 
-  private updateTrack(track: IVideoTrack): void {
+  /**
+   * @param track - 업데이트 할 트랙
+   * @return 변경된 트랙의 동기화 완료된 클립 ID 배열
+   */
+  private async updateTrack(track: IVideoTrack) {
     const container = this.trackContainers.get(track.id);
-    if (!container) return;
+    if (!container) return [];
 
     // 변경된 속성만 업데이트
     if (container.visible !== track.enabled) {
@@ -178,8 +188,7 @@ export class Renderer {
       container.zIndex = track.zIndex;
     }
 
-    // 클립 동기화
-    this.syncClips(track.id, track.clips);
+    return this.syncClips(track.id, track.clips);
   }
 
   private removeTrack(trackId: string): void {
@@ -198,10 +207,6 @@ export class Renderer {
     this.trackContainers.delete(trackId);
     console.log(`[Renderer] Track(${trackId}) 이 제거되었습니다`);
   }
-
-  // ============================================================================
-  // Element Creation Helpers
-  // ============================================================================
 
   private async createVideoElement(
     asset: IVideoAsset
@@ -275,13 +280,12 @@ export class Renderer {
     img.removeAttribute('src');
   }
 
-  // ============================================================================
-  // Clip Management
-  // ============================================================================
-
-  private syncClips(trackId: string, newClips: IVideoClip[]): void {
+  private async syncClips(
+    trackId: string,
+    newClips: IVideoClip[]
+  ): Promise<string[]> {
     const container = this.trackContainers.get(trackId);
-    if (!container) return;
+    if (!container) return [];
 
     const newClipIds = new Set(newClips.map((c) => c.id));
 
@@ -293,14 +297,23 @@ export class Renderer {
     }
 
     // 클립 추가 또는 업데이트
+    const addClipPromises: Promise<void>[] = [];
     for (const clip of newClips) {
       if (clip.type !== 'video' && clip.type !== 'image') continue;
       if (this.clipSprites.has(clip.id)) {
         this.updateClip(clip);
       } else {
-        this.addClip(trackId, clip);
+        addClipPromises.push(this.addClip(trackId, clip));
       }
     }
+    // 모든 addClip 비동기 작업 완료 대기
+    await Promise.all(addClipPromises);
+
+    // 동기화된 클립 ID 반환
+    return Array.from(this.clipSprites.keys()).filter((clipId) => {
+      const sprite = this.clipSprites.get(clipId);
+      return sprite && sprite.parent === container;
+    });
   }
 
   private async addClip(trackId: string, clip: IVideoClip) {
