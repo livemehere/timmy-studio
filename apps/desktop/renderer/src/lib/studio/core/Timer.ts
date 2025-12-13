@@ -16,7 +16,9 @@ export class Timer {
 
   constructor(duration: number) {
     this.durationMs$.next(duration);
-    console.debug(`[Timer] Constructor called with duration: ${duration} ms`);
+    console.log(
+      `[Timer] 생성됨 - ${duration} ms (${(duration / 1000).toFixed(2)}s)`
+    );
   }
 
   get currentMs() {
@@ -35,11 +37,6 @@ export class Timer {
     this.durationMs$.next(ms);
   }
 
-  /**
-   * Timer 상태 변경을 구독합니다.
-   * @param listener 상태가 변경될 때 호출되는 콜백
-   * @returns unsubscribe 함수
-   */
   subscribe(listener: (state: TimerState) => void): () => void {
     // 즉시 현재 상태 전달
     listener(this.getState());
@@ -120,7 +117,7 @@ export class Timer {
   };
 
   destroy() {
-    console.debug('[Timer] Destroy called');
+    console.log('[Timer] Destroy called');
     this.pause();
     this.currentMs$.complete();
     this.isPlaying$.complete();

@@ -3,7 +3,7 @@ import { Renderer } from '../core/Renderer';
 import { AudioManager } from '../core/AudioManager';
 import type { IProject } from '../types/types';
 import { createStore } from 'zustand/vanilla';
-import type { IAsset } from '../types/asset';
+import type { AssetGetter } from '../types/asset';
 
 export interface EngineState {
   // Engine instances (런타임 인스턴스 소유)
@@ -16,8 +16,8 @@ export interface EngineState {
 
   // Renderer sync state (Pixi 객체 접근용)
   isRendererReady: boolean;
-  syncedTrackIds: string[];
-  syncedClipIds: string[];
+  syncedVideoTrackIds: string[];
+  syncedVideoClipIds: string[];
 
   // AudioManager sync state (Audio 객체 접근용)
   // TODO: AudioManager 구현 완료 후 사용
@@ -27,13 +27,7 @@ export interface EngineState {
 }
 
 export interface EngineActions {
-  // Initialization
-  init: (
-    project: IProject,
-    getAssetFromDoc: <T extends IAsset = IAsset>(
-      assetId: string
-    ) => T | undefined
-  ) => void;
+  // Destruction
   destroy: () => void;
 
   // Renderer sync state management
@@ -50,84 +44,44 @@ export interface EngineActions {
 
 export type EngineStore = EngineState & EngineActions;
 
-export const createEngineStore = () => {
-  console.debug('[EngineStore] createStore');
+export const createEngineStore = (
+  project: IProject,
+  assetGetter: AssetGetter
+) => {
+  console.group('[EngineStore] Engine 스토어 생성됨.');
+
+  const timer = new Timer(project.settings.duration);
+  const renderer = new Renderer(timer, assetGetter);
+  const audioManager = new AudioManager(project.settings.sampleRate);
+
+  const videoTracks = project.tracks.filter((track) => track.type === 'video');
+  const audioTracks = project.tracks.filter((track) => track.type === 'audio');
+
+  const syncedVideoTrackIds = renderer.syncTracks(videoTracks);
+  const syncedAudioTrackIds = audioManager.syncTracks(audioTracks);
+
+  console.groupEnd();
+
   return createStore<EngineStore>()((set, get) => ({
-    // Initial state
-    timer: null,
-    renderer: null,
-    audioManager: null,
-    isInitialized: false,
+    timer,
+    renderer,
+    audioManager,
+    isInitialized: true,
 
     // Renderer sync state
-    isRendererReady: false,
-    syncedTrackIds: [],
-    syncedClipIds: [],
+    isRendererReady: true,
+    syncedVideoTrackIds: syncedVideoTrackIds,
+    syncedVideoClipIds: [], // TODO: clip 별로 개별 업데이트 후 완료되면 push 처리
 
     // AudioManager sync state
-    isAudioReady: false,
-    syncedAudioTrackIds: [],
-    syncedAudioClipIds: [],
+    isAudioReady: true,
+    syncedAudioTrackIds: syncedAudioTrackIds,
+    syncedAudioClipIds: [], // TODO: clip 별로 개별 업데이트 후 완료되면 push 처리
 
-    // Actions
-    init: (project, getAssetFromDoc) => {
-      const state = get();
-      if (state.isInitialized) {
-        console.debug('[EngineStore] init already, Skipping.');
-        return;
-      }
-
-      console.debug('[EngineStore] init called');
-
-      // Create engine instances
-      const timer = new Timer(project.settings.duration);
-
-      // Use the getAsset function from docStore (live updates)
-      const renderer = new Renderer(timer, getAssetFromDoc);
-
-      const audioManager = new AudioManager(project.settings.sampleRate);
-
-      const videoTracks = project.tracks.filter(
-        (track) => track.type === 'video'
-      );
-
-      const audioTracks = project.tracks.filter(
-        (track) => track.type === 'audio'
-      );
-
-      // Directly sync tracks (no asset loading needed anymore)
-      renderer.syncTracks(videoTracks);
-      audioManager.syncTracks(audioTracks);
-
-      // Sync 완료 후 상태 업데이트 (Video)
-      const trackIds = videoTracks.map((t) => t.id);
-      const clipIds = videoTracks.flatMap((t) => t.clips.map((c) => c.id));
-
-      // Sync 완료 후 상태 업데이트 (Audio)
-      // TODO: AudioManager 구현 완료 후 실제 동작
-      const audioTrackIds = audioTracks.map((t) => t.id);
-      const audioClipIds = audioTracks.flatMap((t) => t.clips.map((c) => c.id));
-
-      set({
-        timer,
-        renderer,
-        audioManager,
-        isInitialized: true,
-        isRendererReady: true,
-        syncedTrackIds: trackIds,
-        syncedClipIds: clipIds,
-        isAudioReady: true,
-        syncedAudioTrackIds: audioTrackIds,
-        syncedAudioClipIds: audioClipIds,
-      });
-
-      console.debug(
-        `[EngineStore] Renderer synced - tracks: ${trackIds.length}, clips: ${clipIds.length}`
-      );
-    },
+    // ...existing code...
 
     destroy: () => {
-      console.debug('[EngineStore] Destroying engine instances');
+      console.log('[EngineStore] Destroying engine instances');
 
       const state = get();
 
@@ -152,8 +106,8 @@ export const createEngineStore = () => {
         audioManager: null,
         isInitialized: false,
         isRendererReady: false,
-        syncedTrackIds: [],
-        syncedClipIds: [],
+        syncedVideoTrackIds: [],
+        syncedVideoClipIds: [],
         isAudioReady: false,
         syncedAudioTrackIds: [],
         syncedAudioClipIds: [],
@@ -166,11 +120,11 @@ export const createEngineStore = () => {
     },
 
     setSyncedTrackIds: (trackIds) => {
-      set({ syncedTrackIds: trackIds });
+      set({ syncedVideoTrackIds: trackIds });
     },
 
     setSyncedClipIds: (clipIds) => {
-      set({ syncedClipIds: clipIds });
+      set({ syncedVideoClipIds: clipIds });
     },
 
     // AudioManager sync state management

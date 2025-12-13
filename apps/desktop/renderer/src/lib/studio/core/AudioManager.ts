@@ -9,18 +9,16 @@ export class AudioManager {
   private clipNodes = new Map<string, unknown>();
 
   constructor(sampleRate: number = 44100) {
+    console.log('[AudioManager] 생성됨');
     this.sampleRate = sampleRate;
-    console.debug('[AudioManager] Constructor called');
   }
 
   // ============================================================================
   // Track Management
   // ============================================================================
 
-  syncTracks(tracks: IAudioTrack[]): void {
-    console.debug(
-      `[AudioManager] syncTracks called with ${tracks.length} audio tracks`
-    );
+  syncTracks(tracks: IAudioTrack[]): string[] {
+    console.group(`[AudioManager] ${tracks.length}개 트랙 동기화 시작`);
 
     const currentTrackIds = new Set(tracks.map((t) => t.id));
 
@@ -39,11 +37,15 @@ export class AudioManager {
         this.addTrack(track);
       }
     }
+
+    console.groupEnd();
+
+    return Array.from(this.trackNodes.keys());
   }
 
   private addTrack(track: IAudioTrack): void {
     // TODO: 오디오 트랙 노드 생성 (GainNode 등)
-    console.debug(`[AudioManager] Track added: ${track.id}`);
+    console.log(`[AudioManager] Track added: ${track.id}`);
     this.trackNodes.set(track.id, {
       /* TODO: 실제 노드 */
     });
@@ -54,7 +56,7 @@ export class AudioManager {
 
   private updateTrack(track: IAudioTrack): void {
     // TODO: 트랙 속성 업데이트 (volume 등)
-    console.debug(`[AudioManager] Track updated: ${track.id}`);
+    console.log(`[AudioManager] Track updated: ${track.id}`);
 
     // 클립 동기화
     this.syncClips(track.id, track.clips);
@@ -70,7 +72,7 @@ export class AudioManager {
 
     // TODO: 트랙 노드 정리
     this.trackNodes.delete(trackId);
-    console.debug(`[AudioManager] Track removed: ${trackId}`);
+    console.log(`[AudioManager] Track removed: ${trackId}`);
   }
 
   // ============================================================================
@@ -78,7 +80,7 @@ export class AudioManager {
   // ============================================================================
 
   private syncClips(trackId: string, clips: IAudioClip[]): void {
-    console.debug(
+    console.log(
       `[AudioManager] syncClips for track ${trackId}: ${clips.length} clips`
     );
 
@@ -103,19 +105,19 @@ export class AudioManager {
 
   private addClip(trackId: string, clip: IAudioClip): void {
     // TODO: 오디오 클립 노드 생성 (AudioBufferSourceNode 등)
-    console.debug(`[AudioManager] Clip added: ${clip.id} to track ${trackId}`);
+    console.log(`[AudioManager] Clip added: ${clip.id} to track ${trackId}`);
     this.clipNodes.set(clip.id, { trackId /* TODO: 실제 노드 */ });
   }
 
   private updateClip(clip: IAudioClip): void {
     // TODO: 클립 속성 업데이트 (volume, trimStart, trimEnd 등)
-    console.debug(`[AudioManager] Clip updated: ${clip.id}`);
+    console.log(`[AudioManager] Clip updated: ${clip.id}`);
   }
 
   private removeClip(clipId: string): void {
     // TODO: 클립 노드 정리
     this.clipNodes.delete(clipId);
-    console.debug(`[AudioManager] Clip removed: ${clipId}`);
+    console.log(`[AudioManager] Clip removed: ${clipId}`);
   }
 
   // ============================================================================
@@ -135,7 +137,7 @@ export class AudioManager {
   // ============================================================================
 
   destroy(): void {
-    console.debug('[AudioManager] Destroy called');
+    console.log('[AudioManager] Destroy called');
 
     // TODO: 모든 오디오 노드 정리
     for (const trackId of this.trackNodes.keys()) {

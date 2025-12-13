@@ -8,9 +8,9 @@ import type {
 } from '@renderer/lib/studio/types/types';
 import type { Timer } from '@renderer/lib/studio/core/Timer';
 import type {
-  IAsset,
   IVideoAsset,
   IImageAsset,
+  AssetGetter,
 } from '@renderer/lib/studio/types/asset';
 import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
 
@@ -46,9 +46,7 @@ export class Renderer {
 
   // 외부 의존성
   private timer: Timer;
-  private getAsset: <T extends IAsset = IAsset>(
-    assetId: string
-  ) => T | undefined;
+  private readonly getAsset: AssetGetter;
 
   static readonly LABELS = {
     SCENE_CONTAINER: 'SCENE_CONTAINER',
@@ -68,13 +66,10 @@ export class Renderer {
   // Constructor
   // ============================================================================
 
-  constructor(
-    timer: Timer,
-    getAsset: <T extends IAsset = IAsset>(assetId: string) => T | undefined
-  ) {
-    console.debug('[Renderer] Constructor called');
+  constructor(timer: Timer, assetGetter: AssetGetter) {
+    console.log('[Renderer] 생성됨');
     this.timer = timer;
-    this.getAsset = getAsset;
+    this.getAsset = assetGetter;
     this.app = new Application();
     this.sceneContainer = new Container();
     this.sceneContainer.label = Renderer.LABELS.SCENE_CONTAINER;
@@ -92,7 +87,7 @@ export class Renderer {
     background: string,
     frameRate: number
   ): Promise<void> {
-    console.debug(`[Renderer] init(${width},${height}) called`);
+    console.log(`[Renderer] init(${width},${height}) called`);
     await this.app.init({
       canvas,
       width,
@@ -127,18 +122,19 @@ export class Renderer {
   // Track Management
   // ============================================================================
 
-  syncTracks(tracks: IVideoTrack[]): void {
-    const currentTrackIds = new Set(tracks.map((t) => t.id));
+  syncTracks(newTracks: IVideoTrack[]): string[] {
+    console.group(`[Renderer] ${newTracks.length}개 트랙 동기화 시작`);
+    const newTrackIds = new Set(newTracks.map((t) => t.id));
 
-    // 제거된 트랙 정리
+    // 제거된 트랙 PIXI 에서 제거
     for (const trackId of this.trackContainers.keys()) {
-      if (!currentTrackIds.has(trackId)) {
+      if (!newTrackIds.has(trackId)) {
         this.removeTrack(trackId);
       }
     }
 
     // 트랙 추가 또는 업데이트
-    for (const track of tracks) {
+    for (const track of newTracks) {
       if (this.trackContainers.has(track.id)) {
         this.updateTrack(track);
       } else {
@@ -147,6 +143,9 @@ export class Renderer {
     }
 
     this.sceneContainer.sortChildren();
+    console.groupEnd();
+
+    return Array.from(this.trackContainers.keys());
   }
 
   private addTrack(track: IVideoTrack): void {
@@ -158,11 +157,10 @@ export class Renderer {
 
     this.sceneContainer.addChild(container);
     this.trackContainers.set(track.id, container);
+    console.log(`[Renderer] Track(${track.id})가 추가되었습니다`);
 
     // 클립도 함께 추가
     this.syncClips(track.id, track.clips);
-
-    console.debug(`[Renderer] Track added: ${track.id}`);
   }
 
   private updateTrack(track: IVideoTrack): void {
@@ -191,15 +189,14 @@ export class Renderer {
     // 해당 트랙의 클립 스프라이트 정리
     for (const [clipId, sprite] of this.clipSprites) {
       if (sprite.parent === container) {
-        this.clearClipSprite(clipId);
+        this.removeClip(clipId);
       }
     }
 
     this.sceneContainer.removeChild(container);
     container.destroy({ children: true });
     this.trackContainers.delete(trackId);
-
-    console.debug(`[Renderer] Track removed: ${trackId}`);
+    console.log(`[Renderer] Track(${trackId}) 이 제거되었습니다`);
   }
 
   // ============================================================================
@@ -282,23 +279,22 @@ export class Renderer {
   // Clip Management
   // ============================================================================
 
-  private syncClips(trackId: string, clips: IVideoClip[]): void {
+  private syncClips(trackId: string, newClips: IVideoClip[]): void {
     const container = this.trackContainers.get(trackId);
     if (!container) return;
 
-    const currentClipIds = new Set(clips.map((c) => c.id));
+    const newClipIds = new Set(newClips.map((c) => c.id));
 
     // 제거된 클립 정리
     for (const [clipId, sprite] of this.clipSprites) {
-      if (sprite.parent === container && !currentClipIds.has(clipId)) {
+      if (sprite.parent === container && !newClipIds.has(clipId)) {
         this.removeClip(clipId);
       }
     }
 
     // 클립 추가 또는 업데이트
-    for (const clip of clips) {
+    for (const clip of newClips) {
       if (clip.type !== 'video' && clip.type !== 'image') continue;
-
       if (this.clipSprites.has(clip.id)) {
         this.updateClip(clip);
       } else {
@@ -307,7 +303,7 @@ export class Renderer {
     }
   }
 
-  private addClip(trackId: string, clip: IVideoClip): void {
+  private async addClip(trackId: string, clip: IVideoClip) {
     const container = this.trackContainers.get(trackId);
     if (!container) return;
 
@@ -321,9 +317,9 @@ export class Renderer {
     }
 
     if (clip.type === 'video' && asset.type === 'video') {
-      this.addVideoClip(trackId, clip, asset, container);
+      await this.addVideoClip(trackId, clip, asset, container);
     } else if (clip.type === 'image' && asset.type === 'image') {
-      this.addImageClip(trackId, clip, asset, container);
+      await this.addImageClip(trackId, clip, asset, container);
     }
   }
 
@@ -332,7 +328,7 @@ export class Renderer {
     clip: IVideoMediaClip,
     asset: IVideoAsset,
     container: Container
-  ): Promise<void> {
+  ) {
     try {
       // Create clip-specific video element
       const element = await this.createVideoElement(asset);
@@ -384,9 +380,12 @@ export class Renderer {
         pendingOriginSwap: false,
       });
 
-      console.debug(`[Renderer] Video clip added: ${clip.id}`);
+      console.log(`[Renderer] VideoClip(${clip.id}) 인스턴스가 생성되었습니다`);
     } catch (error) {
-      console.error(`[Renderer] Failed to add video clip: ${clip.id}`, error);
+      console.error(
+        `[Renderer] VideoClip(${clip.id}) 인스턴스 생성 실패`,
+        error
+      );
     }
   }
 
@@ -395,7 +394,7 @@ export class Renderer {
     clip: IImageClip,
     asset: IImageAsset,
     container: Container
-  ): Promise<void> {
+  ) {
     try {
       // Create clip-specific image element
       const element = await this.createImageElement(asset);
@@ -421,9 +420,12 @@ export class Renderer {
         pendingOriginSwap: false,
       });
 
-      console.debug(`[Renderer] Image clip added: ${clip.id}`);
+      console.log(`[Renderer] ImageClip(${clip.id}) 인스턴스가 생성되었습니다`);
     } catch (error) {
-      console.error(`[Renderer] Failed to add image clip: ${clip.id}`, error);
+      console.error(
+        `[Renderer] ImageClip(${clip.id}) 인스턴스 생성 실패`,
+        error
+      );
     }
   }
 
@@ -437,26 +439,20 @@ export class Renderer {
     if (!sprite) return;
 
     this.applyTransform(sprite, clip.transforms);
+    // TODO: 나머지 재생속도,필터 등등.. 추가되면 여기서 업데이트
   }
 
   private removeClip(clipId: string): void {
-    const sprite = this.clipSprites.get(clipId);
-    if (!sprite) return;
-
-    this.clearClipSprite(clipId);
-    console.debug(`[Renderer] Clip removed: ${clipId}`);
-  }
-
-  private clearClipSprite(clipId: string): void {
     const sprite = this.clipSprites.get(clipId);
     const state = this.clipStates.get(clipId);
 
     if (sprite) {
       sprite.parent?.removeChild(sprite);
-      sprite.destroy({ texture: true, textureSource: true }); // Texture와 VideoSource도 함께 destroy
+      sprite.destroy(true); // Texture와 VideoSource도 함께 destroy
       this.clipSprites.delete(clipId);
     }
 
+    // TODO: 위에서 true 를 주었을때 아마 아래 코드가 에러나는지 나중에 확인하고, 중복 destroy 방지 고민
     // Cleanup clip-specific elements and VideoSources
     if (state) {
       const { element, proxyElement, videoSource, proxyVideoSource } = state;
@@ -480,11 +476,9 @@ export class Renderer {
 
       this.clipStates.delete(clipId);
     }
-  }
 
-  // ============================================================================
-  // Transform Helpers
-  // ============================================================================
+    console.log(`[Renderer] Clip(${clipId})이 제거되었습니다`);
+  }
 
   private applyTransform(sprite: Sprite, transforms: ITransform): void {
     if (transforms.position) {
@@ -512,10 +506,6 @@ export class Renderer {
     }
   }
 
-  // ============================================================================
-  // Renderer Settings
-  // ============================================================================
-
   resize(width: number, height: number): void {
     if (!this._isInitialized) {
       console.warn('[Renderer] resize() called before init()');
@@ -528,7 +518,7 @@ export class Renderer {
       return;
     }
 
-    console.debug('[Renderer] resize:', width, height);
+    console.log('[Renderer] resize:', width, height);
     this.app.renderer.resize(width, height);
   }
 
@@ -541,7 +531,7 @@ export class Renderer {
       return;
     }
 
-    console.debug('[Renderer] set background:', color);
+    console.log('[Renderer] set background:', color);
     this.app.renderer.background.color = color;
   }
 
@@ -554,13 +544,9 @@ export class Renderer {
       return;
     }
 
-    console.debug('[Renderer] set frameRate:', frameRate);
+    console.log('[Renderer] set frameRate:', frameRate);
     this.app.ticker.maxFPS = frameRate;
   }
-
-  // ============================================================================
-  // Cleanup
-  // ============================================================================
 
   destroy(): void {
     if (!this._isInitialized) {
@@ -572,11 +558,11 @@ export class Renderer {
       return;
     }
 
-    console.debug('[Renderer] Destroy called');
+    console.log('[Renderer] Destroy called');
 
     // 모든 클립 스프라이트 정리
     for (const clipId of this.clipSprites.keys()) {
-      this.clearClipSprite(clipId);
+      this.removeClip(clipId);
     }
 
     // 모든 트랙 컨테이너 정리
@@ -591,12 +577,8 @@ export class Renderer {
     this._isInitialized = false;
   }
 
-  // ============================================================================
-  // Internal Loop
-  // ============================================================================
-
   private startLoop(): void {
-    console.debug('[Renderer] startLoop()');
+    console.log('[Renderer] startLoop()');
     this.app.ticker.add(() => {
       const currentTime = this.timer.currentMs;
       const isPlaying = this.timer.isPlaying;
@@ -809,7 +791,7 @@ export class Renderer {
         state.pendingOriginSwap = false;
         proxy.pause();
 
-        console.debug(
+        console.log(
           `[Renderer] Swap to origin (seeked): ${clip.id} (time: ${origin.currentTime.toFixed(3)})`
         );
 
@@ -854,7 +836,7 @@ export class Renderer {
       proxy.pause();
     }
 
-    console.debug(
+    console.log(
       `[Renderer] Paused: ${clip.id} (time: ${actualOriginTime.toFixed(3)})`
     );
   }
@@ -904,7 +886,7 @@ export class Renderer {
         state.isUsingProxy = true;
         state.pendingProxySwap = false;
 
-        console.debug(
+        console.log(
           `[Renderer] Swap to proxy: ${clip.id} (time: ${proxy.currentTime.toFixed(3)})`
         );
       } else {

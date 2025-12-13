@@ -10,14 +10,10 @@ export function bindDocToEngine(
   docStore: StoreApi<DocStore>,
   engineStore: StoreApi<EngineStore>
 ) {
-  console.debug('[Binding] Setting up doc-to-engine bindings');
+  console.log('[Binding] Setting up doc-to-engine bindings');
 
   const unsubscribe = docStore.subscribe((state, prevState) => {
     const engine = engineStore.getState();
-
-    if (!engine.isInitialized) {
-      throw new Error('[bindDocToEngine] Engine is not initialized yet.');
-    }
 
     // 공통: videoTracks 추출 및 syncedIds 업데이트 헬퍼
     const getVideoTracks = () =>
@@ -34,7 +30,7 @@ export function bindDocToEngine(
       engineStore.getState().setSyncedTrackIds(trackIds);
       engineStore.getState().setSyncedClipIds(clipIds);
 
-      console.debug(
+      console.log(
         `[bindDocToEngine] Synced IDs updated - tracks: ${trackIds.length}, clips: ${clipIds.length}`
       );
     };
@@ -48,7 +44,7 @@ export function bindDocToEngine(
       engineStore.getState().setSyncedAudioTrackIds(trackIds);
       engineStore.getState().setSyncedAudioClipIds(clipIds);
 
-      console.debug(
+      console.log(
         `[bindDocToEngine] Audio synced IDs updated - tracks: ${trackIds.length}, clips: ${clipIds.length}`
       );
     };
@@ -56,7 +52,7 @@ export function bindDocToEngine(
     const syncTracks = () => {
       if (!engine.renderer) return;
       const videoTracks = getVideoTracks();
-      console.debug('[bindDocToEngine] Syncing tracks:', videoTracks.length);
+      console.log('[bindDocToEngine] Syncing tracks:', videoTracks.length);
       engine.renderer.syncTracks(videoTracks);
 
       // sync 후 IDs 업데이트
@@ -67,7 +63,7 @@ export function bindDocToEngine(
     const syncAudioTracks = () => {
       if (!engine.audioManager) return;
       const audioTracks = getAudioTracks();
-      console.debug(
+      console.log(
         '[bindDocToEngine] Syncing audio tracks:',
         audioTracks.length
       );
@@ -94,7 +90,7 @@ export function bindDocToEngine(
     /** tracks sync - clip-based instantiation */
     const tracksChanged = state.tracks !== prevState.tracks;
     if (tracksChanged) {
-      console.debug('[bindDocToEngine] Tracks changed - syncing to renderer');
+      console.log('[bindDocToEngine] Tracks changed - syncing to renderer');
       syncTracks();
       syncAudioTracks(); // TODO: AudioManager 구현 완료 후 동작 확인
     }
@@ -102,7 +98,7 @@ export function bindDocToEngine(
 
   // Cleanup function
   return () => {
-    console.debug('[bindDocToEngine] Cleaning up doc-to-engine bindings');
+    console.log('[bindDocToEngine] Cleaning up doc-to-engine bindings');
     unsubscribe();
   };
 }

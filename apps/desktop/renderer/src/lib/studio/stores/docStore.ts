@@ -1,7 +1,7 @@
 import { createStore } from 'zustand/vanilla';
 import type { IClip, IProject, ITrack } from '../types/types';
 import isEqual from 'fast-deep-equal';
-import type { IAsset } from '@renderer/lib/studio/types/asset';
+import type { AssetGetter, IAsset } from '@renderer/lib/studio/types/asset';
 import { produce } from 'immer';
 
 const DEFAULT_PROJECT: IProject = {
@@ -61,6 +61,7 @@ export interface DocActions {
   addAsset: (asset: IAsset | IAsset[]) => void;
   removeAsset: (assetId: string | string[]) => void;
   updateAsset: (assetId: string, updates: Partial<IAsset>) => void;
+  getAssetById: AssetGetter;
 
   // Reset
   reset: () => void;
@@ -71,7 +72,7 @@ export type DocStore = DocState & DocActions;
 export const createDocStore = (initialProject?: IProject) => {
   const project = initialProject ?? DEFAULT_PROJECT;
 
-  console.debug(`[DocStore] Doc 스토어 생성됨`);
+  console.log(`[DocStore] Doc 스토어 생성됨`);
   return createStore<DocStore>()((set, get) => {
     return {
       id: project.id,
@@ -84,10 +85,10 @@ export const createDocStore = (initialProject?: IProject) => {
       // Actions
       loadProject: (newProject) => {
         if (isEqual(get().getProject(), newProject)) {
-          console.debug(`[DocStore] loadProject - 변화가 없음으로 스킵`);
+          console.log(`[DocStore] loadProject - 변화가 없음으로 스킵`);
           return;
         }
-        console.debug(
+        console.log(
           `[DocStore] loadProject - 새로운 프로젝트 로드`,
           newProject
         );
@@ -227,8 +228,13 @@ export const createDocStore = (initialProject?: IProject) => {
         });
       },
 
+      getAssetById: <T extends IAsset = IAsset>(assetId: string) => {
+        const currentAssets = get().assets;
+        return currentAssets.find((a) => a.id === assetId) as T | undefined;
+      },
+
       reset: () => {
-        console.debug(`[DocStore] 초기값으로 리셋`);
+        console.log(`[DocStore] 초기값으로 리셋`);
         set({
           id: project.id,
           name: project.name,

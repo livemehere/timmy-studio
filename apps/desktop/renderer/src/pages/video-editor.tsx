@@ -45,50 +45,32 @@ export default function VideoEditorPage() {
           background: '#000000',
         },
         tracks: [
-          // {
-          //   id: 'video-track-1',
-          //   name: 'Video Track 1',
-          //   type: 'video',
-          //   enabled: true,
-          //   locked: false,
-          //   zIndex: 0,
-          //   opacity: 1,
-          //   clips: [
-          //     {
-          //       id: uid(4),
-          //       name: 'Video1',
-          //       type: 'video',
-          //       startTime: 0,
-          //       endTime: 30000,
-          //       assetId: 'sample-video-asset',
-          //       transforms: {
-          //         position: { x: 0, y: 0 },
-          //         size: {
-          //           width: 540,
-          //           height: 960,
-          //         },
-          //       },
-          //     },
-          //     {
-          //       id: 'rect',
-          //       name: 'Rectangle Shape',
-          //       type: 'shape',
-          //       startTime: 31000,
-          //       endTime: 40000,
-          //       transforms: {
-          //         position: { x: 100, y: 100 },
-          //         size: { width: 400, height: 300 },
-          //         rotation: 0,
-          //       },
-          //       shapeData: {
-          //         shapeType: 'rectangle',
-          //         width: 100,
-          //         height: 100,
-          //         color: 'red',
-          //       },
-          //     },
-          //   ],
-          // },
+          {
+            id: 'video-track-1',
+            name: 'Video Track 1',
+            type: 'video',
+            enabled: true,
+            locked: false,
+            zIndex: 0,
+            opacity: 1,
+            clips: [
+              {
+                id: uid(4),
+                name: 'Video1',
+                type: 'video',
+                startTime: 0,
+                endTime: 30000,
+                assetId: '78286a02-c72b-4f18-b786-b3593414ddd2',
+                transforms: {
+                  position: { x: 0, y: 0 },
+                  size: {
+                    width: 720,
+                    height: 360,
+                  },
+                },
+              },
+            ],
+          },
         ],
       }}
     >

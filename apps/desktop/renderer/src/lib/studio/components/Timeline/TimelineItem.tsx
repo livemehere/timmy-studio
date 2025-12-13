@@ -19,7 +19,7 @@ export function TimelineItem({
 
   const renderer = useEngineStore((state) => state.renderer);
   const isReady = useEngineStore((state) => state.isRendererReady);
-  const syncedClipIds = useEngineStore((state) => state.syncedClipIds);
+  const syncedClipIds = useEngineStore((state) => state.syncedVideoClipIds);
   const sprite =
     isReady && renderer && syncedClipIds.includes(clipId)
       ? (renderer.getClipSprite(clipId) ?? null)

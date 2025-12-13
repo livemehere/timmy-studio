@@ -1,16 +1,15 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, type ReactNode } from 'react';
 import type { IProject } from '../types/types';
 import { createDocStore } from '../stores/docStore';
 import { createEngineStore } from '../stores/engineStore';
 import { bindDocToEngine } from '../stores/bindDocToEngine';
 import { StudioContext, type StudioStores } from '../hooks/useStudioStores';
-import type { IAsset } from '@renderer/lib/studio/types/asset';
 
 export function StudioProvider({
   children,
   initialProject,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   initialProject: IProject;
 }) {
   const storesRef = useRef<StudioStores | null>(null);
@@ -19,21 +18,15 @@ export function StudioProvider({
   /** 스토어 최초 생성 */
   if (!storesRef.current) {
     const docStore = createDocStore(initialProject);
-    const engineStore = createEngineStore();
+    const engineStore = createEngineStore(
+      initialProject,
+      docStore.getState().getAssetById.bind(docStore.getState())
+    );
 
     storesRef.current = {
       docStore,
       engineStore,
     };
-
-    // Initialize engine with project
-    engineStore
-      .getState()
-      .init(initialProject, <T extends IAsset = IAsset>(assetId: string) => {
-        return docStore.getState().assets.find((a) => a.id === assetId) as
-          | T
-          | undefined;
-      });
 
     // Bind doc changes to engine
     unbindRef.current = bindDocToEngine(docStore, engineStore);
