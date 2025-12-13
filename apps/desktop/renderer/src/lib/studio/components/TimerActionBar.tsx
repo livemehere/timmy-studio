@@ -76,6 +76,15 @@ export function TimerActionBar() {
     });
 
     try {
+      const exportStartPerf = performance.now();
+      let seekMsTotal = 0;
+      let extractMsTotal = 0;
+      let invokeMsTotal = 0;
+      let seekMsMax = 0;
+      let extractMsMax = 0;
+      let invokeMsMax = 0;
+      let framesSent = 0;
+
       const startMs = 0;
       const endMs = 10_000;
       const fps = Math.max(1, Math.round(settings.frameRate || 30));
@@ -98,26 +107,88 @@ export function TimerActionBar() {
         exportGridRef.current.innerHTML = '';
       }
 
-      await timer.seekAndWait(startMs);
-      await window.app.invoke('exportVideoStart', {
-        width: exportWidth,
-        height: exportHeight,
-        fps,
-        totalFrames,
-      });
+      {
+        const t0 = performance.now();
+        await timer.seekAndWait(startMs);
+        const dt = performance.now() - t0;
+        seekMsTotal += dt;
+        seekMsMax = Math.max(seekMsMax, dt);
+      }
 
       {
+        const t0 = performance.now();
+        await window.app.invoke('exportVideoStart', {
+          width: exportWidth,
+          height: exportHeight,
+          fps,
+          totalFrames,
+        });
+        const dt = performance.now() - t0;
+        invokeMsTotal += dt;
+        invokeMsMax = Math.max(invokeMsMax, dt);
+      }
+
+      {
+        const tExtract0 = performance.now();
         const { data } = renderer.exportCurrentPixels();
+        const extractDt = performance.now() - tExtract0;
+        extractMsTotal += extractDt;
+        extractMsMax = Math.max(extractMsMax, extractDt);
+
+        const tInvoke0 = performance.now();
         await window.app.invoke('exportVideoFrame', data);
+        const invokeDt = performance.now() - tInvoke0;
+        invokeMsTotal += invokeDt;
+        invokeMsMax = Math.max(invokeMsMax, invokeDt);
+        framesSent += 1;
       }
 
       for (let ms = startMs + stepMs; ms <= endMs; ms += stepMs) {
-        await timer.seekAndWait(ms);
+        {
+          const t0 = performance.now();
+          await timer.seekAndWait(ms);
+          const dt = performance.now() - t0;
+          seekMsTotal += dt;
+          seekMsMax = Math.max(seekMsMax, dt);
+        }
+
+        const tExtract0 = performance.now();
         const { data } = renderer.exportCurrentPixels();
+        const extractDt = performance.now() - tExtract0;
+        extractMsTotal += extractDt;
+        extractMsMax = Math.max(extractMsMax, extractDt);
+
+        const tInvoke0 = performance.now();
         await window.app.invoke('exportVideoFrame', data);
+        const invokeDt = performance.now() - tInvoke0;
+        invokeMsTotal += invokeDt;
+        invokeMsMax = Math.max(invokeMsMax, invokeDt);
+        framesSent += 1;
       }
 
+      const finishInvoke0 = performance.now();
       const { outputPath } = await window.app.invoke('exportVideoFinish');
+      const finishInvokeDt = performance.now() - finishInvoke0;
+      invokeMsTotal += finishInvokeDt;
+      invokeMsMax = Math.max(invokeMsMax, finishInvokeDt);
+
+      const elapsed = performance.now() - exportStartPerf;
+      const avg = (ms: number) => (framesSent > 0 ? ms / framesSent : 0);
+
+      console.log(
+        `[export][renderer] done frames=${framesSent}/${totalFrames} elapsed=${elapsed.toFixed(
+          1
+        )}ms seek=${seekMsTotal.toFixed(1)}ms(avg=${avg(seekMsTotal).toFixed(
+          2
+        )} max=${seekMsMax.toFixed(1)}) extract=${extractMsTotal.toFixed(
+          1
+        )}ms(avg=${avg(extractMsTotal).toFixed(2)} max=${extractMsMax.toFixed(
+          1
+        )}) invoke=${invokeMsTotal.toFixed(1)}ms(avg=${avg(
+          invokeMsTotal
+        ).toFixed(2)} max=${invokeMsMax.toFixed(1)})`
+      );
+
       setExportState((prev) => ({
         ...prev,
         isExporting: false,

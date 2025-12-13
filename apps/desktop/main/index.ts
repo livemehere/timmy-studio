@@ -93,6 +93,11 @@ type ExportSession = {
   startedAtMs: number;
   drainCount: number;
   drainWaitMsTotal: number;
+  lastFrameAtMs: number | null;
+  interFrameCount: number;
+  interFrameMsTotal: number;
+  interFrameMsMin: number;
+  interFrameMsMax: number;
 };
 
 let exportSession: ExportSession | null = null;
@@ -237,12 +242,22 @@ function ipcFacade(win: BrowserWindow) {
         const elapsedSec = (Date.now() - exportSession.startedAtMs) / 1000;
         const effectiveFps =
           elapsedSec > 0 ? exportSession.writtenFrames / elapsedSec : 0;
+
+        const interCount = exportSession.interFrameCount;
+        const interAvg =
+          interCount > 0 ? exportSession.interFrameMsTotal / interCount : 0;
+        const interMin = interCount > 0 ? exportSession.interFrameMsMin : 0;
+        const interMax = interCount > 0 ? exportSession.interFrameMsMax : 0;
         console.log(
           `[export] done frames=${exportSession.writtenFrames}/${exportSession.totalFrames} elapsed=${elapsedSec.toFixed(
             2
-          )}s effectiveFps=${effectiveFps.toFixed(2)} drainCount=${exportSession.drainCount} drainWaitMs=${exportSession.drainWaitMsTotal.toFixed(
+          )}s effectiveFps=${effectiveFps.toFixed(
+            2
+          )} drainCount=${exportSession.drainCount} drainWaitMs=${exportSession.drainWaitMsTotal.toFixed(
             1
-          )}`
+          )} interFrameMs(avg=${interAvg.toFixed(2)} min=${interMin.toFixed(
+            2
+          )} max=${interMax.toFixed(2)})`
         );
 
         if (code !== 0) {
@@ -266,6 +281,11 @@ function ipcFacade(win: BrowserWindow) {
         startedAtMs: Date.now(),
         drainCount: 0,
         drainWaitMsTotal: 0,
+        lastFrameAtMs: null,
+        interFrameCount: 0,
+        interFrameMsTotal: 0,
+        interFrameMsMin: Number.POSITIVE_INFINITY,
+        interFrameMsMax: 0,
       };
 
       sendExportProgress(win, exportSession);
@@ -276,6 +296,16 @@ function ipcFacade(win: BrowserWindow) {
   ipc.handle('exportVideoFrame', async (_, frameRgba: Uint8Array) => {
     const session = exportSession;
     if (!session) throw new Error('No export in progress');
+
+    const now = Date.now();
+    if (session.lastFrameAtMs != null) {
+      const dt = now - session.lastFrameAtMs;
+      session.interFrameCount += 1;
+      session.interFrameMsTotal += dt;
+      session.interFrameMsMin = Math.min(session.interFrameMsMin, dt);
+      session.interFrameMsMax = Math.max(session.interFrameMsMax, dt);
+    }
+    session.lastFrameAtMs = now;
 
     if (frameRgba.byteLength !== session.frameSizeBytes) {
       throw new Error(
