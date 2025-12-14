@@ -20,6 +20,10 @@ import { detectAssetType } from '@main/utils/ffprobe/detectAssetType';
 import { getCreatedAt } from './getCreatedAt';
 import { createVideoThumbnail } from '@main/utils/ffmpeg/createThumbnail';
 import { createProxy, getProxyPath } from '../ffmpeg/createProxy';
+import {
+  computeFilmstripSpec,
+  getFilmstripPath,
+} from '@main/utils/ffmpeg/createFilmstrip';
 
 function createVideoAsset(
   data: FfprobeData,
@@ -31,6 +35,22 @@ function createVideoAsset(
   const filePath = data.format.filename!;
   const videoStream = getPrimaryVideoStream(data);
 
+  const metadata = {
+    ...createVideoAssetMetadata(data, videoStream),
+    createdAt,
+  };
+
+  const filmstripSpec =
+    metadata.durationMs != null
+      ? computeFilmstripSpec(metadata.durationMs)
+      : null;
+
+  const filmstripPath =
+    filmstripSpec != null ? getFilmstripPath(filePath, filmstripSpec) : null;
+
+  const isFilmstripReady =
+    filmstripPath != null && fs.existsSync(filmstripPath);
+
   return {
     id: randomUUID(),
     name: path.basename(filePath),
@@ -39,9 +59,13 @@ function createVideoAsset(
     thumbnailPath,
     proxyFilePath: proxyPath,
     isProxyReady,
+    filmstrip:
+      filmstripSpec != null && filmstripPath != null
+        ? { ...filmstripSpec, filePath: filmstripPath }
+        : undefined,
+    isFilmstripReady: filmstripSpec != null ? isFilmstripReady : undefined,
     metadata: {
-      ...createVideoAssetMetadata(data, videoStream),
-      createdAt,
+      ...metadata,
     },
   };
 }

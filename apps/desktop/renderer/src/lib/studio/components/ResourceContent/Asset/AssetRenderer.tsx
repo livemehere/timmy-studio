@@ -3,7 +3,7 @@ import { cn } from '@renderer/utils/cn';
 // import { formatFileSize } from '@renderer/lib/studio/utils/size';
 import type { IAsset, IAssetMetadata } from '@renderer/lib/studio/types/asset';
 import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
-import { Plus } from 'lucide-react';
+import { Layers, Plus } from 'lucide-react';
 import { useCreateAssetToClip } from '@renderer/lib/studio/hooks/asset/useCreateAssetToClip';
 import { useDocStore } from '@renderer/lib/studio/hooks/useStudioStores';
 import {
@@ -73,6 +73,33 @@ function AssetItem({ asset }: { asset: IAsset }) {
   const settings = useDocStore((state) => state.settings);
   const { addClip, isDisabled } = useCreateAssetToClip(asset);
 
+  const addClipWithPreset = async (options?: { createNewTrack?: boolean }) => {
+    if (asset.type === 'audio') {
+      await addClip({ createNewTrack: options?.createNewTrack });
+      return;
+    }
+
+    const assetWidth = asset.metadata.width;
+    const assetHeight = asset.metadata.height;
+    if (assetWidth == null || assetHeight == null) {
+      await addClip({ createNewTrack: options?.createNewTrack });
+      return;
+    }
+
+    const transforms = computeTransformFromPreset({
+      total: { width: settings.width, height: settings.height },
+      target: { width: assetWidth, height: assetHeight },
+      preset: ASSET_PLACEMENT_PRESETS.containCenter,
+    });
+
+    await addClip({
+      createNewTrack: options?.createNewTrack,
+      clipOptions: {
+        transforms,
+      },
+    });
+  };
+
   return (
     <div className="flex flex-col gap-1">
       <div
@@ -89,32 +116,21 @@ function AssetItem({ asset }: { asset: IAsset }) {
           </span>
         )}
         <button
+          className="absolute bottom-2.5 right-10 bg-[dodgerblue] rounded-full p-1 group-hover:block hidden cursor-pointer"
+          onClick={async () => {
+            await addClipWithPreset({ createNewTrack: true });
+          }}
+          title="새 트랙에 추가"
+        >
+          <Layers className=" text-white" size={14} />
+        </button>
+
+        <button
           className="absolute bottom-2.5 right-2.5 bg-[dodgerblue] rounded-full p-1 group-hover:block hidden cursor-pointer"
           onClick={async () => {
-            if (asset.type === 'audio') {
-              await addClip();
-              return;
-            }
-
-            const assetWidth = asset.metadata.width;
-            const assetHeight = asset.metadata.height;
-            if (assetWidth == null || assetHeight == null) {
-              await addClip();
-              return;
-            }
-
-            const transforms = computeTransformFromPreset({
-              total: { width: settings.width, height: settings.height },
-              target: { width: assetWidth, height: assetHeight },
-              preset: ASSET_PLACEMENT_PRESETS.containCenter,
-            });
-
-            await addClip({
-              clipOptions: {
-                transforms,
-              },
-            });
+            await addClipWithPreset({ createNewTrack: false });
           }}
+          title="추가"
         >
           <Plus className=" text-white" size={14} />
         </button>

@@ -16,6 +16,7 @@ import { ffmpegPath, ffprobePromise } from '@main/utils/ffmpeg';
 import { createAssetData } from '@main/utils/ffprobe';
 import { ensureFiles } from '@main/utils/file';
 import { createProxy } from '@main/utils/ffmpeg/createProxy';
+import { createFilmstrip } from '@main/utils/ffmpeg/createFilmstrip';
 
 log.initialize();
 log.info('App starting...');
@@ -154,6 +155,24 @@ function ipcFacade(win: BrowserWindow) {
         })
         .catch((err) => {
           log.error('[updateAsset] Failed to create proxy:', err);
+        });
+    }
+
+    if (
+      asset.type === 'video' &&
+      asset.isFilmstripReady === false &&
+      asset.metadata.durationMs != null
+    ) {
+      createFilmstrip(filePath, { durationMs: asset.metadata.durationMs })
+        .then((filmstrip) => {
+          win.webContents.send('updateAsset', {
+            ...asset,
+            filmstrip,
+            isFilmstripReady: true,
+          });
+        })
+        .catch((err) => {
+          log.error('[updateAsset] Failed to create filmstrip:', err);
         });
     }
 

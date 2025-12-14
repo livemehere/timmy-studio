@@ -18,6 +18,9 @@ export interface UseCreateAssetToClipOptions {
   /** 특정 트랙에 추가 (기본값: 타입에 따른 첫 번째 트랙) */
   trackId?: string;
 
+  /** 항상 새 트랙을 생성해서 그 트랙에 추가 */
+  createNewTrack?: boolean;
+
   /** 기본값: append(현재 트랙 마지막 클립 뒤) */
   insertMode?: 'append' | 'atStart';
 
@@ -42,17 +45,35 @@ export function useCreateAssetToClip(asset: IAsset) {
     const trackType: ITrack['type'] =
       asset.type === 'audio' ? 'audio' : 'video';
 
-    let track: ITrack | undefined = options.trackId
-      ? tracks.find((t) => t.id === options.trackId)
-      : tracks.find((t) => t.type === trackType);
+    let track: ITrack | undefined;
 
+    // 1) 특정 트랙이 지정되면 그 트랙에 추가
+    if (options.trackId) {
+      track = tracks.find((t) => t.id === options.trackId);
+    }
+
+    // 2) 새 트랙 생성 옵션이 켜져 있으면 항상 새 트랙 생성
+    if (!track && options.createNewTrack) {
+      const existingCount = tracks.filter((t) => t.type === trackType).length;
+      track =
+        trackType === 'video'
+          ? createEmptyVideoTrack(`videoTrack-${existingCount}`, existingCount)
+          : createEmptyAudioTrack(`audioTrack-${existingCount}`, existingCount);
+      addTrack(track);
+    }
+
+    // 3) 기본: 타입에 따른 첫 번째 트랙
+    if (!track) {
+      track = tracks.find((t) => t.type === trackType);
+    }
+
+    // 4) 트랙이 하나도 없으면 생성
     if (!track) {
       const existingCount = tracks.filter((t) => t.type === trackType).length;
       track =
         trackType === 'video'
           ? createEmptyVideoTrack(`videoTrack-${existingCount}`, existingCount)
           : createEmptyAudioTrack(`audioTrack-${existingCount}`, existingCount);
-
       addTrack(track);
     }
 
