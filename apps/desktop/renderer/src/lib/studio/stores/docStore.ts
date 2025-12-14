@@ -2,6 +2,7 @@ import { createStore } from 'zustand/vanilla';
 import type { IClip, IProject, ITrack } from '../types/types';
 import type { AssetGetter, IAsset } from '@renderer/lib/studio/types/asset';
 import { produce } from 'immer';
+import { computeNextProjectDurationMs } from '@renderer/lib/studio/utils/projectDuration';
 
 const DEFAULT_PROJECT: IProject = {
   id: 'default-project',
@@ -144,13 +145,30 @@ export const createDocStore = (initialProject?: IProject) => {
       },
 
       addClipToTrack: (trackId: string, clip: IClip) => {
-        const currentTracks = get().tracks;
-        const newTracks = produce(currentTracks, (draft) => {
+        const state = get();
+        const newTracks = produce(state.tracks, (draft) => {
           const track = draft.find((t) => t.id === trackId);
           if (track) {
             (track.clips as IClip[]).push(clip);
           }
         });
+
+        // NOTE: 나중에 사용자 설정/실험 플래그로 뺄 수 있도록 boolean으로 토글 가능하게 유지
+        const enableAutoExtendDuration = true;
+        const nextDuration = computeNextProjectDurationMs({
+          enabled: enableAutoExtendDuration,
+          currentDurationMs: state.settings.duration,
+          tracks: newTracks,
+        });
+
+        if (nextDuration !== state.settings.duration) {
+          set({
+            tracks: newTracks,
+            settings: { ...state.settings, duration: nextDuration },
+          });
+          return;
+        }
+
         set({ tracks: newTracks });
       },
 
