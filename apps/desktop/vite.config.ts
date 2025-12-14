@@ -15,7 +15,10 @@ const resolve: UserConfig['resolve'] = {
 };
 
 export default defineConfig({
-  test: {},
+  test: {
+    setupFiles: ['renderer/src/lib/studio/__tests__/setup.ts'],
+    environment: 'happy-dom',
+  },
   /** 공통으로 merge 되는 설정 */
   resolve,
   plugins: [

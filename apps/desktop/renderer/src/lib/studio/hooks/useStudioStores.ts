@@ -12,6 +12,7 @@ export interface StudioStores {
 }
 
 export const StudioContext = createContext<StudioStores | null>(null);
+StudioContext.displayName = 'StudioContext';
 
 export function useStudioStores(): StudioStores {
   const stores = useContext(StudioContext);

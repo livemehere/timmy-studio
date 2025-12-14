@@ -16,31 +16,10 @@ export interface IBaseAsset {
   thumbnailPath?: string;
 }
 
-export interface IFilmstripInfo {
-  filePath: string;
-  frameCount: number;
-  frameHeight: number;
-  intervalMs: number;
-  assetDurationMs: number;
-}
-
 export interface IVideoAsset extends IBaseAsset {
   type: 'video';
   proxyFilePath?: string;
-  /**
-   * `false` while proxy generation is in progress.
-   * `true` once main process confirms proxy file exists.
-   * `undefined` for legacy assets created before this flag existed.
-   */
   isProxyReady?: boolean;
-
-  filmstrip?: IFilmstripInfo;
-  /**
-   * `false` while filmstrip generation is in progress.
-   * `true` once main process confirms filmstrip file exists.
-   * `undefined` for legacy assets created before this flag existed.
-   */
-  isFilmstripReady?: boolean;
 }
 
 export interface IAudioAsset extends IBaseAsset {
@@ -50,6 +29,7 @@ export interface IAudioAsset extends IBaseAsset {
 export interface IImageAsset extends IBaseAsset {
   type: 'image';
 }
+
 export type AssetType = 'video' | 'audio' | 'image' | 'animated-image';
 export type IAsset = IVideoAsset | IAudioAsset | IImageAsset;
 

@@ -3,17 +3,10 @@ import { PreviewPanel } from '@renderer/lib/studio/components/Layout/PreviewPane
 import { PropertiesPanel } from '@renderer/lib/studio/components/Layout/PropertiesPanel';
 import { TimelinePanel } from '@renderer/lib/studio/components/Layout/TimelinePanel';
 import { ResourcePanel } from '@renderer/lib/studio/components/Layout/ResourcePanel';
-import { useEffect } from 'react';
-import { useDocStore } from '@renderer/lib/studio/hooks/useStudioStores';
-import { filterMethods } from '@renderer/lib/studio/utils/object';
+import { useAssetUpdateSubscription } from '@renderer/lib/studio/hooks/asset/useAssetUpdateSubscription';
 
 export function StudioApp() {
-  const doc = useDocStore((state) => state);
-
-  useEffect(() => {
-    const _doc = filterMethods(doc);
-    console.log('doc changed', _doc);
-  }, [doc]);
+  useAssetUpdateSubscription();
 
   return (
     <div className="h-full p-2 overflow-hidden">
