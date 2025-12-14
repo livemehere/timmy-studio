@@ -69,7 +69,7 @@ export function TimerActionBar() {
       let framesSent = 0;
 
       const startMs = 0;
-      const endMs = 10_000;
+      const endMs = settings.duration;
       const fps = Math.max(1, Math.round(settings.frameRate || 30));
       const stepMs = Math.max(1, Math.round(1000 / fps));
       const totalFrames = Math.floor((endMs - startMs) / stepMs) + 1;
@@ -311,7 +311,7 @@ export function TimerActionBar() {
   return (
     <>
       <div className={'grid grid-cols-3 items-center p-2'}>
-        <div className="tabular-nums">
+        <div className="tabular-nums text-xs">
           {formatTime(timerState.currentMs)} /{' '}
           {formatTime(timerState.durationMs)}
         </div>
@@ -340,7 +340,7 @@ export function TimerActionBar() {
           Export (0~10s) → ~/Downloads/output.mp4
         </div>
 
-        <div className="text-[11px] text-neutral-200 tabular-nums mb-2">
+        <div className="text-[10px] text-neutral-200 tabular-nums mb-2">
           {exportState.error ? (
             <span className="text-red-300">{exportState.error}</span>
           ) : exportState.isExporting ? (

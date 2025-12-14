@@ -20,6 +20,10 @@ import type {
   IImageAsset,
 } from '@renderer/lib/studio/types/asset';
 import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
+import {
+  didClipBecomeVisible,
+  shouldStartVideoPlayback,
+} from '@renderer/lib/studio/core/playbackGuards';
 
 export type DocGetter = () => IProject;
 
@@ -746,10 +750,18 @@ export class Renderer {
         const sprite = this.clipSprites.get(clipId);
         if (!sprite) continue;
 
+        // 이전 프레임의 가시성 (클립이 재생 중에 활성화되는 순간 감지용)
+        const wasClipVisible = sprite.visible;
+
         // 클립 가시성 (시간 범위 체크)
         const isClipVisible =
           currentTime >= clip.startTime && currentTime < clip.endTime;
         sprite.visible = isClipVisible;
+
+        const clipBecameVisible = didClipBecomeVisible({
+          wasVisible: wasClipVisible,
+          isVisible: isClipVisible,
+        });
 
         if (!isClipVisible) {
           // 클립이 보이지 않으면 비디오 일시정지
@@ -771,7 +783,8 @@ export class Renderer {
             currentTime,
             isPlaying,
             playStateChanged,
-            isSeeking
+            isSeeking,
+            clipBecameVisible
           );
         }
       }
@@ -862,7 +875,8 @@ export class Renderer {
     currentTime: number,
     isPlaying: boolean,
     playStateChanged: boolean,
-    isSeeking: boolean
+    isSeeking: boolean,
+    clipBecameVisible: boolean
   ): void {
     // Get elements from ClipState
     const origin = state.element as HTMLVideoElement;
@@ -879,7 +893,9 @@ export class Renderer {
         state,
         origin,
         proxy,
-        playStateChanged
+        clipRelativeTime,
+        playStateChanged,
+        clipBecameVisible
       );
     } else {
       this.handleVideoPaused(
@@ -918,7 +934,9 @@ export class Renderer {
     state: ClipState,
     origin: HTMLVideoElement,
     proxy: HTMLVideoElement | null,
-    playStateChanged: boolean
+    clipRelativeTime: number,
+    playStateChanged: boolean,
+    clipBecameVisible: boolean
   ): void {
     // pending proxy swap 취소 (재생 시작되면 proxy 스왑 불필요)
     this.cancelPendingSwaps(state, 'proxy');
@@ -928,8 +946,25 @@ export class Renderer {
       this.requestSwapToOrigin(clip, sprite, state, origin, proxy);
     }
 
-    // origin 스왑 완료 후 재생 시작 (playStateChanged && !pendingOriginSwap)
-    if (playStateChanged && !state.pendingOriginSwap && !state.isUsingProxy) {
+    // 재생 시작 트리거:
+    // - 전체 타이머가 paused → playing 으로 바뀐 경우
+    // - 타이머는 이미 playing 이지만, 이 클립이 방금 활성화(visible)된 경우 (startTime > 0 등)
+    const shouldStartPlayback = shouldStartVideoPlayback({
+      playStateChanged,
+      clipBecameVisible,
+    });
+
+    // origin 스왑 완료 후 재생 시작
+    if (
+      shouldStartPlayback &&
+      !state.pendingOriginSwap &&
+      !state.isUsingProxy
+    ) {
+      // 클립이 중간 시점에 활성화된 경우(큰 tick / 외부에서 현재 시간 점프 등)에도
+      // 올바른 프레임에서 시작하도록 시간 동기화 후 재생.
+      if (clipBecameVisible) {
+        origin.currentTime = clipRelativeTime;
+      }
       this.startVideoPlayback(clip, origin);
     }
   }
