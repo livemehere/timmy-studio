@@ -10,3 +10,9 @@ export const THUMBNAILS_DIR = path.join(
 );
 
 export const PROXIES_DIR = path.join(APP_DATA_DIR, 'contents-cache', 'proxies');
+
+export const FILMSTRIPS_DIR = path.join(
+  APP_DATA_DIR,
+  'contents-cache',
+  'filmstrips'
+);
