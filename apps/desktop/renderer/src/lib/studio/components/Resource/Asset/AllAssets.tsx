@@ -1,5 +1,5 @@
 import { useDocStore } from '../../../hooks/useStudioStores';
-import { AssetRenderer } from './AssetRenderer';
+import { AssetViewer } from './AssetViewer';
 import { useSelectAssets } from '@renderer/lib/studio/hooks/asset/useSelectAssets';
 
 export function AllAssets() {
@@ -16,7 +16,7 @@ export function AllAssets() {
           가져오기
         </button>
       </div>
-      <AssetRenderer assets={assets} emptyMessage="No assets" />
+      <AssetViewer assets={assets} emptyMessage="No assets" />
     </div>
   );
 }

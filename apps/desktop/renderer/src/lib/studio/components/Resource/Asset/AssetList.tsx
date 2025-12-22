@@ -145,7 +145,7 @@ interface AssetsProps {
   emptyMessage?: string;
 }
 
-export function AssetRenderer({
+export function AssetViewer({
   assets,
   emptyMessage = 'No assets',
 }: AssetsProps) {

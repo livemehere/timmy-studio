@@ -14,7 +14,7 @@ import {
 } from '@renderer/lib/studio/utils/clip';
 import { NONE_VIDEO_CLIP_DEFAULT_DURATION_MS } from '../../constants/clip';
 
-export interface UseCreateAssetToClipOptions {
+interface Options {
   /** 특정 트랙에 추가 (기본값: 타입에 따른 첫 번째 트랙) */
   trackId?: string;
 
@@ -31,11 +31,11 @@ export interface UseCreateAssetToClipOptions {
 export function useCreateAssetToClip(asset: IAsset) {
   const tracks = useDocStore((state) => state.tracks);
   const addTrack = useDocStore((state) => state.addTrack);
-  const addClipToTrack = useDocStore((state) => state.addClipToTrack);
+  const addClip = useDocStore((state) => state.addClip);
 
   const isDisabled = asset.type === 'video' && asset.isProxyReady === false;
 
-  const addClip = async (options: UseCreateAssetToClipOptions = {}) => {
+  const createClipFromAsset = async (options: Options = {}) => {
     if (asset.type === 'video' && asset.isProxyReady === false) {
       throw new Error(
         'Proxy가 준비되지 않은 비디오 에셋은 클립으로 추가할 수 없습니다.'
@@ -111,7 +111,7 @@ export function useCreateAssetToClip(asset: IAsset) {
       };
 
       const newClip = createClip(merged) as unknown as IClip;
-      addClipToTrack(track.id, newClip);
+      addClip(track.id, newClip);
       return newClip;
     } else if (asset.type === 'image') {
       const base: CreateImageClipOptions = {
@@ -129,7 +129,7 @@ export function useCreateAssetToClip(asset: IAsset) {
       };
 
       const newClip = createClip(merged) as unknown as IClip;
-      addClipToTrack(track.id, newClip);
+      addClip(track.id, newClip);
       return newClip;
     } else {
       const base: CreateAudioClipOptions = {
@@ -147,10 +147,10 @@ export function useCreateAssetToClip(asset: IAsset) {
       };
 
       const newClip = createClip(merged) as unknown as IClip;
-      addClipToTrack(track.id, newClip);
+      addClip(track.id, newClip);
       return newClip;
     }
   };
 
-  return { isDisabled, addClip };
+  return { isDisabled, createClipFromAsset };
 }
