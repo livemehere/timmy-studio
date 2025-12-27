@@ -167,7 +167,7 @@ export function TimerActionBar() {
         }
       });
 
-      const ffmpegPath = await window.app.invoke('getFfmpegPath');
+      const ffmpegPath = await window.app.invoke('ffmpeg:getPath');
 
       {
         const t0 = performance.now();

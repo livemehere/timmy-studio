@@ -1,5 +1,3 @@
-import type { ITransform } from '@renderer/lib/studio/types/types';
-
 export type FitMode =
   | 'original'
   | 'stretch'
@@ -52,11 +50,15 @@ export const ASSET_PLACEMENT_PRESETS = {
   stretch: { fit: 'stretch', alignX: 'center', alignY: 'center' },
 } as const satisfies Record<string, PlacementPreset>;
 
-export function computePlacement(
-  total: Size,
-  target: Size,
-  preset: PlacementPreset
-): PlacementResult {
+export function computePlacement({
+  total,
+  target,
+  preset,
+}: {
+  total: Size;
+  target: Size;
+  preset: PlacementPreset;
+}): PlacementResult {
   const totalW = Number(total.width);
   const totalH = Number(total.height);
   const targetW = Number(target.width);
@@ -137,17 +139,4 @@ export function computePlacement(
     position: { x, y },
     size: { width, height },
   };
-}
-
-export function computeTransformFromPreset(args: {
-  total: Size;
-  target: Size;
-  preset: PlacementPreset;
-}): Pick<ITransform, 'position' | 'size'> {
-  const { position, size } = computePlacement(
-    args.total,
-    args.target,
-    args.preset
-  );
-  return { position, size };
 }

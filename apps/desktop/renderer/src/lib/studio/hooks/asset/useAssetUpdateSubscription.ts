@@ -9,7 +9,7 @@ export function useAssetUpdateSubscription() {
   const setAsset = useDocStore((state) => state.setAsset);
 
   useEffect(() => {
-    const unsubscribe = window.app.on('updateAsset', (asset: IAsset) => {
+    const unsubscribe = window.app.on('asset:update', (asset: IAsset) => {
       setAsset(asset);
     });
 

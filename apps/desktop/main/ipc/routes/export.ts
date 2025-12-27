@@ -1,0 +1,257 @@
+import { app, type BrowserWindow } from 'electron';
+import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import path from 'node:path';
+import { ffmpegPath } from '@main/utils/ffmpeg';
+import { createIpcRouter } from '../router';
+import type { MainIpcContext } from '../context';
+
+type ExportSession = {
+  proc: ChildProcessWithoutNullStreams;
+  outputPath: string;
+  width: number;
+  height: number;
+  fps: number;
+  totalFrames: number;
+  writtenFrames: number;
+  frameSizeBytes: number;
+  startedAtMs: number;
+  drainCount: number;
+  drainWaitMsTotal: number;
+  lastFrameAtMs: number | null;
+  interFrameCount: number;
+  interFrameMsTotal: number;
+  interFrameMsMin: number;
+  interFrameMsMax: number;
+};
+
+let exportSession: ExportSession | null = null;
+
+function sendExportProgress(win: BrowserWindow, session: ExportSession) {
+  const percent =
+    session.totalFrames > 0
+      ? (session.writtenFrames / session.totalFrames) * 100
+      : 0;
+
+  win.webContents.send('export:progress', {
+    writtenFrames: session.writtenFrames,
+    totalFrames: session.totalFrames,
+    percent,
+    outputPath: session.outputPath,
+  });
+}
+
+function failExport(win: BrowserWindow, message: string) {
+  win.webContents.send('export:error', message);
+}
+
+export function createExportRouter() {
+  return createIpcRouter<MainIpcContext>()
+    .handle(
+      'export:start',
+      async (
+        { win },
+        _,
+        options: {
+          width: number;
+          height: number;
+          fps: number;
+          totalFrames: number;
+        }
+      ) => {
+        if (exportSession) {
+          throw new Error('Export already in progress');
+        }
+
+        const { width, height, fps, totalFrames } = options;
+        if (!Number.isFinite(width) || width <= 0)
+          throw new Error('Invalid width');
+        if (!Number.isFinite(height) || height <= 0)
+          throw new Error('Invalid height');
+        if (!Number.isFinite(fps) || fps <= 0) throw new Error('Invalid fps');
+        if (!Number.isFinite(totalFrames) || totalFrames < 0) {
+          throw new Error('Invalid totalFrames');
+        }
+
+        const outputPath = path.join(app.getPath('downloads'), 'output.mp4');
+        const frameSizeBytes = width * height * 4;
+
+        const isMac = process.platform === 'darwin';
+
+        const videoFilter = 'pad=ceil(iw/2)*2:ceil(ih/2)*2,format=yuv420p';
+
+        const encoderArgs = isMac
+          ? [
+              '-c:v',
+              'h264_videotoolbox',
+              // Reasonable default bitrate; tune later if needed.
+              '-b:v',
+              '8M',
+            ]
+          : ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23'];
+
+        const args = [
+          '-y',
+          '-f',
+          'rawvideo',
+          '-pix_fmt',
+          'rgba',
+          '-s:v',
+          `${width}x${height}`,
+          '-r',
+          String(fps),
+          '-i',
+          'pipe:0',
+          // H.264 requires even dimensions; also convert to yuv420p for compatibility.
+          '-vf',
+          videoFilter,
+          '-an',
+          ...encoderArgs,
+          '-pix_fmt',
+          'yuv420p',
+          '-movflags',
+          '+faststart',
+          outputPath,
+        ];
+
+        const proc = spawn(ffmpegPath, args, {
+          stdio: ['pipe', 'pipe', 'pipe'],
+        });
+
+        proc.on('error', (err) => {
+          console.error('[export] ffmpeg spawn error', err);
+          failExport(win, String(err));
+        });
+
+        proc.stderr.on('data', (chunk: Buffer) => {
+          const text = chunk.toString('utf8');
+          // keep logs lightweight; stderr is useful for debugging export failures
+          console.log(`[export] ffmpeg: ${text.trimEnd()}`);
+        });
+
+        proc.on('close', (code, signal) => {
+          if (!exportSession || exportSession.proc !== proc) return;
+
+          const elapsedSec = (Date.now() - exportSession.startedAtMs) / 1000;
+          const effectiveFps =
+            elapsedSec > 0 ? exportSession.writtenFrames / elapsedSec : 0;
+
+          const interCount = exportSession.interFrameCount;
+          const interAvg =
+            interCount > 0 ? exportSession.interFrameMsTotal / interCount : 0;
+          const interMin = interCount > 0 ? exportSession.interFrameMsMin : 0;
+          const interMax = interCount > 0 ? exportSession.interFrameMsMax : 0;
+          console.log(
+            `[export] done frames=${exportSession.writtenFrames}/${exportSession.totalFrames} elapsed=${elapsedSec.toFixed(
+              2
+            )}s effectiveFps=${effectiveFps.toFixed(
+              2
+            )} drainCount=${exportSession.drainCount} drainWaitMs=${exportSession.drainWaitMsTotal.toFixed(
+              1
+            )} interFrameMs(avg=${interAvg.toFixed(2)} min=${interMin.toFixed(
+              2
+            )} max=${interMax.toFixed(2)})`
+          );
+
+          if (code !== 0) {
+            const msg = `[export] ffmpeg exited code=${code} signal=${signal}`;
+            console.error(msg);
+            failExport(win, msg);
+          }
+
+          exportSession = null;
+        });
+
+        exportSession = {
+          proc,
+          outputPath,
+          width,
+          height,
+          fps,
+          totalFrames,
+          writtenFrames: 0,
+          frameSizeBytes,
+          startedAtMs: Date.now(),
+          drainCount: 0,
+          drainWaitMsTotal: 0,
+          lastFrameAtMs: null,
+          interFrameCount: 0,
+          interFrameMsTotal: 0,
+          interFrameMsMin: Number.POSITIVE_INFINITY,
+          interFrameMsMax: 0,
+        };
+
+        sendExportProgress(win, exportSession);
+        return { outputPath };
+      }
+    )
+    .handle('export:frame', async ({ win }, _, frameRgba) => {
+      const session = exportSession;
+      if (!session) throw new Error('No export in progress');
+
+      const now = Date.now();
+      if (session.lastFrameAtMs != null) {
+        const dt = now - session.lastFrameAtMs;
+        session.interFrameCount += 1;
+        session.interFrameMsTotal += dt;
+        session.interFrameMsMin = Math.min(session.interFrameMsMin, dt);
+        session.interFrameMsMax = Math.max(session.interFrameMsMax, dt);
+      }
+      session.lastFrameAtMs = now;
+
+      if (frameRgba.byteLength !== session.frameSizeBytes) {
+        throw new Error(
+          `Invalid frame size: got ${frameRgba.byteLength}, expected ${session.frameSizeBytes}`
+        );
+      }
+
+      const ok = session.proc.stdin.write(Buffer.from(frameRgba));
+      if (!ok) {
+        session.drainCount += 1;
+        const waitStart = Date.now();
+        await new Promise<void>((resolve, reject) => {
+          const onError = (err: unknown) => {
+            cleanup();
+            reject(err);
+          };
+          const onDrain = () => {
+            cleanup();
+            resolve();
+          };
+          const cleanup = () => {
+            session.proc.stdin.off('error', onError);
+            session.proc.stdin.off('drain', onDrain);
+          };
+
+          session.proc.stdin.on('error', onError);
+          session.proc.stdin.on('drain', onDrain);
+        });
+
+        session.drainWaitMsTotal += Date.now() - waitStart;
+      }
+
+      session.writtenFrames += 1;
+      sendExportProgress(win, session);
+      return { writtenFrames: session.writtenFrames };
+    })
+    .handle('export:finish', async (_ctx) => {
+      if (!exportSession) throw new Error('No export in progress');
+
+      const session = exportSession;
+      session.proc.stdin.end();
+
+      if (session.proc.exitCode == null) {
+        await new Promise<void>((resolve, reject) => {
+          const onClose = (code: number | null) => {
+            if (code === 0) resolve();
+            else reject(new Error(`ffmpeg exited with code ${code}`));
+          };
+          session.proc.once('close', onClose);
+          session.proc.once('error', reject);
+        });
+      } else if (session.proc.exitCode !== 0) {
+        throw new Error(`ffmpeg exited with code ${session.proc.exitCode}`);
+      }
+
+      return { outputPath: session.outputPath };
+    });
+}

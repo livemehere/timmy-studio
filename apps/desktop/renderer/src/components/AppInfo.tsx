@@ -3,7 +3,7 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 export function AppInfo() {
   const { data } = useSuspenseQuery({
     queryKey: ['getAppInfo'],
-    queryFn: () => window.app.invoke('getAppInfo'),
+    queryFn: () => window.app.invoke('app:getInfo'),
   });
 
   return (

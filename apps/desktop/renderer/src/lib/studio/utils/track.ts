@@ -1,7 +1,7 @@
 import type {
   IAudioTrack,
-  IVideoTrack,
   ITrack,
+  IVideoTrack,
 } from '@renderer/lib/studio/types/types';
 import { uid } from 'uid';
 
@@ -37,7 +37,7 @@ export function createTrack(options: CreateTrackOptionsUnion): ITrack {
   const locked = false;
 
   if (type === 'video') {
-    const videoTrack: IVideoTrack = {
+    return {
       id,
       name,
       zIndex,
@@ -47,9 +47,8 @@ export function createTrack(options: CreateTrackOptionsUnion): ITrack {
       clips: [],
       opacity: options.opacity ?? 1,
     };
-    return videoTrack;
   } else {
-    const audioTrack: IAudioTrack = {
+    return {
       id,
       name,
       zIndex,
@@ -59,7 +58,6 @@ export function createTrack(options: CreateTrackOptionsUnion): ITrack {
       clips: [],
       volume: options.volume ?? 1,
     };
-    return audioTrack;
   }
 }
 
@@ -75,4 +73,12 @@ export function createEmptyAudioTrack(
   zIndex: number
 ): IAudioTrack {
   return createTrack({ type: 'audio', name, zIndex });
+}
+
+export function getLastestClipEndTime(track: ITrack): number {
+  const clips = track.clips;
+  if (clips.length === 0) {
+    return 0;
+  }
+  return Math.max(...clips.map((clip) => clip.endTime));
 }

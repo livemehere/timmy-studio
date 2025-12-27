@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@renderer/utils/cn';
 import { useState } from 'react';
-import { TimelineItem } from '@renderer/lib/studio/components/Timeline/TimelineItem';
+import { TimelineClipItem } from '@renderer/lib/studio/components/Timeline/TimelineClipItem';
 import { useDocStore } from '../../hooks/useStudioStores';
 
 function TrackButton({
@@ -75,7 +75,7 @@ export function TimelineTrack({
 
       <div className={'bg-neutral-800 flex-1 relative'}>
         {track.clips.map((clip) => (
-          <TimelineItem
+          <TimelineClipItem
             key={clip.id}
             trackId={track.id}
             clipId={clip.id}

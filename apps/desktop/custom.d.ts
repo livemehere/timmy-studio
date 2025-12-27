@@ -7,31 +7,31 @@ import type { IAsset } from '@renderer/lib/studio/types/asset';
  */
 declare module '@timmy-studio/electron-utils/ipc' {
   interface IpcInvokeChannels {
-    getAppInfo: {
+    'app:getInfo': {
       response: {
         isDev: boolean;
         isPackaged: boolean;
         version: string;
       };
     };
-    getFilePath: {
+    'file:getPath': {
       payload: [file: File];
       response: string;
     };
-    showOpenDialog: {
+    'dialog:open': {
       payload: [Electron.OpenDialogOptions];
       response: Electron.OpenDialogReturnValue;
     };
-    createAsset: {
+    'asset:create': {
       payload: [filePath: string];
       response: IAsset;
     };
 
-    getFfmpegPath: {
+    'ffmpeg:getPath': {
       response: string;
     };
 
-    exportVideoStart: {
+    'export:start': {
       payload: [
         options: {
           width: number;
@@ -45,14 +45,14 @@ declare module '@timmy-studio/electron-utils/ipc' {
       };
     };
 
-    exportVideoFrame: {
+    'export:frame': {
       payload: [frameRgba: Uint8Array];
       response: {
         writtenFrames: number;
       };
     };
 
-    exportVideoFinish: {
+    'export:finish': {
       response: {
         outputPath: string;
       };
@@ -60,11 +60,11 @@ declare module '@timmy-studio/electron-utils/ipc' {
   }
 
   interface IpcSendChannels {
-    updateAsset: {
+    'asset:update': {
       payload: [asset: IAsset];
     };
 
-    exportVideoProgress: {
+    'export:progress': {
       payload: [
         progress: {
           writtenFrames: number;
@@ -75,7 +75,7 @@ declare module '@timmy-studio/electron-utils/ipc' {
       ];
     };
 
-    exportVideoError: {
+    'export:error': {
       payload: [message: string];
     };
   }

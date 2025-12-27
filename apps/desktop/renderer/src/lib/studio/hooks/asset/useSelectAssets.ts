@@ -9,7 +9,7 @@ export function useSelectAssets() {
   const addAsset = useDocStore((state) => state.addAsset);
 
   return useCallback(async () => {
-    const result = await window.app.invoke('showOpenDialog', {
+    const result = await window.app.invoke('dialog:open', {
       title: '파일 선택',
       properties: ['openFile', 'multiSelections'],
       filters: [
@@ -19,11 +19,12 @@ export function useSelectAssets() {
         },
       ],
     });
+
     if (result.canceled) return;
 
     const assets = await Promise.all(
       result.filePaths.map((filePath) =>
-        window.app.invoke('createAsset', filePath)
+        window.app.invoke('asset:create', filePath)
       )
     );
     addAsset(assets);

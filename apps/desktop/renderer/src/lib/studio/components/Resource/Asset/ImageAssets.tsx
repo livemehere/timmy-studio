@@ -1,8 +1,8 @@
 import { useDocStore } from '../../../hooks/useStudioStores';
-import { AssetViewer } from './AssetViewer';
+import { AssetList } from './AssetList';
 
 export function ImageAssets() {
   const assets = useDocStore((state) => state.assets);
   const imageAssets = assets.filter((asset) => asset.type === 'image');
-  return <AssetViewer assets={imageAssets} emptyMessage="No image assets" />;
+  return <AssetList assets={imageAssets} emptyMessage="No image assets" />;
 }

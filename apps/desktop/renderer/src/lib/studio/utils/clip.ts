@@ -61,7 +61,7 @@ export type CreateClipOptionsUnion =
   | CreateShapeClipOptions
   | CreateTextClipOptions;
 
-function mergeTransforms(
+export function mergeTransforms(
   base: ITransform,
   override?: Partial<ITransform>
 ): ITransform {
