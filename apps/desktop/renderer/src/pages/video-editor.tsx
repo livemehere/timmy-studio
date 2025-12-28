@@ -1,6 +1,7 @@
 import { StudioProvider } from '@renderer/lib/studio/contexts/StudioProvider';
 import { uid } from 'uid';
 import { StudioApp } from '@renderer/lib/studio/components';
+import { StudioDebugger } from '@renderer/lib/studio/components/StduioDebugger';
 
 export default function VideoEditorPage() {
   return (
@@ -49,6 +50,7 @@ export default function VideoEditorPage() {
       }}
     >
       <StudioApp />
+      {/*<StudioDebugger />*/}
     </StudioProvider>
   );
 }

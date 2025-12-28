@@ -1,8 +1,10 @@
 import { createStore } from 'zustand/vanilla';
-import type { IClip, IProject, ITrack } from '../types/types';
 import type { IAsset } from '@renderer/lib/studio/domains/Asset/types';
 import { produce } from 'immer';
 import { computeNextProjectDurationMs } from '@renderer/lib/studio/utils/projectDuration';
+import type { IProject } from '../types/project';
+import type { ITrack } from '../domains/Track/types';
+import type { IClip } from '../domains/Clip/types';
 
 type AssetGetter = <T extends IAsset = IAsset>(
   assetId: string

@@ -3,10 +3,10 @@ import {
   useEngineStore,
   useInteractionStore,
 } from '../../hooks/useStudioStores';
-import type { IGraphicClip } from '../../types/types';
 import { msToSec } from '../../utils/time';
+import type { IGraphicClip } from '@renderer/lib/studio/domains/Clip/types';
 
-export function TimelineClipItem({
+export function TimelineClip({
   clipId,
   pxPerSec,
   trackId,

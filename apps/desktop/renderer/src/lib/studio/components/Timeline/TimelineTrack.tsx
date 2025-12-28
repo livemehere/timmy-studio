@@ -7,8 +7,7 @@ import {
   VolumeOff,
 } from 'lucide-react';
 import { cn } from '@renderer/utils/cn';
-import { useState } from 'react';
-import { TimelineClipItem } from '@renderer/lib/studio/components/Timeline/TimelineClipItem';
+import { TimelineClip } from '@renderer/lib/studio/components/Timeline/TimelineClip';
 import { useDocStore } from '../../hooks/useStudioStores';
 
 function TrackButton({
@@ -43,13 +42,18 @@ export function TimelineTrack({
   trackHeight: number;
   pxPerSec: number;
 }) {
-  const track = useDocStore((state) =>
-    state.tracks.find((t) => t.id === trackId)
-  );
+  const getTrackById = useDocStore((state) => state.getTrackById);
+  const updateTrack = useDocStore((state) => state.updateTrack);
+  const track = getTrackById(trackId);
+
   if (!track) {
     throw new Error(`Track(${trackId}) not found`);
   }
-  const [active, setActive] = useState(false);
+
+  const toggleTrackLock = (trackId: string, locked: boolean) => {
+    updateTrack(trackId, { locked });
+  };
+
   return (
     <div
       style={{
@@ -65,8 +69,8 @@ export function TimelineTrack({
       >
         <TrackButton
           icon={LockKeyhole}
-          active={active}
-          onClick={() => setActive(!active)}
+          active={track.locked}
+          onClick={() => toggleTrackLock(track.id, !track.locked)}
         />
         <TrackButton icon={Eye} />
         <TrackButton icon={VolumeOff} />
@@ -75,7 +79,7 @@ export function TimelineTrack({
 
       <div className={'bg-neutral-800 flex-1 relative'}>
         {track.clips.map((clip) => (
-          <TimelineClipItem
+          <TimelineClip
             key={clip.id}
             trackId={track.id}
             clipId={clip.id}

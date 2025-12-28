@@ -1,6 +1,10 @@
 import { useDocStore, useInteractionStore } from '../../hooks/useStudioStores';
-import type { IClip, ITrack, IGraphicClip } from '../../types/types';
-import type { ReactNode } from 'react';
+import { type ReactNode } from 'react';
+import type { ITrack } from '@renderer/lib/studio/domains/Track/types';
+import type {
+  IClip,
+  IGraphicClip,
+} from '@renderer/lib/studio/domains/Clip/types';
 
 function findClipInTracks(
   tracks: ITrack[],
