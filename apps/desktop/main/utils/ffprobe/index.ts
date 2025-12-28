@@ -8,10 +8,6 @@ import type {
 import { randomUUID } from 'crypto';
 import path from 'path';
 import fs from 'fs';
-import {
-  createAudioAssetMetadata,
-  createVideoAssetMetadata,
-} from '@main/utils/ffprobe/createAssetMetadata';
 
 import { MediaUtils } from '@main/utils/MediaUtils';
 
@@ -23,12 +19,7 @@ function createVideoAsset(
   isProxyReady?: boolean
 ): IVideoAsset {
   const filePath = data.format.filename!;
-  const videoStream = MediaUtils.extractPrimaryVideoStream(data);
 
-  const metadata = {
-    ...createVideoAssetMetadata(data, videoStream),
-    createdAt,
-  };
   return {
     id: randomUUID(),
     name: path.basename(filePath),
@@ -37,39 +28,31 @@ function createVideoAsset(
     thumbnailPath,
     proxyFilePath: proxyPath,
     isProxyReady,
-    metadata,
+    metadata: MediaUtils.createAssetMetadata(data),
   };
 }
 
 function createAudioAsset(data: FfprobeData, createdAt?: string): IAudioAsset {
   const filePath = data.format.filename!;
-  const audioStream = MediaUtils.extractAudioStream(data);
 
   return {
     id: randomUUID(),
     name: path.basename(filePath),
     filePath,
     type: 'audio',
-    metadata: {
-      ...createAudioAssetMetadata(data, audioStream),
-      createdAt,
-    },
+    metadata: MediaUtils.createAssetMetadata(data),
   };
 }
 
 function createImageAsset(data: FfprobeData, createdAt?: string): IImageAsset {
   const filePath = data.format.filename!;
-  const videoStream = MediaUtils.extractPrimaryVideoStream(data);
 
   return {
     id: randomUUID(),
     name: path.basename(filePath),
     filePath,
     type: 'image',
-    metadata: {
-      ...createVideoAssetMetadata(data, videoStream),
-      createdAt,
-    },
+    metadata: MediaUtils.createAssetMetadata(data),
   };
 }
 

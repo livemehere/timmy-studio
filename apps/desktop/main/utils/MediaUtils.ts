@@ -1,10 +1,13 @@
 import path from 'node:path';
 import { app } from 'electron';
-import FfmpegCmd, { type FfprobeData } from 'fluent-ffmpeg';
+import FfmpegCmd, { type FfprobeData, type FfprobeStream } from 'fluent-ffmpeg';
 import ffmpeg from '@ffmpeg-installer/ffmpeg';
 import ffprobe from '@ffprobe-installer/ffprobe';
 import { FileUtils } from '@main/utils/FileUtils';
-import type { AssetType } from '@renderer/lib/studio/types/asset';
+import type {
+  AssetType,
+  IAssetMetadata,
+} from '@renderer/lib/studio/types/asset';
 
 FileUtils.ensureExecutable(ffmpeg.path);
 FileUtils.ensureExecutable(ffprobe.path);
@@ -156,6 +159,7 @@ export class MediaUtils {
     });
   }
 
+  /** AssetType 판별 */
   static detectAssetType(data: FfprobeData): AssetType {
     const primaryVideo = MediaUtils.extractPrimaryVideoStream(data);
     const audioStream = MediaUtils.extractAudioStream(data);
@@ -199,5 +203,67 @@ export class MediaUtils {
 
     // 3-3) 나머지는 비디오
     return 'video';
+  }
+
+  /** r_frame_rate 또는 avg_frame_rate 문자열 파싱 */
+  private static parseFps(rFrameRate?: string): number | undefined {
+    if (!rFrameRate) return undefined;
+    const [n, d] = rFrameRate.split('/').map(Number);
+    if (!Number.isFinite(n) || !Number.isFinite(d) || d === 0) return undefined;
+    const fps = n / d;
+    return Number.isFinite(fps) && fps > 0 ? fps : undefined;
+  }
+
+  /** 신뢰할 수 없는 프레임레이트인지 검사 */
+  private static isUnreliableFps(stream: FfprobeStream): boolean {
+    const avg = MediaUtils.parseFps(stream?.avg_frame_rate);
+    const r = MediaUtils.parseFps(stream?.r_frame_rate);
+
+    if (!avg) {
+      if (r && r > 240) return true;
+      if (!r) return true;
+    }
+
+    if (avg && avg > 120) return true;
+
+    return false;
+  }
+
+  /** 에셋 메타데이터 생성 */
+  static createAssetMetadata(data: FfprobeData): IAssetMetadata {
+    const assetType = MediaUtils.detectAssetType(data);
+
+    const videoStream = MediaUtils.extractPrimaryVideoStream(data);
+    const audioStream = MediaUtils.extractAudioStream(data);
+
+    const durationSec = Number(data.format.duration);
+    const durationMs =
+      Number.isFinite(durationSec) && durationSec > 0
+        ? Math.round(durationSec * 1000)
+        : undefined;
+
+    const metadata: IAssetMetadata = {
+      size: data.format.size ?? 0,
+      durationMs,
+      createdAt: MediaUtils.getCreatedTime(data),
+    };
+
+    // video / image / animated-image 공통 (video stream 기준)
+    if (videoStream) {
+      metadata.width = videoStream.width;
+      metadata.height = videoStream.height;
+      metadata.codec = videoStream.codec_name;
+
+      if (!MediaUtils.isUnreliableFps(videoStream)) {
+        metadata.frameRate = MediaUtils.parseFps(videoStream.r_frame_rate);
+      }
+    }
+
+    // audio only
+    if (assetType === 'audio' && audioStream) {
+      metadata.codec = audioStream.codec_name;
+    }
+
+    return metadata;
   }
 }

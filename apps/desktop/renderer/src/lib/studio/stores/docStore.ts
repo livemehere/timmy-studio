@@ -1,8 +1,12 @@
 import { createStore } from 'zustand/vanilla';
 import type { IClip, IProject, ITrack } from '../types/types';
-import type { AssetGetter, IAsset } from '@renderer/lib/studio/types/asset';
+import type { IAsset } from '@renderer/lib/studio/types/asset';
 import { produce } from 'immer';
 import { computeNextProjectDurationMs } from '@renderer/lib/studio/utils/projectDuration';
+
+type AssetGetter = <T extends IAsset = IAsset>(
+  assetId: string
+) => T | undefined;
 
 const DEFAULT_PROJECT: IProject = {
   id: 'default-project',

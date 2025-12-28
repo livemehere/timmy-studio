@@ -30,9 +30,13 @@ export interface IImageAsset extends IBaseAsset {
   type: 'image';
 }
 
-export type AssetType = 'video' | 'audio' | 'image' | 'animated-image';
-export type IAsset = IVideoAsset | IAudioAsset | IImageAsset;
+export interface IAnimatedImageAsset extends IBaseAsset {
+  type: 'animated-image';
+}
 
-export type AssetGetter = <T extends IAsset = IAsset>(
-  assetId: string
-) => T | undefined;
+export type AssetType = 'video' | 'audio' | 'image' | 'animated-image';
+export type IAsset =
+  | IVideoAsset
+  | IAudioAsset
+  | IImageAsset
+  | IAnimatedImageAsset;
