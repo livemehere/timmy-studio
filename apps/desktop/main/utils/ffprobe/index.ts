@@ -13,7 +13,6 @@ import {
   createVideoAssetMetadata,
 } from '@main/utils/ffprobe/createAssetMetadata';
 
-import { detectAssetType } from '@main/utils/ffprobe/detectAssetType';
 import { MediaUtils } from '@main/utils/MediaUtils';
 
 function createVideoAsset(
@@ -88,7 +87,7 @@ export async function createAssetData(
     throw new Error('File path is missing in ffprobe data');
   }
 
-  const assetType = detectAssetType(meta);
+  const assetType = MediaUtils.detectAssetType(meta);
   const createdAt = MediaUtils.getCreatedTime(meta);
   const shouldCreateProxy = options?.createProxy ?? true;
 
