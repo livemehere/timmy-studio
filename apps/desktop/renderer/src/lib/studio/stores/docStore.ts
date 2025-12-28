@@ -56,8 +56,8 @@ export interface DocActions {
 
   // Clip actions
   addClip: (trackId: string, clip: IClip) => void;
-  removeClipFromTrack: (trackId: string, clipId: string) => void;
-  updateClipInTrack: (
+  removeClip: (trackId: string, clipId: string) => void;
+  updateClip: (
     trackId: string,
     clipId: string,
     updates: Partial<IClip>
@@ -184,7 +184,7 @@ export const createDocStore = (initialProject?: IProject) => {
         set({ tracks: newTracks });
       },
 
-      removeClipFromTrack: (trackId: string, clipId: string) => {
+      removeClip: (trackId: string, clipId: string) => {
         const currentTracks = get().tracks;
         const newTracks = produce(currentTracks, (draft) => {
           const track = draft.find((t) => t.id === trackId);
@@ -198,7 +198,7 @@ export const createDocStore = (initialProject?: IProject) => {
         set({ tracks: newTracks });
       },
 
-      updateClipInTrack: (
+      updateClip: (
         trackId: string,
         clipId: string,
         updates: Partial<IClip>

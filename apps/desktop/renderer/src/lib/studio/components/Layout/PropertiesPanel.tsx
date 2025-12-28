@@ -216,7 +216,7 @@ function ObjectFieldInputs({
 export function PropertiesPanel() {
   const selectedClipIds = useInteractionStore((state) => state.selectedClipIds);
   const tracks = useDocStore((state) => state.tracks);
-  const updateClipInTrack = useDocStore((state) => state.updateClipInTrack);
+  const updateClipInTrack = useDocStore((state) => state.updateClip);
 
   const selectedClipId = selectedClipIds[0];
   if (!selectedClipId) {
