@@ -14,7 +14,6 @@ import {
 } from '@main/utils/ffprobe/createAssetMetadata';
 
 import { detectAssetType } from '@main/utils/ffprobe/detectAssetType';
-import { getCreatedAt } from './getCreatedAt';
 import { MediaUtils } from '@main/utils/MediaUtils';
 
 function createVideoAsset(
@@ -90,7 +89,7 @@ export async function createAssetData(
   }
 
   const assetType = detectAssetType(meta);
-  const createdAt = getCreatedAt(meta);
+  const createdAt = MediaUtils.getCreatedTime(meta);
   const shouldCreateProxy = options?.createProxy ?? true;
 
   switch (assetType) {

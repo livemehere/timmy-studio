@@ -18,4 +18,18 @@ export class FileUtils {
       }
     });
   }
+
+  static getCreatedTime(filePath: string) {
+    try {
+      const stats = fs.statSync(filePath);
+
+      if (stats.birthtime && stats.birthtime.getTime() > 0) {
+        return stats.birthtime.toISOString();
+      }
+
+      return stats.mtime.toISOString();
+    } catch {
+      return undefined;
+    }
+  }
 }

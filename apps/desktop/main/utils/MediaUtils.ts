@@ -45,6 +45,12 @@ export class MediaUtils {
     });
   };
 
+  /** 생성 시간 추출 ( ffprobe의 meta 데이터 > file-system 의 stat 데이터 > undefined ) */
+  static getCreatedTime(data: FfprobeData) {
+    const creationTime = data.format.tags?.creation_time as string | undefined;
+    return creationTime ?? FileUtils.getCreatedTime(data.format.filename!);
+  }
+
   /** 비디오 스트림 추출 (커버아트/썸네일 제외) */
   static extractPrimaryVideoStream(data: FfprobeData) {
     return data.streams.find(
