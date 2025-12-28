@@ -1,13 +1,17 @@
 import path from 'node:path';
-import { app } from 'electron';
+import { app, type BrowserWindow } from 'electron';
 import FfmpegCmd, { type FfprobeData, type FfprobeStream } from 'fluent-ffmpeg';
 import ffmpeg from '@ffmpeg-installer/ffmpeg';
 import ffprobe from '@ffprobe-installer/ffprobe';
 import { FileUtils } from '@main/utils/FileUtils';
 import type {
   AssetType,
+  IAsset,
   IAssetMetadata,
+  IBaseAsset,
 } from '@renderer/lib/studio/types/asset';
+import { uid } from 'uid';
+import fs from 'node:fs';
 
 FileUtils.ensureExecutable(ffmpeg.path);
 FileUtils.ensureExecutable(ffprobe.path);
@@ -265,5 +269,64 @@ export class MediaUtils {
     }
 
     return metadata;
+  }
+
+  static async createAsset(filePath: string): Promise<IAsset> {
+    const ffprobeData = await MediaUtils.ffprobe(filePath);
+    const metadata = MediaUtils.createAssetMetadata(ffprobeData);
+    const assetType = MediaUtils.detectAssetType(ffprobeData);
+
+    const baseAsset: IBaseAsset = {
+      id: uid(8),
+      name: path.basename(filePath),
+      filePath,
+      metadata,
+    };
+
+    switch (assetType) {
+      case 'video':
+        const proxyFilePath = MediaUtils.getProxyFilePath(filePath);
+        const proxyAlreadyExists = fs.existsSync(proxyFilePath); // 이미 있으면 생성 안함
+        return {
+          ...baseAsset,
+          type: 'video',
+          thumbnailPath: await MediaUtils.createThumbnailImage(filePath),
+          proxyFilePath,
+          isProxyReady: proxyAlreadyExists,
+        };
+      case 'audio':
+        return {
+          ...baseAsset,
+          type: 'audio',
+          thumbnailPath: undefined,
+        };
+      case 'image':
+        return {
+          ...baseAsset,
+          type: 'image',
+          thumbnailPath: filePath, // 파일 자체를 썸네일로 사용
+        };
+      case 'animated-image':
+        return {
+          ...baseAsset,
+          type: 'animated-image',
+          thumbnailPath: filePath, // 파일 자체를 썸네일로 사용
+        };
+      default:
+        throw new Error(`Unsupported asset type: ${assetType}`);
+    }
+  }
+
+  static async postProcessAssetCreation(
+    asset: IAsset
+  ): Promise<IAsset | undefined> {
+    if (asset.type === 'video' && !asset.isProxyReady) {
+      return {
+        ...asset,
+        isProxyReady: true,
+        proxyFilePath: await MediaUtils.createProxyVideo(asset.filePath),
+      };
+    }
+    return undefined;
   }
 }

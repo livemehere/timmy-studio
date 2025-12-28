@@ -4,7 +4,6 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import path from 'node:path';
 import { ipc } from '@timmy-studio/electron-utils/ipc/main';
 import { isDev } from '@timmy-studio/electron-utils/utils/main';
-import { createAssetData } from '@main/utils/ffprobe';
 import { MediaUtils } from '@main/utils/MediaUtils';
 
 type ExportSession = {
@@ -64,24 +63,17 @@ export function registerIpcHandlers(win: BrowserWindow) {
   });
 
   ipc.handle('asset:create', async (_, filePath: string) => {
-    const meta = await MediaUtils.ffprobe(filePath);
-    const asset = await createAssetData(meta, { createProxy: false }); // proxy 파일 생성 없이 순수, 메타데이터만 생성
+    const asset = await MediaUtils.createAsset(filePath);
+    MediaUtils.postProcessAssetCreation(asset)
+      .then((updatedAsset) => {
+        // 후속 처리가 필요없으면 반환값이 없음
+        if (!updatedAsset) return;
 
-    if (asset.type === 'video' && asset.isProxyReady === false) {
-      // 프록시파일이 이미 존재하는 경우 true, 아닌경우, 비동기로 proxy 비디오 생성
-      MediaUtils.createProxyVideo(filePath)
-        .then((proxyFilePath) => {
-          // 생성이 끝나면, 렌더러 프로세스에 업데이트된 에셋 정보를 보냄
-          win.webContents.send('asset:update', {
-            ...asset,
-            proxyFilePath,
-            isProxyReady: true,
-          });
-        })
-        .catch((err) => {
-          log.error('[asset:update] Failed to create proxy:', err);
-        });
-    }
+        win.webContents.send('asset:update', updatedAsset);
+      })
+      .catch((e) => {
+        console.error('Fail to asset post-processing', e);
+      });
 
     return asset;
   });
