@@ -1,4 +1,9 @@
-import type { IAudioClip, IVideoClip } from './clip';
+import type {
+  IAudioClip,
+  IGraphicClip,
+} from '@renderer/lib/studio/domains/Clip/types';
+
+export type TrackType = 'video' | 'audio';
 
 export interface IBaseTrack {
   id: string;
@@ -10,7 +15,7 @@ export interface IBaseTrack {
 
 export interface IVideoTrack extends IBaseTrack {
   type: 'video';
-  clips: IVideoClip[];
+  clips: IGraphicClip[];
   opacity: number; // 0-1
 }
 

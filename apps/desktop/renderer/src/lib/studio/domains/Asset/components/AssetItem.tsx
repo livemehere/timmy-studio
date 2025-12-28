@@ -5,19 +5,16 @@ import type {
 import { cn } from '@renderer/utils/cn';
 import { formatTime } from '@renderer/lib/studio/utils/time';
 import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
-import { useDocStore } from '@renderer/lib/studio/hooks/useStudioStores';
 import { useAsset } from '@renderer/lib/studio/domains/Asset/hooks/useAsset';
 import { Layers, Plus } from 'lucide-react';
 import { formatFileSize } from '@renderer/lib/studio/utils/size';
 import { Spinner } from '@renderer/components/UI/Spinner';
-import { TrackUtils } from '@renderer/lib/studio/domains/Track/utils';
 
 const badgeClass =
   'absolute text-[9px] bg-black/60 px-1 py-0.5 rounded leading-none select-none';
 
 export function AssetItem({ asset }: { asset: IAsset }) {
-  const tracks = useDocStore((state) => state.tracks);
-  const { createToClip, status } = useAsset(asset);
+  const { addClip, firstTrackId, status } = useAsset(asset);
 
   return (
     <div className="flex flex-col gap-1">
@@ -36,7 +33,7 @@ export function AssetItem({ asset }: { asset: IAsset }) {
         <button
           className="absolute bottom-2.5 right-10 bg-[dodgerblue] rounded-full p-1 group-hover:block hidden cursor-pointer"
           onClick={async () => {
-            await createToClip({
+            await addClip({
               placementPresetKey: 'containCenter',
             });
           }}
@@ -48,11 +45,8 @@ export function AssetItem({ asset }: { asset: IAsset }) {
         <button
           className="absolute bottom-2.5 right-2.5 bg-[dodgerblue] rounded-full p-1 group-hover:block hidden cursor-pointer"
           onClick={async () => {
-            await createToClip({
-              trackId: TrackUtils.findFirstTrack(
-                tracks,
-                TrackUtils.AssetTypeToTrackType(asset.type)
-              ).id,
+            await addClip({
+              trackId: firstTrackId, // 없으면 새로운 트랙 생성됨
               placementPresetKey: 'containCenter',
             });
           }}

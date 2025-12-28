@@ -1,5 +1,5 @@
 import { useDocStore, useInteractionStore } from '../../hooks/useStudioStores';
-import type { IClip, ITrack, IVideoClip } from '../../types/types';
+import type { IClip, ITrack, IGraphicClip } from '../../types/types';
 import type { ReactNode } from 'react';
 
 function findClipInTracks(
@@ -225,7 +225,7 @@ export function PropertiesPanel() {
   }
 
   const { clip, trackId } = result;
-  const videoClip = clip.type !== 'audio' ? (clip as IVideoClip) : null;
+  const videoClip = clip.type !== 'audio' ? (clip as IGraphicClip) : null;
   const updateClip = (updates: Partial<IClip>) => {
     updateClipInTrack(trackId, clip.id, updates);
   };

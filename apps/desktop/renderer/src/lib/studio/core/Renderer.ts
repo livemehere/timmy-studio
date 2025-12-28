@@ -7,13 +7,11 @@ import {
   VideoSource,
 } from 'pixi.js';
 import type {
-  IVideoTrack,
-  IVideoClip,
+  IGraphicClip,
   ITransform,
-  IVideoMediaClip,
+  IVideoClip,
   IImageClip,
-  IProject,
-} from '@renderer/lib/studio/types/types';
+} from '@renderer/lib/studio/domains/Clip/types';
 import type { Timer } from '@renderer/lib/studio/core/Timer';
 import type {
   IVideoAsset,
@@ -24,13 +22,15 @@ import {
   didClipBecomeVisible,
   shouldStartVideoPlayback,
 } from '@renderer/lib/studio/core/playbackGuards';
+import type { IVideoTrack } from '@renderer/lib/studio/domains/Track/types';
+import type { IProject } from '@renderer/lib/studio/types/project';
 
 export type DocGetter = () => IProject;
 
 export type SeekingRenderMode = 'proxy' | 'origin';
 
 interface ClipState {
-  clip: IVideoClip;
+  clip: IGraphicClip;
   trackId: string;
   element: HTMLVideoElement | HTMLImageElement; // clip별 DOM element
   proxyElement?: HTMLVideoElement; // video clip의 proxy element (optional)
@@ -374,7 +374,7 @@ export class Renderer {
 
   private async syncClips(
     trackId: string,
-    newClips: IVideoClip[]
+    newClips: IGraphicClip[]
   ): Promise<string[]> {
     const container = this.trackContainers.get(trackId);
     if (!container) return [];
@@ -408,7 +408,7 @@ export class Renderer {
     });
   }
 
-  private async addClip(trackId: string, clip: IVideoClip) {
+  private async addClip(trackId: string, clip: IGraphicClip) {
     const container = this.trackContainers.get(trackId);
     if (!container) return;
 
@@ -430,7 +430,7 @@ export class Renderer {
 
   private async addVideoClip(
     trackId: string,
-    clip: IVideoMediaClip,
+    clip: IVideoClip,
     asset: IVideoAsset,
     container: Container
   ) {
@@ -540,7 +540,7 @@ export class Renderer {
     }
   }
 
-  private updateClip(clip: IVideoClip): void {
+  private updateClip(clip: IGraphicClip): void {
     // clipStates 업데이트
     const state = this.clipStates.get(clip.id);
     if (state) {
@@ -869,7 +869,7 @@ export class Renderer {
    * 상태에 따라 적절한 핸들러로 분기
    */
   private handleVideoClip(
-    clip: IVideoMediaClip,
+    clip: IVideoClip,
     sprite: Sprite,
     state: ClipState,
     currentTime: number,
@@ -914,10 +914,7 @@ export class Renderer {
   /**
    * 클립 내 상대 시간 계산 (초 단위)
    */
-  private calcClipRelativeTime(
-    clip: IVideoMediaClip,
-    currentTime: number
-  ): number {
+  private calcClipRelativeTime(clip: IVideoClip, currentTime: number): number {
     const trimStart = clip.trimStart ?? 0;
     return (currentTime - clip.startTime + trimStart) / 1000;
   }
@@ -929,7 +926,7 @@ export class Renderer {
    * - 재생 시작
    */
   private handleVideoPlaying(
-    clip: IVideoMediaClip,
+    clip: IVideoClip,
     sprite: Sprite,
     state: ClipState,
     origin: HTMLVideoElement,
@@ -975,7 +972,7 @@ export class Renderer {
    * - seeking 시 proxy 스왑 및 시간 업데이트
    */
   private handleVideoPaused(
-    clip: IVideoMediaClip,
+    clip: IVideoClip,
     sprite: Sprite,
     state: ClipState,
     origin: HTMLVideoElement,
@@ -1023,7 +1020,7 @@ export class Renderer {
    * seeked 이벤트 후 실제 스왑 실행 (깜빡임 방지)
    */
   private requestSwapToOrigin(
-    clip: IVideoMediaClip,
+    clip: IVideoClip,
     sprite: Sprite,
     state: ClipState,
     origin: HTMLVideoElement,
@@ -1069,7 +1066,7 @@ export class Renderer {
    * seeked 이벤트 후 실제 스왑 실행 (깜빡임 방지)
    */
   private requestSwapToOriginAtTime(
-    clip: IVideoMediaClip,
+    clip: IVideoClip,
     sprite: Sprite,
     state: ClipState,
     origin: HTMLVideoElement,
@@ -1109,10 +1106,7 @@ export class Renderer {
   /**
    * 비디오 재생 시작
    */
-  private startVideoPlayback(
-    clip: IVideoMediaClip,
-    origin: HTMLVideoElement
-  ): void {
+  private startVideoPlayback(clip: IVideoClip, origin: HTMLVideoElement): void {
     origin.play().catch((e) => {
       console.warn(`[Renderer] Video play failed: ${clip.id}`, e);
     });
@@ -1123,7 +1117,7 @@ export class Renderer {
    * origin의 실제 프레임 위치를 기준으로 proxy 동기화
    */
   private syncOnPause(
-    clip: IVideoMediaClip,
+    clip: IVideoClip,
     origin: HTMLVideoElement,
     proxy: HTMLVideoElement | null
   ): void {
@@ -1146,7 +1140,7 @@ export class Renderer {
    * - 시간 업데이트
    */
   private handleSeeking(
-    clip: IVideoMediaClip,
+    clip: IVideoClip,
     sprite: Sprite,
     state: ClipState,
     origin: HTMLVideoElement,
@@ -1241,7 +1235,7 @@ export class Renderer {
    * seeked 이벤트 후 실제 스왑 실행 (깜빡임 방지)
    */
   private requestSwapToProxy(
-    clip: IVideoMediaClip,
+    clip: IVideoClip,
     sprite: Sprite,
     state: ClipState,
     origin: HTMLVideoElement,
@@ -1291,7 +1285,7 @@ export class Renderer {
   /**
    * 비디오 클립 일시정지 (클립이 화면 밖일 때)
    */
-  private pauseVideoClip(clip: IVideoMediaClip): void {
+  private pauseVideoClip(clip: IVideoClip): void {
     const state = this.clipStates.get(clip.id);
     if (!state) return;
 

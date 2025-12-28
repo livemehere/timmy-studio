@@ -1,3 +1,5 @@
+import type { TrackType } from '@renderer/lib/studio/domains/Track/types';
+
 export interface IAssetMetadata {
   durationMs?: number;
   width?: number;
@@ -40,3 +42,9 @@ export type IAsset =
   | IAudioAsset
   | IImageAsset
   | IAnimatedImageAsset;
+
+// asset ui 에서 사용할 상태
+export interface AssetStatus {
+  isReady: boolean;
+  trackType: TrackType;
+}

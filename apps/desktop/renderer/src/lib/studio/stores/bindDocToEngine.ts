@@ -5,7 +5,7 @@ import isEqual from 'fast-deep-equal';
 import type {
   IAudioTrack,
   IVideoTrack,
-} from '@renderer/lib/studio/types/types';
+} from '@renderer/lib/studio/domains/Track/types';
 
 /**
  * Video 트랙 동기화

@@ -3,7 +3,7 @@ import {
   useEngineStore,
   useInteractionStore,
 } from '../../hooks/useStudioStores';
-import type { IVideoClip } from '../../types/types';
+import type { IGraphicClip } from '../../types/types';
 import { msToSec } from '../../utils/time';
 
 export function TimelineClipItem({
@@ -16,7 +16,7 @@ export function TimelineClipItem({
   trackId: string;
 }) {
   const getClipById = useDocStore((state) => state.getClipById);
-  const clip = getClipById<IVideoClip>(trackId, clipId);
+  const clip = getClipById<IGraphicClip>(trackId, clipId);
 
   if (!clip) {
     throw new Error(`Clip(${clipId}) not found`);
