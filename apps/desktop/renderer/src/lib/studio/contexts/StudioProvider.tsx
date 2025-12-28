@@ -1,10 +1,10 @@
 import { useRef, useEffect, type ReactNode } from 'react';
-import type { IProject } from '../types/types';
 import { createDocStore } from '../stores/docStore';
 import { createEngineStore } from '../stores/engineStore';
 import { createInteractionStore } from '../stores/interactionStore';
 import { bindDocToEngine } from '../stores/bindDocToEngine';
 import { StudioContext, type StudioStores } from '../hooks/useStudioStores';
+import type { IProject } from '../types/project';
 
 export function StudioProvider({
   children,

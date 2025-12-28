@@ -1,4 +1,5 @@
-import type { IClip, ITrack } from '@renderer/lib/studio/types/types';
+import type { ITrack } from '@renderer/lib/studio/domains/Track/types';
+import type { IClip } from '../domains/Clip/types';
 
 export function getMaxClipEndTimeMs(tracks: ITrack[]): number {
   let maxEndTime = 0;
@@ -6,7 +7,7 @@ export function getMaxClipEndTimeMs(tracks: ITrack[]): number {
     const clips = (track as any).clips as IClip[] | undefined;
     if (!clips || clips.length === 0) continue;
     for (const clip of clips) {
-      if (typeof clip.endTime === 'number' && clip.endTime > maxEndTime) {
+      if (clip.endTime > maxEndTime) {
         maxEndTime = clip.endTime;
       }
     }

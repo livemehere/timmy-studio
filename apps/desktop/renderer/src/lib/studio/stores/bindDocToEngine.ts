@@ -64,11 +64,15 @@ export function bindDocToEngine(
       engine.audioManager!.sampleRate = state.settings.sampleRate;
     }
 
-    const videoTracks = state.tracks.filter((track) => track.type === 'video');
-    const audioTracks = state.tracks.filter((track) => track.type === 'audio');
-
     const tracksChanged = state.tracks !== prevState.tracks;
     if (tracksChanged) {
+      const videoTracks = state.tracks.filter(
+        (track) => track.type === 'video'
+      );
+      const audioTracks = state.tracks.filter(
+        (track) => track.type === 'audio'
+      );
+
       syncVideoTracks(engine, videoTracks);
       syncAudioTracks(engine, audioTracks);
     }

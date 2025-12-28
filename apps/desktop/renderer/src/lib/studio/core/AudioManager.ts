@@ -1,4 +1,5 @@
-import type { IAudioTrack, IAudioClip } from '@renderer/lib/studio/types/types';
+import type { IAudioTrack } from '../domains/Track/types';
+import type { IAudioClip } from '@renderer/lib/studio/domains/Clip/types';
 
 export interface SyncAudioTracksResult {
   syncedTrackIds: string[];
