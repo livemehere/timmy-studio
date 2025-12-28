@@ -1,5 +1,4 @@
 import { app, dialog, type BrowserWindow } from 'electron';
-import log from 'electron-log/main';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import path from 'node:path';
 import { ipc } from '@timmy-studio/electron-utils/ipc/main';

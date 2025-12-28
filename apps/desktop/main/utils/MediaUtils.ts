@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { app, type BrowserWindow } from 'electron';
+import { app } from 'electron';
 import FfmpegCmd, { type FfprobeData, type FfprobeStream } from 'fluent-ffmpeg';
 import ffmpeg from '@ffmpeg-installer/ffmpeg';
 import ffprobe from '@ffprobe-installer/ffprobe';
@@ -271,6 +271,7 @@ export class MediaUtils {
     return metadata;
   }
 
+  /** 에셋 생성 */
   static async createAsset(filePath: string): Promise<IAsset> {
     const ffprobeData = await MediaUtils.ffprobe(filePath);
     const metadata = MediaUtils.createAssetMetadata(ffprobeData);
@@ -317,6 +318,7 @@ export class MediaUtils {
     }
   }
 
+  /** 에셋 생성 후속 처리 */
   static async postProcessAssetCreation(
     asset: IAsset
   ): Promise<IAsset | undefined> {
