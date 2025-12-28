@@ -1,6 +1,6 @@
 /// <reference types="@timmy-studio/electron-utils/ipc/renderer" />
 
-import type { IAsset } from '@renderer/lib/studio/types/asset';
+import type { IAsset } from '@renderer/lib/studio/domains/Asset/types';
 
 /**
  * Extend the IPC channel interfaces with app-specific channels

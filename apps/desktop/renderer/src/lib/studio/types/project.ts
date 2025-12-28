@@ -1,4 +1,4 @@
-import type { IAsset } from './asset';
+import type { IAsset } from '@renderer/lib/studio/domains/Asset/types';
 import type { ITrack } from './track';
 
 export interface IProject {

@@ -1,4 +1,4 @@
-import type { IAsset } from '@renderer/lib/studio/types/asset';
+import type { IAsset } from '@renderer/lib/studio/domains/Asset/types';
 import type {
   IAudioTrack,
   ITrack,
@@ -18,7 +18,7 @@ import {
   type CreateImageClipOptions,
   type CreateVideoClipOptions,
 } from '@renderer/lib/studio/utils/clip';
-import { NONE_VIDEO_CLIP_DEFAULT_DURATION_MS } from '../../constants/clip';
+import { NONE_VIDEO_CLIP_DEFAULT_DURATION_MS } from '../../../constants/clip';
 import { useMemo } from 'react';
 import {
   ASSET_PLACEMENT_PRESETS,
@@ -293,8 +293,6 @@ export function useAsset(asset: IAsset) {
       case 'image':
         return { isReady: false, trackType: 'video' };
       default:
-        const _exhaustive: never = asset;
-        void _exhaustive;
         throw new Error(`지원하지 않는 에셋 타입입니다`);
     }
   }, [asset]);

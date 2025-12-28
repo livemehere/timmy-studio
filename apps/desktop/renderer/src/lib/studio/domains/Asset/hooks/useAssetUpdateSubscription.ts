@@ -1,6 +1,6 @@
 import { useDocStore } from '@renderer/lib/studio/hooks/useStudioStores';
 import { useEffect } from 'react';
-import type { IAsset } from '@renderer/lib/studio/types/asset';
+import type { IAsset } from '@renderer/lib/studio/domains/Asset/types';
 
 /**
  * @description main 프로세스에서 asset 의 비동기 처리가 끝나면 업데이트 이벤트가 오는데, 해당 에셋을 상태 업데이트

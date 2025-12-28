@@ -1,6 +1,6 @@
 import { useDocStore } from '../../../hooks/useStudioStores';
+import { useSelectAssets } from '@renderer/lib/studio/domains/Asset/hooks/useSelectAssets';
 import { AssetList } from './AssetList';
-import { useSelectAssets } from '@renderer/lib/studio/hooks/asset/useSelectAssets';
 
 export function AllAssets() {
   const assets = useDocStore((state) => state.assets);

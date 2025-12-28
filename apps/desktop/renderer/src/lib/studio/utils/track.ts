@@ -5,6 +5,8 @@ import type {
 } from '@renderer/lib/studio/types/types';
 import { uid } from 'uid';
 
+export type TrackType = 'video' | 'audio';
+
 interface CreateTrackOptions {
   name: string;
   zIndex: number;

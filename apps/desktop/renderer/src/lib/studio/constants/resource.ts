@@ -7,10 +7,10 @@ import {
   Pentagon,
   Type,
 } from 'lucide-react';
-import { AllAssets } from '@renderer/lib/studio/components/Resource/Asset/AllAssets';
-import { VideoAssets } from '@renderer/lib/studio/components/Resource/Asset/VideoAssets';
-import { ImageAssets } from '@renderer/lib/studio/components/Resource/Asset/ImageAssets';
-import { AudioAssets } from '@renderer/lib/studio/components/Resource/Asset/AudioAssets';
+import { AllAssets } from '@renderer/lib/studio/domains/Asset/components/AllAssets';
+import { VideoAssets } from '@renderer/lib/studio/domains/Asset/components/VideoAssets';
+import { ImageAssets } from '@renderer/lib/studio/domains/Asset/components/ImageAssets';
+import { AudioAssets } from '@renderer/lib/studio/domains/Asset/components/AudioAssets';
 
 export interface IResourceTab {
   name: string;

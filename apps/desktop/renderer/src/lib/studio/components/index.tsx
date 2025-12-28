@@ -3,7 +3,7 @@ import { PreviewPanel } from '@renderer/lib/studio/components/Layout/PreviewPane
 import { PropertiesPanel } from '@renderer/lib/studio/components/Layout/PropertiesPanel';
 import { TimelinePanel } from '@renderer/lib/studio/components/Layout/TimelinePanel';
 import { ResourcePanel } from '@renderer/lib/studio/components/Layout/ResourcePanel';
-import { useAssetUpdateSubscription } from '@renderer/lib/studio/hooks/asset/useAssetUpdateSubscription';
+import { useAssetUpdateSubscription } from '@renderer/lib/studio/domains/Asset/hooks/useAssetUpdateSubscription';
 
 export function StudioApp() {
   useAssetUpdateSubscription();

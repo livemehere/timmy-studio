@@ -1,6 +1,6 @@
-import type { IAsset } from '@renderer/lib/studio/types/asset';
+import type { IAsset } from '@renderer/lib/studio/domains/Asset/types';
 
-import { AssetItem } from '@renderer/lib/studio/components/Resource/Asset/AssetItem';
+import { AssetItem } from '@renderer/lib/studio/domains/Asset/components/AssetItem';
 
 interface AssetsProps {
   assets: IAsset[];

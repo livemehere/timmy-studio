@@ -1,15 +1,70 @@
-import type { IAsset, IAssetMetadata } from '@renderer/lib/studio/types/asset';
+import type {
+  IAsset,
+  IAssetMetadata,
+} from '@renderer/lib/studio/domains/Asset/types';
 import { cn } from '@renderer/utils/cn';
 import { formatTime } from '@renderer/lib/studio/utils/time';
 import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
 import { useDocStore } from '@renderer/lib/studio/hooks/useStudioStores';
-import { useAsset } from '@renderer/lib/studio/hooks/asset/useAsset';
+import { useAsset } from '@renderer/lib/studio/domains/Asset/hooks/useAsset';
 import { Layers, Plus } from 'lucide-react';
 import { formatFileSize } from '@renderer/lib/studio/utils/size';
 import { Spinner } from '@renderer/components/UI/Spinner';
+import { TrackUtils } from '@renderer/lib/studio/domains/Track/utils';
 
 const badgeClass =
   'absolute text-[9px] bg-black/60 px-1 py-0.5 rounded leading-none select-none';
+
+export function AssetItem({ asset }: { asset: IAsset }) {
+  const tracks = useDocStore((state) => state.tracks);
+  const { createToClip, status } = useAsset(asset);
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div
+        className={
+          'group h-[70px] bg-neutral-800 rounded overflow-hidden relative'
+        }
+      >
+        <AssetPreviewContent asset={asset} />
+        <MetadataOverlay metadata={asset.metadata} />
+        {!status.isReady && (
+          <div className="absolute inset-0 bg-black/40 flex justify-center items-center">
+            <Spinner strokeWidth={2} size={14} />
+          </div>
+        )}
+        <button
+          className="absolute bottom-2.5 right-10 bg-[dodgerblue] rounded-full p-1 group-hover:block hidden cursor-pointer"
+          onClick={async () => {
+            await createToClip({
+              placementPresetKey: 'containCenter',
+            });
+          }}
+          title="새 트랙에 추가"
+        >
+          <Layers className=" text-white" size={14} />
+        </button>
+
+        <button
+          className="absolute bottom-2.5 right-2.5 bg-[dodgerblue] rounded-full p-1 group-hover:block hidden cursor-pointer"
+          onClick={async () => {
+            await createToClip({
+              trackId: TrackUtils.findFirstTrack(
+                tracks,
+                TrackUtils.AssetTypeToTrackType(asset.type)
+              ).id,
+              placementPresetKey: 'containCenter',
+            });
+          }}
+          title="추가"
+        >
+          <Plus className=" text-white" size={14} />
+        </button>
+      </div>
+      <div className="text-xs text-neutral-500">{asset.name}</div>
+    </div>
+  );
+}
 
 function MetadataOverlay({ metadata }: { metadata: IAssetMetadata }) {
   return (
@@ -47,6 +102,7 @@ function AssetPreviewContent({ asset }: { asset: IAsset }) {
         <img
           src={toFilePath(asset.thumbnailPath!)}
           className="w-full h-full object-cover rounded"
+          alt={asset.name}
         />
       );
     case 'image':
@@ -64,57 +120,4 @@ function AssetPreviewContent({ asset }: { asset: IAsset }) {
         </div>
       );
   }
-}
-
-export function AssetItem({ asset }: { asset: IAsset }) {
-  const tracks = useDocStore((state) => state.tracks);
-  const { createToClip, status } = useAsset(asset);
-
-  const getDefaultTrackId = () => {
-    const targetType = asset.type === 'audio' ? 'audio' : 'video';
-    return tracks.find((t) => t.type === targetType)?.id;
-  };
-
-  return (
-    <div className="flex flex-col gap-1">
-      <div
-        className={
-          'group h-[70px] bg-neutral-800 rounded overflow-hidden relative'
-        }
-      >
-        <AssetPreviewContent asset={asset} />
-        <MetadataOverlay metadata={asset.metadata} />
-        {!status.isReady && (
-          <div className="absolute inset-0 bg-black/40 flex justify-center items-center">
-            <Spinner strokeWidth={2} size={14} />
-          </div>
-        )}
-        <button
-          className="absolute bottom-2.5 right-10 bg-[dodgerblue] rounded-full p-1 group-hover:block hidden cursor-pointer"
-          onClick={async () => {
-            await createToClip({
-              placementPresetKey: 'containCenter',
-            });
-          }}
-          title="새 트랙에 추가"
-        >
-          <Layers className=" text-white" size={14} />
-        </button>
-
-        <button
-          className="absolute bottom-2.5 right-2.5 bg-[dodgerblue] rounded-full p-1 group-hover:block hidden cursor-pointer"
-          onClick={async () => {
-            await createToClip({
-              trackId: getDefaultTrackId(),
-              placementPresetKey: 'containCenter',
-            });
-          }}
-          title="추가"
-        >
-          <Plus className=" text-white" size={14} />
-        </button>
-      </div>
-      <div className="text-xs text-neutral-500">{asset.name}</div>
-    </div>
-  );
 }

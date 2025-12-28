@@ -1,6 +1,6 @@
 import { createStore } from 'zustand/vanilla';
 import type { IClip, IProject, ITrack } from '../types/types';
-import type { IAsset } from '@renderer/lib/studio/types/asset';
+import type { IAsset } from '@renderer/lib/studio/domains/Asset/types';
 import { produce } from 'immer';
 import { computeNextProjectDurationMs } from '@renderer/lib/studio/utils/projectDuration';
 

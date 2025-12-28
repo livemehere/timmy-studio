@@ -18,7 +18,7 @@ import type { Timer } from '@renderer/lib/studio/core/Timer';
 import type {
   IVideoAsset,
   IImageAsset,
-} from '@renderer/lib/studio/types/asset';
+} from '@renderer/lib/studio/domains/Asset/types';
 import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
 import {
   didClipBecomeVisible,
