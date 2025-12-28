@@ -1,9 +1,6 @@
 import type { FfprobeData } from 'fluent-ffmpeg';
 import type { AssetType } from '@renderer/lib/studio/types/asset';
-import {
-  getAudioStream,
-  getPrimaryVideoStream,
-} from '@main/utils/ffprobe/getStream';
+import { MediaUtils } from '@main/utils/MediaUtils';
 
 /**
  * "이미지로 보이는 비디오 스트림"을 구분하기 위한 힌트들
@@ -34,8 +31,8 @@ const ANIMATED_FORMAT_HINTS = ['gif', 'apng', 'webp']; // animated webp 포함
  *    - 그 외                                         => video
  */
 export function detectAssetType(data: FfprobeData): AssetType {
-  const primaryVideo = getPrimaryVideoStream(data);
-  const audioStream = getAudioStream(data);
+  const primaryVideo = MediaUtils.extractPrimaryVideoStream(data);
+  const audioStream = MediaUtils.extractAudioStream(data);
 
   const formatName = (data.format.format_name ?? '').toLowerCase();
 

@@ -4,10 +4,8 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import path from 'node:path';
 import { ipc } from '@timmy-studio/electron-utils/ipc/main';
 import { isDev } from '@timmy-studio/electron-utils/utils/main';
-import { ffmpegPath, ffprobePromise } from '@main/utils/ffmpeg';
 import { createAssetData } from '@main/utils/ffprobe';
-import { createProxy } from '@main/utils/ffmpeg/createProxy';
-import { createFilmstrip } from '@main/utils/ffmpeg/createFilmstrip';
+import { MediaUtils } from '@main/utils/MediaUtils';
 
 type ExportSession = {
   proc: ChildProcessWithoutNullStreams;
@@ -58,7 +56,7 @@ export function registerIpcHandlers(win: BrowserWindow) {
   });
 
   ipc.handle('ffmpeg:getPath', () => {
-    return ffmpegPath;
+    return MediaUtils.ffmpegPath;
   });
 
   ipc.handle('dialog:open', async (_, options) => {
@@ -66,12 +64,12 @@ export function registerIpcHandlers(win: BrowserWindow) {
   });
 
   ipc.handle('asset:create', async (_, filePath: string) => {
-    const meta = await ffprobePromise(filePath);
+    const meta = await MediaUtils.ffprobe(filePath);
     const asset = await createAssetData(meta, { createProxy: false }); // proxy 파일 생성 없이 순수, 메타데이터만 생성
 
     if (asset.type === 'video' && asset.isProxyReady === false) {
       // 프록시파일이 이미 존재하는 경우 true, 아닌경우, 비동기로 proxy 비디오 생성
-      createProxy(filePath)
+      MediaUtils.createProxyVideo(filePath)
         .then((proxyFilePath) => {
           // 생성이 끝나면, 렌더러 프로세스에 업데이트된 에셋 정보를 보냄
           win.webContents.send('asset:update', {
@@ -82,20 +80,6 @@ export function registerIpcHandlers(win: BrowserWindow) {
         })
         .catch((err) => {
           log.error('[asset:update] Failed to create proxy:', err);
-        });
-    }
-
-    if (asset.type === 'video' && asset.metadata.durationMs != null) {
-      createFilmstrip(filePath, { durationMs: asset.metadata.durationMs })
-        .then((filmstrip) => {
-          win.webContents.send('asset:update', {
-            ...asset,
-            filmstrip,
-            isFilmstripReady: true,
-          });
-        })
-        .catch((err) => {
-          log.error('[asset:update] Failed to create filmstrip:', err);
         });
     }
 
@@ -161,7 +145,7 @@ export function registerIpcHandlers(win: BrowserWindow) {
         outputPath,
       ];
 
-      const proc = spawn(ffmpegPath, args, {
+      const proc = spawn(MediaUtils.ffmpegPath, args, {
         stdio: ['pipe', 'pipe', 'pipe'],
       });
 

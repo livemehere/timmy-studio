@@ -9,8 +9,9 @@ import {
   installExtension,
   REACT_DEVELOPER_TOOLS,
 } from 'electron-devtools-installer';
-import { ensureFiles } from '@main/utils/file';
+import { FileUtils } from '@main/utils/FileUtils';
 import { registerIpcHandlers } from './ipc';
+import { MediaUtils } from '@main/utils/MediaUtils';
 
 log.initialize();
 log.info('App starting...');
@@ -30,7 +31,11 @@ app.whenReady().then(async () => {
     log.info(`Error while installing extension: ${err}`);
   }
 
-  ensureFiles();
+  FileUtils.ensureDirectory([
+    MediaUtils.THUMBNAILS_DIR,
+    MediaUtils.PROXIES_DIR,
+    MediaUtils.FILMSTRIPS_DIR,
+  ]);
 
   debug({
     isEnabled: true,

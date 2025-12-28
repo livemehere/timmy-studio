@@ -12,18 +12,10 @@ import {
   createAudioAssetMetadata,
   createVideoAssetMetadata,
 } from '@main/utils/ffprobe/createAssetMetadata';
-import {
-  getAudioStream,
-  getPrimaryVideoStream,
-} from '@main/utils/ffprobe/getStream';
+
 import { detectAssetType } from '@main/utils/ffprobe/detectAssetType';
 import { getCreatedAt } from './getCreatedAt';
-import { createVideoThumbnail } from '@main/utils/ffmpeg/createThumbnail';
-import { createProxy, getProxyPath } from '../ffmpeg/createProxy';
-import {
-  computeFilmstripSpec,
-  getFilmstripPath,
-} from '@main/utils/ffmpeg/createFilmstrip';
+import { MediaUtils } from '@main/utils/MediaUtils';
 
 function createVideoAsset(
   data: FfprobeData,
@@ -33,24 +25,12 @@ function createVideoAsset(
   isProxyReady?: boolean
 ): IVideoAsset {
   const filePath = data.format.filename!;
-  const videoStream = getPrimaryVideoStream(data);
+  const videoStream = MediaUtils.extractPrimaryVideoStream(data);
 
   const metadata = {
     ...createVideoAssetMetadata(data, videoStream),
     createdAt,
   };
-
-  const filmstripSpec =
-    metadata.durationMs != null
-      ? computeFilmstripSpec(metadata.durationMs)
-      : null;
-
-  const filmstripPath =
-    filmstripSpec != null ? getFilmstripPath(filePath, filmstripSpec) : null;
-
-  const isFilmstripReady =
-    filmstripPath != null && fs.existsSync(filmstripPath);
-
   return {
     id: randomUUID(),
     name: path.basename(filePath),
@@ -59,20 +39,13 @@ function createVideoAsset(
     thumbnailPath,
     proxyFilePath: proxyPath,
     isProxyReady,
-    filmstrip:
-      filmstripSpec != null && filmstripPath != null
-        ? { ...filmstripSpec, filePath: filmstripPath }
-        : undefined,
-    isFilmstripReady: filmstripSpec != null ? isFilmstripReady : undefined,
-    metadata: {
-      ...metadata,
-    },
+    metadata,
   };
 }
 
 function createAudioAsset(data: FfprobeData, createdAt?: string): IAudioAsset {
   const filePath = data.format.filename!;
-  const audioStream = getAudioStream(data);
+  const audioStream = MediaUtils.extractAudioStream(data);
 
   return {
     id: randomUUID(),
@@ -88,7 +61,7 @@ function createAudioAsset(data: FfprobeData, createdAt?: string): IAudioAsset {
 
 function createImageAsset(data: FfprobeData, createdAt?: string): IImageAsset {
   const filePath = data.format.filename!;
-  const videoStream = getPrimaryVideoStream(data);
+  const videoStream = MediaUtils.extractPrimaryVideoStream(data);
 
   return {
     id: randomUUID(),
@@ -122,9 +95,13 @@ export async function createAssetData(
 
   switch (assetType) {
     case 'video': {
-      const thumbnailPath = await createVideoThumbnail(meta.format.filename);
+      const thumbnailPath = await MediaUtils.createThumbnailImage(
+        meta.format.filename
+      );
       if (shouldCreateProxy) {
-        const proxyPath = await createProxy(meta.format.filename);
+        const proxyPath = await MediaUtils.createProxyVideo(
+          meta.format.filename
+        );
         return createVideoAsset(
           meta,
           createdAt,
@@ -134,7 +111,7 @@ export async function createAssetData(
         );
       }
 
-      const proxyPath = getProxyPath(meta.format.filename);
+      const proxyPath = MediaUtils.getProxyFilePath(meta.format.filename);
       const isProxyReady = fs.existsSync(proxyPath);
       return createVideoAsset(
         meta,
@@ -149,16 +126,20 @@ export async function createAssetData(
     case 'image':
       return createImageAsset(meta, createdAt);
     case 'animated-image': {
-      const thumbPath = await createVideoThumbnail(meta.format.filename);
+      const thumbPath = await MediaUtils.createThumbnailImage(
+        meta.format.filename
+      );
       // 정책 1) animated-image를 별도 타입으로 쓰고 싶으면:
       // return { ...createImageAsset(data), type: 'image', isAnimated: true } 처럼 확장
       // 정책 2) 지금 당장은 비디오로 취급하고 싶으면:
       if (shouldCreateProxy) {
-        const proxyPath = await createProxy(meta.format.filename);
+        const proxyPath = await MediaUtils.createProxyVideo(
+          meta.format.filename
+        );
         return createVideoAsset(meta, createdAt, thumbPath, proxyPath, true);
       }
 
-      const proxyPath = getProxyPath(meta.format.filename);
+      const proxyPath = MediaUtils.getProxyFilePath(meta.format.filename);
       const isProxyReady = fs.existsSync(proxyPath);
       return createVideoAsset(
         meta,
