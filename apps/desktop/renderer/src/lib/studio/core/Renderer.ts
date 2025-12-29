@@ -3,54 +3,41 @@ import {
   Container,
   Rectangle,
   Sprite,
-  Texture,
   VideoSource,
 } from 'pixi.js';
 import type {
   IGraphicClip,
-  ITransform,
-  IVideoClip,
-  IImageClip,
   ClipType,
 } from '@renderer/lib/studio/domains/Clip/types';
 import type { Timer } from '@renderer/lib/studio/core/Timer';
-import type {
-  IVideoAsset,
-  IImageAsset,
-} from '@renderer/lib/studio/domains/Asset/types';
-import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
-import {
-  didClipBecomeVisible,
-  shouldStartVideoPlayback,
-} from '@renderer/lib/studio/core/playbackGuards';
 import type { IVideoTrack } from '@renderer/lib/studio/domains/Track/types';
 import type { IProject } from '@renderer/lib/studio/types/project';
-import { ClipUtils } from '@renderer/lib/studio/domains/Clip/utils';
 import {
   type ClipRenderer,
-  ImageClipRenderer,
-  ShapeClipRenderer,
-  TextClipRenderer,
   VideoClipRenderer,
+  ImageClipRenderer,
+  TextClipRenderer,
+  ShapeClipRenderer,
 } from '@renderer/lib/studio/core/ClipRenderer';
 
 export type DocGetter = () => IProject;
 
 export type SeekingRenderMode = 'proxy' | 'origin';
 
-interface ClipState {
+export interface ClipState {
   clip: IGraphicClip;
-  element: HTMLVideoElement | HTMLImageElement; // clip별 DOM element
-  proxyElement?: HTMLVideoElement; // video clip의 proxy element (optional)
-  videoSource?: VideoSource; // video clip의 PixiJS VideoSource (메모리 관리용)
-  proxyVideoSource?: VideoSource; // proxy video의 PixiJS VideoSource (메모리 관리용)
-  isUsingProxy: boolean; // 현재 proxy texture 사용 중인지
-  lastSeekTime: number; // 마지막 seeking 시간
-  lastSeekTarget: 'origin' | 'proxy' | null; // 마지막 seeking 대상
-  dirty: boolean; // 비디오 시킹/디코딩 대기 상태
-  dirtySessionId: number | null; // 현재 dirty가 속한 seek 세션
-  pendingProxySwap: boolean; // origin → proxy 스왑 대기 중 (seeked 이벤트 대기)
-  pendingOriginSwap: boolean; // proxy → origin 스왑 대기 중 (seeked 이벤트 대기)
+  trackId: string;
+  element: HTMLVideoElement | HTMLImageElement;
+  proxyElement?: HTMLVideoElement;
+  videoSource?: VideoSource;
+  proxyVideoSource?: VideoSource;
+  isUsingProxy: boolean;
+  lastSeekTime: number;
+  lastSeekTarget: 'origin' | 'proxy' | null;
+  dirty: boolean;
+  dirtySessionId: number | null;
+  pendingProxySwap: boolean;
+  pendingOriginSwap: boolean;
 }
 
 export interface TickContext {
@@ -63,30 +50,24 @@ export interface TickContext {
 }
 
 export class Renderer {
-  // 초기화 상태
   private _isInitialized = false;
 
-  // Seeking 시 렌더링 소스 선택 (기본: proxy)
-  private seekingRenderMode: SeekingRenderMode = 'proxy';
+  // Seeking rendering source selection
+  private _seekingRenderMode: SeekingRenderMode = 'proxy';
 
-  // Pixi.js 인스턴스
   private app: Application;
   private sceneContainer: Container;
 
-  // 내부 관리 Map
-  private trackContainers = new Map<string, Container>();
-  private clipSprites = new Map<string, Sprite>();
-  private clipStates = new Map<string, ClipState>(); // 클립별 런타임 상태
+  public trackContainers = new Map<string, Container>();
+  public clipSprites = new Map<string, Sprite>();
+  public clipStates = new Map<string, ClipState>();
 
-  // 이전 타이머 상태 (변경 감지용)
   private lastIsPlaying = false;
   private lastCurrentMs = 0;
 
-  // 외부 의존성
-  private timer: Timer;
+  public timer: Timer;
   readonly getDoc: DocGetter;
 
-  // seekAndWait 지원: 현재 seek 세션(타임라인 시킹)에서 dirty clip이 모두 해제될 때 resolve
   private seekSessionId = 0;
   private activeSeekWait: {
     id: number;
@@ -108,8 +89,16 @@ export class Renderer {
     return this._isInitialized;
   }
 
+  get seekingRenderMode(): SeekingRenderMode {
+    return this._seekingRenderMode;
+  }
+
+  get currentSeekSessionId(): number {
+    return this.seekSessionId;
+  }
+
   constructor(timer: Timer, docGetter: DocGetter) {
-    console.log('[Renderer] 생성됨');
+    console.log('[Renderer] Created');
     this.timer = timer;
     this.getDoc = docGetter;
     this.app = new Application();
@@ -117,21 +106,23 @@ export class Renderer {
     this.sceneContainer.label = Renderer.LABELS.SCENE_CONTAINER;
     this.app.stage.addChild(this.sceneContainer);
 
+    // Initialize renderers
     this.clipRenderers.set('video', new VideoClipRenderer(this));
     this.clipRenderers.set('image', new ImageClipRenderer(this));
     this.clipRenderers.set('text', new TextClipRenderer(this));
     this.clipRenderers.set('shape', new ShapeClipRenderer(this));
   }
 
-  private getClipRenderer<T extends IGraphicClip = IGraphicClip>(clip: T) {
-    const renderer = this.clipRenderers.get(clip.type);
+  private getClipRenderer<T extends IGraphicClip>(
+    type: ClipType
+  ): ClipRenderer<T> {
+    const renderer = this.clipRenderers.get(type);
     if (!renderer) {
-      throw new Error(`No ClipRenderer for type: ${clip.type}`);
+      throw new Error(`No ClipRenderer for type: ${type}`);
     }
-    return renderer;
+    return renderer as ClipRenderer<T>;
   }
 
-  // ticker 에서 매 프레임 호출되어 현재 상태 캡처
   private captureTickContext(): TickContext {
     const currentTime = this.timer.currentMs;
     const isPlaying = this.timer.isPlaying;
@@ -163,7 +154,6 @@ export class Renderer {
       resolution: 1,
     });
 
-    // zero-copy view over the clamped array
     const data = new Uint8Array(
       out.pixels.buffer,
       out.pixels.byteOffset,
@@ -173,7 +163,7 @@ export class Renderer {
     const expectedBytes = width * height * 4;
     if (data.byteLength !== expectedBytes) {
       throw new Error(
-        `[Renderer.exportCurrentPixels] byteLength mismatch: got ${data.byteLength} (out ${out.width}x${out.height}), expected ${expectedBytes} (${width}x${height})`
+        `[Renderer.exportCurrentPixels] byteLength mismatch: got ${data.byteLength}, expected ${expectedBytes}`
       );
     }
 
@@ -181,21 +171,14 @@ export class Renderer {
   }
 
   setSeekingRenderMode(mode: SeekingRenderMode): void {
-    this.seekingRenderMode = mode;
+    this._seekingRenderMode = mode;
   }
 
   getSeekingRenderMode(): SeekingRenderMode {
-    return this.seekingRenderMode;
+    return this._seekingRenderMode;
   }
 
-  /**
-   * timer.seek(ms) 이후, 해당 시간에 필요한 비디오 시킹(seeked)이 모두 끝날 때까지 대기
-   * - 여러 비디오 클립이 동시에 시킹될 수 있음
-   * - 비디오가 아닌 클립은 dirty로 잡지 않음
-   */
   waitForSeekSettled(targetMs: number): Promise<void> {
-    // 이미 해당 시간에 멈춰있는 경우(예: 시작이 0ms이고 현재도 0ms)에는
-    // isSeeking이 false라 started가 never-set 되는 문제가 있어 즉시 resolve.
     if (!this.timer.isPlaying && this.timer.currentMs === targetMs) {
       return Promise.resolve();
     }
@@ -226,7 +209,9 @@ export class Renderer {
     this.app.ticker.maxFPS = settings.frameRate;
     this.startLoop();
     this._isInitialized = true;
-    console.log(`[Renderer] init 완료(${settings.width},${settings.height})`);
+    console.log(
+      `[Renderer] init complete (${settings.width},${settings.height})`
+    );
   }
 
   getTrackContainer(trackId: string): Container | undefined {
@@ -244,19 +229,18 @@ export class Renderer {
   }
 
   async syncTracks(tracks: IVideoTrack[]) {
-    console.log(`[Renderer] ${tracks.length}개 트랙 동기화 시작`);
+    console.log(`[Renderer] Syncing ${tracks.length} tracks`);
     const trackIds = new Set(tracks.map((t) => t.id));
-
     const syncedClipIds: string[] = [];
 
-    // 제거된 트랙 PIXI 에서 제거
+    // Remove tracks
     for (const trackId of this.trackContainers.keys()) {
       if (!trackIds.has(trackId)) {
         this.removeTrack(trackId);
       }
     }
 
-    // 트랙 추가 또는 업데이트
+    // Add/Update tracks
     for (const track of tracks) {
       if (this.trackContainers.has(track.id)) {
         const updatedClipIds = await this.updateTrack(track);
@@ -268,8 +252,6 @@ export class Renderer {
     }
 
     this.sceneContainer.sortChildren();
-    console.groupEnd();
-
     return {
       syncedTrackIds: Array.from(this.trackContainers.keys()),
       syncedClipIds,
@@ -285,7 +267,7 @@ export class Renderer {
 
     this.sceneContainer.addChild(container);
     this.trackContainers.set(track.id, container);
-    console.log(`[Renderer] Track(${track.id})가 추가되었습니다`);
+    console.log(`[Renderer] Track(${track.id}) added`);
 
     return this.syncClips(track.id, track.clips);
   }
@@ -294,18 +276,9 @@ export class Renderer {
     const container = this.trackContainers.get(track.id);
     if (!container) return [];
 
-    // 변경된 속성만 업데이트
-    if (container.visible !== track.enabled) {
-      container.visible = track.enabled;
-    }
-    if (container.alpha !== track.opacity) {
-      container.alpha = track.opacity;
-    }
-    if (container.zIndex !== track.zIndex) {
-      container.zIndex = track.zIndex;
-    }
-
-    console.log(`[Renderer] Track(${track.id})가 업데이트되었습니다`);
+    if (container.visible !== track.enabled) container.visible = track.enabled;
+    if (container.alpha !== track.opacity) container.alpha = track.opacity;
+    if (container.zIndex !== track.zIndex) container.zIndex = track.zIndex;
 
     return this.syncClips(track.id, track.clips);
   }
@@ -314,7 +287,6 @@ export class Renderer {
     const container = this.trackContainers.get(trackId);
     if (!container) return;
 
-    // 해당 트랙의 클립 스프라이트 정리
     for (const [clipId, sprite] of this.clipSprites) {
       if (sprite.parent === container) {
         this.removeClip(clipId);
@@ -324,99 +296,23 @@ export class Renderer {
     this.sceneContainer.removeChild(container);
     container.destroy({ children: true });
     this.trackContainers.delete(trackId);
-    console.log(`[Renderer] Track(${trackId}) 이 제거되었습니다`);
-  }
-
-  private async createVideoElement(
-    asset: IVideoAsset
-  ): Promise<HTMLVideoElement> {
-    const video = document.createElement('video');
-    video.src = toFilePath(asset.filePath);
-    video.crossOrigin = 'anonymous';
-    video.preload = 'auto';
-    video.volume = 1.0;
-    video.playbackRate = 1.0;
-
-    await new Promise<void>((resolve, reject) => {
-      video.oncanplay = () => resolve();
-      video.onerror = () => {
-        console.error(video.error?.message);
-        reject(new Error(`Failed to load video: ${asset.filePath}`));
-      };
-    });
-
-    return video;
-  }
-
-  private async createProxyVideoElement(
-    asset: IVideoAsset
-  ): Promise<HTMLVideoElement | undefined> {
-    if (!asset.proxyFilePath) return undefined;
-
-    const proxy = document.createElement('video');
-    proxy.src = toFilePath(asset.proxyFilePath);
-    proxy.crossOrigin = 'anonymous';
-    proxy.preload = 'auto';
-    proxy.volume = 1.0;
-    proxy.playbackRate = 1.0;
-
-    await new Promise<void>((resolve) => {
-      proxy.oncanplay = () => resolve();
-      proxy.onerror = () => {
-        console.error(proxy.error?.message);
-        console.warn(`[Renderer] Failed to load proxy: ${asset.proxyFilePath}`);
-        resolve(); // proxy 로드 실패해도 계속 진행
-      };
-    });
-
-    return proxy;
-  }
-
-  private createImageElement(asset: IImageAsset): Promise<HTMLImageElement> {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => resolve(img);
-      img.onerror = () =>
-        reject(new Error(`Failed to load image: ${asset.filePath}`));
-      img.src = toFilePath(asset.filePath);
-    });
-  }
-
-  private cleanupVideoElement(video: HTMLVideoElement): void {
-    video.pause();
-    video.oncanplay = null;
-    video.onerror = null;
-    video.src = '';
-    video.removeAttribute('src');
-    video.load();
-  }
-
-  private cleanupImageElement(img: HTMLImageElement): void {
-    img.onload = null;
-    img.onerror = null;
-    img.src = '';
-    img.removeAttribute('src');
-  }
-
-  updateImageClip(...args: any[]) {
-    throw new Error('Method not implemented.');
+    console.log(`[Renderer] Track(${trackId}) removed`);
   }
 
   private async syncSingleClip(
     trackId: string,
     clip: IGraphicClip
   ): Promise<void> {
-    const renderer = this.clipRenderers.get(clip.type);
-    if (!renderer) return;
-
     const container = this.trackContainers.get(trackId);
     if (!container) return;
 
+    // Use specific renderer
+    const renderer = this.getClipRenderer(clip.type);
+
     if (this.clipSprites.has(clip.id)) {
-      renderer.update(this, clip as any);
+      renderer.update(clip);
     } else {
-      await renderer.add(this, trackId, clip as any, container);
+      await renderer.add(clip, container);
     }
   }
 
@@ -426,356 +322,79 @@ export class Renderer {
   ): Promise<string[]> {
     const container = this.trackContainers.get(trackId);
     if (!container) {
-      throw new Error(`[Renderer] 존재하지 않는 Track(${trackId}) 입니다`);
+      throw new Error(`[Renderer] Track(${trackId}) not found`);
     }
 
     const newClipIds = new Set(clips.map((c) => c.id));
 
-    // 1. 제거된 클립 정리
+    // 1. Remove
     for (const [clipId, sprite] of this.clipSprites) {
       if (sprite.parent === container && !newClipIds.has(clipId)) {
         this.removeClip(clipId);
       }
     }
 
-    // 2. 추가 / 업데이트
+    // 2. Add / Update
     const tasks: Promise<void>[] = [];
     for (const clip of clips) {
       tasks.push(this.syncSingleClip(trackId, clip));
     }
-
     await Promise.all(tasks);
 
-    // 3. 이 트랙에 속한 clip id 반환
+    // 3. Return IDs
     return Array.from(this.clipSprites.entries())
       .filter(([, sprite]) => sprite.parent === container)
       .map(([clipId]) => clipId);
   }
 
-  private async addClip(trackId: string, clip: IGraphicClip) {
-    const container = this.trackContainers.get(trackId);
-    if (!container) return;
-
-    if (clip.type !== 'video' && clip.type !== 'image') return;
-
-    // Get asset metadata from docStore
-    const asset = this.getDoc().assets.find((a) => a.id === clip.assetId);
-    if (!asset) {
-      console.warn(`[Renderer] Asset metadata not found for clip: ${clip.id}`);
-      return;
-    }
-
-    if (clip.type === 'video' && asset.type === 'video') {
-      await this.addVideoClip(trackId, clip, asset, container);
-    } else if (clip.type === 'image' && asset.type === 'image') {
-      await this.addImageClip(trackId, clip, asset, container);
-    }
-  }
-
-  async addVideoClip(
-    trackId: string,
-    clip: IVideoClip,
-    asset: IVideoAsset,
-    container: Container
-  ) {
-    try {
-      // Create clip-specific video element
-      const element = await this.createVideoElement(asset);
-      element.pause();
-      element.currentTime = 0;
-
-      // Create proxy element if available
-      const proxyElement = await this.createProxyVideoElement(asset);
-      if (proxyElement) {
-        proxyElement.pause();
-        proxyElement.currentTime = 0;
-      }
-
-      // Create VideoSource with autoPlay disabled
-      const videoSource = new VideoSource({
-        resource: element,
-        autoPlay: false,
-      });
-      const texture = Texture.from(videoSource);
-      const sprite = new Sprite(texture);
-      sprite.label = `${Renderer.LABELS.CLIP_PREFIX}${clip.id}`;
-
-      // Create proxy VideoSource if available
-      let proxyVideoSource: VideoSource | undefined;
-      if (proxyElement) {
-        proxyVideoSource = new VideoSource({
-          resource: proxyElement,
-          autoPlay: false,
-        });
-      }
-
-      this.applyTransform(sprite, clip.transforms);
-
-      container.addChild(sprite);
-
-      this.clipSprites.set(clip.id, sprite);
-
-      // Initialize clip state with elements and VideoSources
-      this.clipStates.set(clip.id, {
-        clip,
-        trackId,
-        element,
-        proxyElement,
-        videoSource,
-        proxyVideoSource,
-        isUsingProxy: false,
-        lastSeekTime: -1,
-        lastSeekTarget: null,
-        dirty: false,
-        dirtySessionId: null,
-        pendingProxySwap: false,
-        pendingOriginSwap: false,
-      });
-
-      console.log(`[Renderer] VideoClip(${clip.id}) 인스턴스가 생성되었습니다`);
-    } catch (error) {
-      console.error(
-        `[Renderer] VideoClip(${clip.id}) 인스턴스 생성 실패`,
-        error
-      );
-    }
-  }
-
-  async addImageClip(
-    trackId: string,
-    clip: IImageClip,
-    asset: IImageAsset,
-    container: Container
-  ) {
-    try {
-      // Create clip-specific image element
-      const element = await this.createImageElement(asset);
-
-      // Create sprite with image texture
-      const texture = Texture.from(element);
-      const sprite = new Sprite(texture);
-      sprite.label = `${Renderer.LABELS.CLIP_PREFIX}${clip.id}`;
-
-      this.applyTransform(sprite, clip.transforms);
-
-      container.addChild(sprite);
-      this.clipSprites.set(clip.id, sprite);
-
-      // Initialize clip state with element
-      this.clipStates.set(clip.id, {
-        clip,
-        element,
-        isUsingProxy: false,
-        lastSeekTime: -1,
-        lastSeekTarget: null,
-        dirty: false,
-        dirtySessionId: null,
-        pendingProxySwap: false,
-        pendingOriginSwap: false,
-      });
-
-      console.log(`[Renderer] ImageClip(${clip.id}) 인스턴스가 생성되었습니다`);
-    } catch (error) {
-      console.error(
-        `[Renderer] ImageClip(${clip.id}) 인스턴스 생성 실패`,
-        error
-      );
-    }
-  }
-
-  // 이미 PIXI 에 존재하는 클립의 sprite 를 업데이트하고,
-  // 변경된 속성(시간, 위치 등)에 맞춰 렌더링 상태를 즉시 갱신합니다.
-  private updateClip(clip: IGraphicClip): void {
-    // clipStates 업데이트
-    const state = this.clipStates.get(clip.id);
-    if (!state) {
-      throw new Error(`[Renderer] Clip(${clip.id}) 상태가 존재하지 않습니다`);
-    }
-
-    // clip 은 무조건 갱신
-    state.clip = clip;
-
-    const sprite = this.clipSprites.get(clip.id);
-    if (!sprite) {
-      throw new Error(
-        `[Renderer] Clip(${clip.id}) 스프라이트가 존재하지 않습니다`
-      );
-    }
-
-    const curTimeMs = this.timer.currentMs;
-    // 클립이 명시적으로 비활성화 되었거나, 현재 시간에 속하지 않는다면 비가시 처리
-    const isVisible =
-      clip.enabled && ClipUtils.isClipVisibleAtTime(clip, curTimeMs);
-
-    sprite.visible = isVisible;
-
-    if (!isVisible) {
-      if (clip.type === 'video') {
-        this.pauseVideoClip(clip);
-      }
-      return;
-    }
-
-    // sprite 에 clip 속성을 반영할 것이 있다면 적용
-    this.applyTransform(sprite, clip.transforms);
-
-    // 비디오 클립인 경우 시간 동기화
-    if (clip.type === 'video') {
-      const origin = state.element as HTMLVideoElement;
-      const proxy = state.proxyElement ?? null;
-      const clipRelativeTime = this.calcClipRelativeTime(clip, curTimeMs);
-
-      // 강제로 시간을 설정하여 화면 갱신 유도
-      if (origin) {
-        origin.currentTime = clipRelativeTime;
-        if (proxy) {
-          proxy.currentTime = clipRelativeTime;
-        }
-      }
-    }
-  }
-
-  // 클립과 관련된 모든 리소스 정리
   removeClip(clipId: string): void {
-    const sprite = this.clipSprites.get(clipId);
+    // We need to know the type to find the renderer, but we might only have ID
+    // Check clipStates first
     const state = this.clipStates.get(clipId);
-
-    // PIXI 스프라이트 정리
-    if (sprite) {
-      sprite.parent?.removeChild(sprite);
-      sprite.destroy(true); // Texture와 VideoSource도 함께 destroy
-      this.clipSprites.delete(clipId);
-    }
-
     if (state) {
-      const { element, proxyElement } = state;
-      // 비디오 클립인 경우
-      if (element instanceof HTMLVideoElement) {
-        this.cleanupVideoElement(element as HTMLVideoElement);
-        if (proxyElement) {
-          this.cleanupVideoElement(proxyElement);
-        }
-        // 이미지 클립인 경우
-      } else if (element instanceof HTMLImageElement) {
-        this.cleanupImageElement(element);
+      const renderer = this.getClipRenderer(state.clip.type);
+      renderer.remove(clipId);
+    } else {
+      // If no state, try to find by checking all renderers or just cleaning up sprite if exists?
+      // Fallback cleanup if sprite exists but no state (should not happen usually)
+      const sprite = this.clipSprites.get(clipId);
+      if (sprite) {
+        sprite.parent?.removeChild(sprite);
+        sprite.destroy(true);
+        this.clipSprites.delete(clipId);
       }
-
-      // 상태 변수 제거
-      this.clipStates.delete(clipId);
-    }
-
-    console.log(`[Renderer] Clip(${clipId})이 제거되었습니다`);
-  }
-
-  // texture 는 부모에 맞게 resizing 되지 않아서, scale 로 처리를 해야됨 (gpt 피셜로 일단 교체)
-  private applyTransform(sprite: Sprite, transforms: ITransform): void {
-    // 1) anchor 먼저 (기준점 고정)
-    if (transforms.anchorX !== undefined || transforms.anchorY !== undefined) {
-      sprite.anchor.set(
-        transforms.anchorX ?? sprite.anchor.x,
-        transforms.anchorY ?? sprite.anchor.y
-      );
-    }
-
-    // 2) position
-    if (transforms.position) {
-      sprite.x = transforms.position.x;
-      sprite.y = transforms.position.y;
-    }
-
-    // 3) base scale 계산 (size -> scale)
-    // NOTE: 비율(aspect ratio) 고려 없이, width/height 각각에 맞게 스케일을 적용한다.
-    let baseScaleX = 1;
-    let baseScaleY = 1;
-
-    if (transforms.size) {
-      const tex = sprite.texture;
-
-      // VideoTexture는 준비 전 0일 수 있으니 orig 우선
-      const srcW = tex?.orig?.width || tex?.width || 0;
-      const srcH = tex?.orig?.height || tex?.height || 0;
-
-      if (srcW > 0 && srcH > 0) {
-        baseScaleX = transforms.size.width / srcW;
-        baseScaleY = transforms.size.height / srcH;
-      }
-    }
-
-    // 4) user scale(추가 배율) 적용: multiplier로 처리
-    const userScaleX = transforms.scaleX ?? 1;
-    const userScaleY = transforms.scaleY ?? 1;
-
-    sprite.scale.set(baseScaleX * userScaleX, baseScaleY * userScaleY);
-
-    // 5) rotation / alpha
-    if (transforms.rotation !== undefined) {
-      sprite.rotation = transforms.rotation;
-    }
-    if (transforms.opacity !== undefined) {
-      sprite.alpha = transforms.opacity;
     }
   }
 
   resize(width: number, height: number): void {
-    if (!this._isInitialized) {
-      console.warn('[Renderer] resize() called before init()');
-      return;
-    }
+    if (!this._isInitialized) return;
     if (
       width === this.app.renderer.width &&
       height === this.app.renderer.height
-    ) {
+    )
       return;
-    }
-
-    console.log('[Renderer] resize:', width, height);
     this.app.renderer.resize(width, height);
   }
 
   set background(color: string) {
-    if (!this._isInitialized) {
-      console.warn('[Renderer] set background called before init()');
-      return;
-    }
-    if (this.app.renderer.background.color.value === color) {
-      return;
-    }
-
-    console.log('[Renderer] set background:', color);
+    if (!this._isInitialized) return;
+    if (this.app.renderer.background.color.value === color) return;
     this.app.renderer.background.color = color;
   }
 
   set frameRate(frameRate: number) {
-    if (!this._isInitialized) {
-      console.warn('[Renderer] set frameRate called before init()');
-      return;
-    }
-    if (this.app.ticker.maxFPS === frameRate) {
-      return;
-    }
-
-    console.log('[Renderer] set frameRate:', frameRate);
+    if (!this._isInitialized) return;
+    if (this.app.ticker.maxFPS === frameRate) return;
     this.app.ticker.maxFPS = frameRate;
   }
 
   destroy(): void {
-    if (!this._isInitialized) {
-      console.warn('[Renderer] destroy() called before init()');
-      return;
-    }
-    if (!this.app || !this.app.stage) {
-      console.warn('[Renderer] destroy() called but app is already destroyed');
-      return;
-    }
+    if (!this._isInitialized) return;
+    if (!this.app || !this.app.stage) return;
 
-    console.log('[Renderer] Destroy called');
-
-    // 모든 클립 스프라이트 정리
     for (const clipId of this.clipSprites.keys()) {
       this.removeClip(clipId);
     }
-
-    // 모든 트랙 컨테이너 정리
     for (const trackId of this.trackContainers.keys()) {
       this.removeTrack(trackId);
     }
@@ -787,19 +406,19 @@ export class Renderer {
     this._isInitialized = false;
   }
 
-  private updateClipsForFrame(ctx: TickContext): void {
-    for (const [clipId, state] of this.clipStates) {
-      const sprite = this.clipSprites.get(clipId);
-      if (!sprite) continue;
+  private startLoop(): void {
+    console.log('[Renderer] startLoop()');
+    this.app.ticker.add(() => {
+      const ctx = this.captureTickContext();
 
-      this.updateSingleClipForFrame(state, sprite, ctx);
-    }
-  }
+      // Delegate tick to each renderer
+      for (const renderer of this.clipRenderers.values()) {
+        renderer.tick(ctx);
+      }
 
-  private handleClipInvisible(clip: IGraphicClip): void {
-    if (clip.type === 'video') {
-      this.pauseVideoClip(clip);
-    }
+      this.maybeResolveSeekWait(ctx.isSeeking);
+      this.commitFrameContext(ctx);
+    });
   }
 
   private commitFrameContext(ctx: TickContext): void {
@@ -807,81 +426,26 @@ export class Renderer {
     this.lastCurrentMs = ctx.currentTime;
   }
 
-  private updateSingleClipForFrame(
-    state: ClipState,
-    sprite: Sprite,
-    ctx: TickContext
-  ): void {
-    const { clip } = state;
-    const { currentTime, isPlaying, playStateChanged, isSeeking } = ctx;
-
-    const wasClipVisible = sprite.visible;
-    const isClipVisible =
-      currentTime >= clip.startTime && currentTime < clip.endTime;
-
-    sprite.visible = isClipVisible;
-
-    const clipBecameVisible = didClipBecomeVisible({
-      wasVisible: wasClipVisible,
-      isVisible: isClipVisible,
-    });
-
-    if (!isClipVisible) {
-      this.handleClipInvisible(clip);
-      return;
-    }
-
-    this.applyTransform(sprite, clip.transforms);
-
-    if (clip.type === 'video') {
-      this.handleVideoClip(
-        clip,
-        sprite,
-        state,
-        currentTime,
-        isPlaying,
-        playStateChanged,
-        isSeeking,
-        clipBecameVisible
-      );
-    }
-  }
-
-  private startLoop(): void {
-    console.log('[Renderer] startLoop()');
-    this.app.ticker.add(() => {
-      const frameCtx = this.captureTickContext();
-      this.updateClipsForFrame(frameCtx);
-      this.maybeResolveSeekWait(frameCtx.isSeeking);
-      this.commitFrameContext(frameCtx);
-    });
-  }
-
   private maybeResolveSeekWait(isSeeking: boolean): void {
     const wait = this.activeSeekWait;
     if (!wait) return;
 
-    // timer.seek로 인해 시킹 상태에 진입했고, 목표 시간이 현재 타임라인과 같아지면 시작 처리
-    // (단, targetMs가 현재 시간과 이미 같을 때는 isSeeking이 false일 수 있으므로 보완)
     if (!this.timer.isPlaying && this.timer.currentMs === wait.targetMs) {
       if (isSeeking || !wait.started) {
         wait.started = true;
       }
     }
 
-    // 시작이 확인된 뒤, 남은 dirty가 없으면 완료
     if (wait.started && wait.remainingDirty === 0) {
       this.activeSeekWait = null;
       wait.resolve();
     }
   }
 
-  private markClipDirty(state: ClipState, sessionId: number | null): void {
-    // 이미 dirty면 카운트 중복 방지
+  public markClipDirty(state: ClipState, sessionId: number | null): void {
     if (!state.dirty) {
       state.dirty = true;
       state.dirtySessionId = sessionId;
-
       const wait = this.activeSeekWait;
       if (wait && sessionId != null && wait.id === sessionId) {
         wait.remainingDirty += 1;
@@ -889,16 +453,14 @@ export class Renderer {
       return;
     }
 
-    // 이미 dirty지만 세션이 바뀐 경우(새로운 seek)라면 세션만 갱신
     if (state.dirtySessionId !== sessionId) {
       state.dirtySessionId = sessionId;
     }
   }
 
-  private clearClipDirty(state: ClipState, sessionId: number | null): void {
+  public clearClipDirty(state: ClipState, sessionId: number | null): void {
     if (!state.dirty) return;
 
-    // 세션이 있는 경우: 해당 세션에 속한 dirty만 카운트 감소
     const wait = this.activeSeekWait;
     if (
       wait &&
@@ -912,487 +474,9 @@ export class Renderer {
     state.dirty = false;
     state.dirtySessionId = null;
 
-    // seeked 이벤트로 dirty가 해제되는 케이스는 isSeeking 플래그와 무관하게 즉시 resolve 가능
     if (wait && wait.started && wait.remainingDirty === 0) {
       this.activeSeekWait = null;
       wait.resolve();
-    }
-  }
-
-  // ============================================================================
-  // Video Clip Playback Control
-  // ============================================================================
-
-  /**
-   * 비디오 클립 메인 핸들러
-   * 상태에 따라 적절한 핸들러로 분기
-   */
-  private handleVideoClip(
-    clip: IVideoClip,
-    sprite: Sprite,
-    state: ClipState,
-    currentTime: number,
-    isPlaying: boolean,
-    playStateChanged: boolean,
-    isSeeking: boolean,
-    clipBecameVisible: boolean
-  ): void {
-    // Get elements from ClipState
-    const origin = state.element as HTMLVideoElement;
-    const proxy = state.proxyElement ?? null;
-    if (!origin) return;
-
-    // 클립 내 상대 시간 계산 (trimStart 고려)
-    const clipRelativeTime = this.calcClipRelativeTime(clip, currentTime);
-
-    if (isPlaying) {
-      this.handleVideoPlaying(
-        clip,
-        sprite,
-        state,
-        origin,
-        proxy,
-        clipRelativeTime,
-        playStateChanged,
-        clipBecameVisible
-      );
-    } else {
-      this.handleVideoPaused(
-        clip,
-        sprite,
-        state,
-        origin,
-        proxy,
-        clipRelativeTime,
-        playStateChanged,
-        isSeeking
-      );
-    }
-  }
-
-  /**
-   * 클립 내 상대 시간 계산 (초 단위)
-   */
-  private calcClipRelativeTime(clip: IVideoClip, currentTime: number): number {
-    const trimStart = clip.trimStart ?? 0;
-    return (currentTime - clip.startTime + trimStart) / 1000;
-  }
-
-  /**
-   * 재생 중 상태 처리
-   * - pending proxy swap 취소
-   * - proxy → origin 스왑 요청 (seeked 대기)
-   * - 재생 시작
-   */
-  private handleVideoPlaying(
-    clip: IVideoClip,
-    sprite: Sprite,
-    state: ClipState,
-    origin: HTMLVideoElement,
-    proxy: HTMLVideoElement | null,
-    clipRelativeTime: number,
-    playStateChanged: boolean,
-    clipBecameVisible: boolean
-  ): void {
-    // pending proxy swap 취소 (재생 시작되면 proxy 스왑 불필요)
-    this.cancelPendingSwaps(state, 'proxy');
-
-    // proxy → origin 스왑 요청
-    if (state.isUsingProxy && proxy && !state.pendingOriginSwap) {
-      this.requestSwapToOrigin(clip, sprite, state, origin, proxy);
-    }
-
-    // 재생 시작 트리거:
-    // - 전체 타이머가 paused → playing 으로 바뀐 경우
-    // - 타이머는 이미 playing 이지만, 이 클립이 방금 활성화(visible)된 경우 (startTime > 0 등)
-    const shouldStartPlayback = shouldStartVideoPlayback({
-      playStateChanged,
-      clipBecameVisible,
-    });
-
-    // origin 스왑 완료 후 재생 시작
-    if (
-      shouldStartPlayback &&
-      !state.pendingOriginSwap &&
-      !state.isUsingProxy
-    ) {
-      // 클립이 중간 시점에 활성화된 경우(큰 tick / 외부에서 현재 시간 점프 등)에도
-      // 올바른 프레임에서 시작하도록 시간 동기화 후 재생.
-      if (clipBecameVisible) {
-        origin.currentTime = clipRelativeTime;
-      }
-      this.startVideoPlayback(clip, origin);
-    }
-  }
-
-  /**
-   * 일시정지 상태 처리
-   * - 정지 시 시간 동기화
-   * - seeking 시 proxy 스왑 및 시간 업데이트
-   */
-  private handleVideoPaused(
-    clip: IVideoClip,
-    sprite: Sprite,
-    state: ClipState,
-    origin: HTMLVideoElement,
-    proxy: HTMLVideoElement | null,
-    clipRelativeTime: number,
-    playStateChanged: boolean,
-    isSeeking: boolean
-  ): void {
-    // 방금 일시정지됨
-    if (playStateChanged) {
-      this.syncOnPause(clip, origin, proxy);
-    }
-
-    // Seeking 처리
-    if (isSeeking) {
-      this.handleSeeking(clip, sprite, state, origin, proxy, clipRelativeTime);
-    }
-
-    // proxy 확실히 정지
-    this.ensureProxyPaused(proxy);
-  }
-
-  // ============================================================================
-  // Video State Transitions
-  // ============================================================================
-
-  /**
-   * pending swap 취소
-   * @param type 'proxy' | 'origin' | 'all'
-   */
-  private cancelPendingSwaps(
-    state: ClipState,
-    type: 'proxy' | 'origin' | 'all' = 'all'
-  ): void {
-    if (type === 'proxy' || type === 'all') {
-      state.pendingProxySwap = false;
-    }
-    if (type === 'origin' || type === 'all') {
-      state.pendingOriginSwap = false;
-    }
-  }
-
-  /**
-   * proxy → origin 스왑 요청
-   * seeked 이벤트 후 실제 스왑 실행 (깜빡임 방지)
-   */
-  private requestSwapToOrigin(
-    clip: IVideoClip,
-    sprite: Sprite,
-    state: ClipState,
-    origin: HTMLVideoElement,
-    proxy: HTMLVideoElement
-  ): void {
-    state.pendingOriginSwap = true;
-    const sessionId = this.activeSeekWait?.id ?? null;
-    this.markClipDirty(state, sessionId);
-
-    origin.currentTime = proxy.currentTime;
-
-    const onSeeked = () => {
-      origin.removeEventListener('seeked', onSeeked);
-
-      // 아직 스왑 대기 중이고, proxy 사용 중이면 스왑 실행
-      if (state.pendingOriginSwap && state.isUsingProxy) {
-        this.swapVideoTexture(sprite, origin, clip.id);
-        state.isUsingProxy = false;
-        state.pendingOriginSwap = false;
-        proxy.pause();
-
-        this.clearClipDirty(state, sessionId);
-
-        console.log(
-          `[Renderer] Swap to origin (seeked): ${clip.id} (time: ${origin.currentTime.toFixed(3)})`
-        );
-
-        // 스왑 완료 후 재생 시작
-        if (this.timer.isPlaying) {
-          this.startVideoPlayback(clip, origin);
-        }
-      } else {
-        state.pendingOriginSwap = false;
-        this.clearClipDirty(state, sessionId);
-      }
-    };
-
-    origin.addEventListener('seeked', onSeeked, { once: true });
-  }
-
-  /**
-   * (Paused Seeking) proxy → origin 스왑 요청 + 원하는 시킹 시간으로 origin을 이동
-   * seeked 이벤트 후 실제 스왑 실행 (깜빡임 방지)
-   */
-  private requestSwapToOriginAtTime(
-    clip: IVideoClip,
-    sprite: Sprite,
-    state: ClipState,
-    origin: HTMLVideoElement,
-    proxy: HTMLVideoElement,
-    targetTime: number
-  ): void {
-    state.pendingOriginSwap = true;
-    const sessionId = this.activeSeekWait?.id ?? null;
-    this.markClipDirty(state, sessionId);
-    origin.currentTime = targetTime;
-
-    const onSeeked = () => {
-      origin.removeEventListener('seeked', onSeeked);
-
-      if (!state.pendingOriginSwap) return;
-
-      if (state.isUsingProxy) {
-        this.swapVideoTexture(sprite, origin, clip.id);
-        state.isUsingProxy = false;
-      }
-
-      state.pendingOriginSwap = false;
-
-      proxy.pause();
-      proxy.currentTime = origin.currentTime;
-
-      console.log(
-        `[Renderer] Swap to origin (seeking): ${clip.id} (time: ${origin.currentTime.toFixed(3)})`
-      );
-
-      this.clearClipDirty(state, sessionId);
-    };
-
-    origin.addEventListener('seeked', onSeeked, { once: true });
-  }
-
-  /**
-   * 비디오 재생 시작
-   */
-  private startVideoPlayback(clip: IVideoClip, origin: HTMLVideoElement): void {
-    origin.play().catch((e) => {
-      console.warn(`[Renderer] Video play failed: ${clip.id}`, e);
-    });
-  }
-
-  /**
-   * 일시정지 시 origin/proxy 시간 동기화
-   * origin의 실제 프레임 위치를 기준으로 proxy 동기화
-   */
-  private syncOnPause(
-    clip: IVideoClip,
-    origin: HTMLVideoElement,
-    proxy: HTMLVideoElement | null
-  ): void {
-    const actualOriginTime = origin.currentTime;
-    origin.pause();
-
-    if (proxy) {
-      proxy.currentTime = actualOriginTime;
-      proxy.pause();
-    }
-
-    console.log(
-      `[Renderer] Paused: ${clip.id} (time: ${actualOriginTime.toFixed(3)})`
-    );
-  }
-
-  /**
-   * Seeking 처리
-   * - origin → proxy 스왑 (seeked 이벤트 대기)
-   * - 시간 업데이트
-   */
-  private handleSeeking(
-    clip: IVideoClip,
-    sprite: Sprite,
-    state: ClipState,
-    origin: HTMLVideoElement,
-    proxy: HTMLVideoElement | null,
-    clipRelativeTime: number
-  ): void {
-    const mode: SeekingRenderMode =
-      proxy && this.seekingRenderMode === 'proxy' ? 'proxy' : 'origin';
-
-    if (mode === 'proxy') {
-      // 현재 렌더링 중인 엘리먼트 시간 업데이트 (스왑 전에는 origin, 스왑 후에는 proxy)
-      if (state.isUsingProxy && proxy) {
-        this.updateVideoCurrentTimeIfNeeded(
-          state,
-          proxy,
-          clipRelativeTime,
-          'proxy'
-        );
-      } else {
-        this.updateVideoCurrentTimeIfNeeded(
-          state,
-          origin,
-          clipRelativeTime,
-          'origin'
-        );
-      }
-
-      // proxy로 스왑 요청 (아직 스왑 안 됐고, 대기 중도 아닐 때)
-      if (proxy && !state.isUsingProxy && !state.pendingProxySwap) {
-        this.requestSwapToProxy(clip, sprite, state, origin, proxy);
-      }
-      return;
-    }
-
-    // origin 모드: proxy 스왑 금지, origin만 시킹
-    this.cancelPendingSwaps(state, 'proxy');
-
-    // proxy를 사용 중이면 origin으로 되돌린 뒤(origin seeked 후) 스왑
-    if (proxy && state.isUsingProxy && !state.pendingOriginSwap) {
-      this.requestSwapToOriginAtTime(
-        clip,
-        sprite,
-        state,
-        origin,
-        proxy,
-        clipRelativeTime
-      );
-      return;
-    }
-
-    this.updateVideoCurrentTimeIfNeeded(
-      state,
-      origin,
-      clipRelativeTime,
-      'origin'
-    );
-  }
-
-  private updateVideoCurrentTimeIfNeeded(
-    state: ClipState,
-    video: HTMLVideoElement,
-    targetTime: number,
-    target: 'origin' | 'proxy'
-  ): void {
-    const EPSILON = 0.001;
-    if (Math.abs(video.currentTime - targetTime) < EPSILON) return;
-
-    if (
-      state.lastSeekTarget === target &&
-      Math.abs(state.lastSeekTime - targetTime) < EPSILON
-    ) {
-      return;
-    }
-
-    state.lastSeekTime = targetTime;
-    state.lastSeekTarget = target;
-
-    const sessionId = this.activeSeekWait?.id ?? null;
-    this.markClipDirty(state, sessionId);
-
-    const onSeeked = () => {
-      video.removeEventListener('seeked', onSeeked);
-      this.clearClipDirty(state, sessionId);
-    };
-
-    video.addEventListener('seeked', onSeeked, { once: true });
-    video.currentTime = targetTime;
-  }
-
-  /**
-   * origin → proxy 스왑 요청
-   * seeked 이벤트 후 실제 스왑 실행 (깜빡임 방지)
-   */
-  private requestSwapToProxy(
-    clip: IVideoClip,
-    sprite: Sprite,
-    state: ClipState,
-    origin: HTMLVideoElement,
-    proxy: HTMLVideoElement
-  ): void {
-    state.pendingProxySwap = true;
-    const sessionId = this.activeSeekWait?.id ?? null;
-    this.markClipDirty(state, sessionId);
-    proxy.currentTime = origin.currentTime;
-
-    const onSeeked = () => {
-      proxy.removeEventListener('seeked', onSeeked);
-
-      // 아직 재생 시작 안했고, 스왑 대기 중이면 스왑 실행
-      if (!this.timer.isPlaying && state.pendingProxySwap) {
-        this.swapVideoTexture(sprite, proxy, clip.id);
-        state.isUsingProxy = true;
-        state.pendingProxySwap = false;
-
-        this.clearClipDirty(state, sessionId);
-
-        console.log(
-          `[Renderer] Swap to proxy: ${clip.id} (time: ${proxy.currentTime.toFixed(3)})`
-        );
-      } else {
-        state.pendingProxySwap = false;
-        this.clearClipDirty(state, sessionId);
-      }
-    };
-
-    proxy.addEventListener('seeked', onSeeked, { once: true });
-  }
-
-  /**
-   * Seeking 시 시간 업데이트는 `handleSeeking()` 내부에서 모드에 따라 처리한다.
-   */
-
-  /**
-   * proxy 확실히 정지
-   */
-  private ensureProxyPaused(proxy: HTMLVideoElement | null): void {
-    if (proxy && !proxy.paused) {
-      proxy.pause();
-    }
-  }
-
-  private pauseVideoClip(clip: IVideoClip): void {
-    const state = this.clipStates.get(clip.id);
-    if (!state) {
-      throw new Error(`[Renderer] Clip(${clip.id}) 상태가 존재하지 않습니다`);
-    }
-
-    const origin = state.element as HTMLVideoElement;
-    const proxy = state.proxyElement ?? null;
-
-    if (origin && !origin.paused) {
-      origin.pause();
-    }
-    if (proxy && !proxy.paused) {
-      proxy.pause();
-    }
-  }
-
-  /**
-   * 스프라이트의 비디오 텍스처 교체
-   * ClipState에 저장된 VideoSource를 재사용
-   */
-  private swapVideoTexture(
-    sprite: Sprite,
-    videoElement: HTMLVideoElement,
-    clipId: string
-  ): void {
-    const state = this.clipStates.get(clipId);
-    if (!state) return;
-
-    // Destroy previous texture (but not the source, we'll reuse it)
-    const oldTexture = sprite.texture;
-    if (oldTexture) {
-      oldTexture.destroy(false); // false = keep the source
-    }
-
-    // Determine which VideoSource to use based on which element we're swapping to
-    const isSwappingToOrigin = videoElement === state.element;
-    const videoSource = isSwappingToOrigin
-      ? state.videoSource
-      : state.proxyVideoSource;
-
-    if (!videoSource) {
-      console.warn(`[Renderer] VideoSource not found for swap: ${clipId}`);
-      return;
-    }
-
-    // Create new texture from existing VideoSource
-    sprite.texture = Texture.from(videoSource);
-
-    // Ensure video is paused if not playing
-    if (!this.timer.isPlaying) {
-      videoElement.pause();
     }
   }
 }
