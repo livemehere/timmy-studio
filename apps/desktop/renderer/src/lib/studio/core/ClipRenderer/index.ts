@@ -7,12 +7,8 @@ import type {
   IImageClip,
   ITransform,
 } from '../../domains/Clip/types';
-import type {
-  Renderer,
-  TickContext,
-  ClipState,
-  SeekingRenderMode,
-} from '../Renderer';
+import type { Renderer } from '../Renderer';
+import type { TickContext, ClipState, SeekingRenderMode } from '../types';
 import { toFilePath } from '../../utils/toFilePath';
 import { ClipUtils } from '../../domains/Clip/utils';
 import {

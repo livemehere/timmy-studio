@@ -1,17 +1,10 @@
-import {
-  Application,
-  Container,
-  Rectangle,
-  Sprite,
-  VideoSource,
-} from 'pixi.js';
+import { Application, Container, Rectangle, Sprite } from 'pixi.js';
 import type {
   IGraphicClip,
   ClipType,
 } from '@renderer/lib/studio/domains/Clip/types';
 import type { Timer } from '@renderer/lib/studio/core/Timer';
 import type { IVideoTrack } from '@renderer/lib/studio/domains/Track/types';
-import type { IProject } from '@renderer/lib/studio/types/project';
 import {
   type ClipRenderer,
   VideoClipRenderer,
@@ -19,35 +12,15 @@ import {
   TextClipRenderer,
   ShapeClipRenderer,
 } from '@renderer/lib/studio/core/ClipRenderer';
+import type {
+  ClipState,
+  TickContext,
+  SeekingRenderMode,
+  DocGetter,
+} from './types';
 
-export type DocGetter = () => IProject;
-
-export type SeekingRenderMode = 'proxy' | 'origin';
-
-export interface ClipState {
-  clip: IGraphicClip;
-  trackId: string;
-  element: HTMLVideoElement | HTMLImageElement;
-  proxyElement?: HTMLVideoElement;
-  videoSource?: VideoSource;
-  proxyVideoSource?: VideoSource;
-  isUsingProxy: boolean;
-  lastSeekTime: number;
-  lastSeekTarget: 'origin' | 'proxy' | null;
-  dirty: boolean;
-  dirtySessionId: number | null;
-  pendingProxySwap: boolean;
-  pendingOriginSwap: boolean;
-}
-
-export interface TickContext {
-  currentTime: number;
-  isPlaying: boolean;
-  wasPlaying: boolean;
-  lastTime: number;
-  playStateChanged: boolean;
-  isSeeking: boolean;
-}
+// Re-export for external usage (e.g. stores)
+export type { ClipState, TickContext, SeekingRenderMode, DocGetter };
 
 export class Renderer {
   private _isInitialized = false;
