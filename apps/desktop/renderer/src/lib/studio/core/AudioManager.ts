@@ -29,7 +29,7 @@ export class AudioManager {
     return new Promise((resolve) => {
       // 비동기 처리를 시뮬레이션하기 위해 마이크로태스크 사용
       queueMicrotask(() => {
-        console.group(`[AudioManager] ${tracks.length}개 트랙 동기화 시작`);
+        console.log(`[AudioManager] ${tracks.length}개 트랙 동기화 시작`);
 
         const currentTrackIds = new Set(tracks.map((t) => t.id));
 
@@ -51,8 +51,6 @@ export class AudioManager {
 
         const syncedTrackIds = Array.from(this.trackNodes.keys());
         const syncedClipIds = Array.from(this.clipNodes.keys());
-
-        console.groupEnd();
 
         resolve({
           syncedTrackIds,

@@ -292,21 +292,21 @@ export class Renderer {
     ) as Container | undefined;
   }
 
-  async syncTracks(newTracks: IVideoTrack[]) {
-    console.group(`[Renderer] ${newTracks.length}개 트랙 동기화 시작`);
-    const newTrackIds = new Set(newTracks.map((t) => t.id));
+  async syncTracks(tracks: IVideoTrack[]) {
+    console.log(`[Renderer] ${tracks.length}개 트랙 동기화 시작`);
+    const trackIds = new Set(tracks.map((t) => t.id));
 
     const syncedClipIds: string[] = [];
 
     // 제거된 트랙 PIXI 에서 제거
     for (const trackId of this.trackContainers.keys()) {
-      if (!newTrackIds.has(trackId)) {
+      if (!trackIds.has(trackId)) {
         this.removeTrack(trackId);
       }
     }
 
     // 트랙 추가 또는 업데이트
-    for (const track of newTracks) {
+    for (const track of tracks) {
       if (this.trackContainers.has(track.id)) {
         const updatedClipIds = await this.updateTrack(track);
         syncedClipIds.push(...updatedClipIds);
@@ -622,23 +622,29 @@ export class Renderer {
     }
   }
 
+  // 이미 PIXI 에 존재하는 클립의 sprite 를 업데이트, 변화와 상관없이 무조건 set 처리합니다.
   private updateClip(clip: IGraphicClip): void {
     // clipStates 업데이트
     const state = this.clipStates.get(clip.id);
+
     if (state) {
+      // 클립의 원천 데이터를 갱신
       state.clip = clip;
     }
     const sprite = this.clipSprites.get(clip.id);
     if (!sprite) return;
 
+    // sprite 에 clip 속성을 반영할 것이 있다면 적용
     this.applyTransform(sprite, clip.transforms);
     // TODO: 나머지 재생속도,필터 등등.. 추가되면 여기서 업데이트
   }
 
+  // 클립과 관련된 모든 리소스 정리
   private removeClip(clipId: string): void {
     const sprite = this.clipSprites.get(clipId);
     const state = this.clipStates.get(clipId);
 
+    // PIXI 스프라이트 정리
     if (sprite) {
       sprite.parent?.removeChild(sprite);
       sprite.destroy(true); // Texture와 VideoSource도 함께 destroy
@@ -647,54 +653,25 @@ export class Renderer {
 
     if (state) {
       const { element, proxyElement } = state;
-
+      // 비디오 클립인 경우
       if (element instanceof HTMLVideoElement) {
-        this.cleanupVideoElement(element);
+        this.cleanupVideoElement(element as HTMLVideoElement);
         if (proxyElement) {
           this.cleanupVideoElement(proxyElement);
         }
+        // 이미지 클립인 경우
       } else if (element instanceof HTMLImageElement) {
         this.cleanupImageElement(element);
       }
 
+      // 상태 변수 제거
       this.clipStates.delete(clipId);
     }
 
     console.log(`[Renderer] Clip(${clipId})이 제거되었습니다`);
   }
 
-  // private applyTransform(sprite: Sprite, transforms: ITransform): void {
-  //   if (transforms.position) {
-  //     sprite.x = transforms.position.x;
-  //     sprite.y = transforms.position.y;
-  //   }
-  //   if (transforms.size) {
-  //     sprite.width = transforms.size.width;
-  //     sprite.height = transforms.size.height;
-  //   }
-  //   if (transforms.scaleX !== undefined) {
-  //     sprite.scale.x = transforms.scaleX;
-  //   }
-  //   if (transforms.scaleY !== undefined) {
-  //     sprite.scale.y = transforms.scaleY;
-  //   }
-  //   if (transforms.rotation !== undefined) {
-  //     sprite.rotation = transforms.rotation;
-  //   }
-  //   if (transforms.opacity !== undefined) {
-  //     sprite.alpha = transforms.opacity;
-  //   }
-  //   if (transforms.anchorX !== undefined || transforms.anchorY !== undefined) {
-  //     sprite.anchor.set(transforms.anchorX, transforms.anchorY);
-  //   }
-  // }
-
-  /**
-   * texture 는 부모에 맞게 resizing 되지 않아서, scale 로 처리를 해야됨 (gpt 피셜로 일단 교체)
-   * @param sprite
-   * @param transforms
-   * @private
-   */
+  // texture 는 부모에 맞게 resizing 되지 않아서, scale 로 처리를 해야됨 (gpt 피셜로 일단 교체)
   private applyTransform(sprite: Sprite, transforms: ITransform): void {
     // 1) anchor 먼저 (기준점 고정)
     if (transforms.anchorX !== undefined || transforms.anchorY !== undefined) {

@@ -14,7 +14,7 @@ export function bindDocToEngine(
   docStore: StoreApi<DocStore>,
   engineStore: StoreApi<EngineStore>
 ) {
-  console.group('[Binding] Doc-Engine 을 바인딩 합니다');
+  console.log('[Binding] Doc-Engine 을 바인딩 합니다');
 
   const engine = engineStore.getState();
   const doc = docStore.getState();
@@ -40,6 +40,7 @@ export function bindDocToEngine(
 
     // 얕은 비교로 변경 감지
     if (state.tracks !== prevState.tracks) {
+      console.log('[Binding] 트랙 변경이 감지되었습니다');
       const newVideoTracks = state.tracks.filter(
         (track) => track.type === 'video'
       );
@@ -51,8 +52,6 @@ export function bindDocToEngine(
       syncAudioTracks(engine, newAudioTracks);
     }
   });
-
-  console.groupEnd();
 
   // Cleanup function
   return () => {
@@ -73,7 +72,7 @@ function syncVideoTracks(engine: EngineStore, tracks: IVideoTrack[]) {
         clipIds: syncedClipIds,
       });
       console.log(
-        `[Binding] Renderer 트랙 동기화 완료 - tracks: ${syncedTrackIds.length}개, clips: ${syncedClipIds.length}개`
+        `[Renderer] 트랙 동기화 완료 - tracks: ${syncedTrackIds.length}개, clips: ${syncedClipIds.length}개`
       );
     });
 }
@@ -90,7 +89,7 @@ function syncAudioTracks(engine: EngineStore, tracks: IAudioTrack[]) {
         clipIds: syncedClipIds,
       });
       console.log(
-        `[Binding] AudioManager 트랙 동기화 완료 - tracks: ${syncedTrackIds.length}개, clips: ${syncedClipIds.length}개`
+        `[AudioManager] 트랙 동기화 완료 - tracks: ${syncedTrackIds.length}개, clips: ${syncedClipIds.length}개`
       );
     });
 }
