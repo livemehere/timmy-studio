@@ -8,14 +8,70 @@ import type {
 } from '@renderer/lib/studio/domains/Track/types';
 
 /**
+ * docStore의 변경사항을 engineStore에 자동으로 반영하는 바인딩 로직
+ */
+export function bindDocToEngine(
+  docStore: StoreApi<DocStore>,
+  engineStore: StoreApi<EngineStore>
+) {
+  console.group('[Binding] Doc-Engine 을 바인딩 합니다');
+
+  const engine = engineStore.getState();
+  const doc = docStore.getState();
+
+  const initialVideoTracks = doc.tracks.filter(
+    (track) => track.type === 'video'
+  );
+  const initialAudioTracks = doc.tracks.filter(
+    (track) => track.type === 'audio'
+  );
+
+  syncVideoTracks(engine, initialVideoTracks);
+  syncAudioTracks(engine, initialAudioTracks);
+
+  const unsubscribe = docStore.subscribe((state, prevState) => {
+    if (!isEqual(state.settings, prevState.settings)) {
+      engine.renderer!.resize(state.settings.width, state.settings.height);
+      engine.renderer!.background = state.settings.background;
+      engine.renderer!.frameRate = state.settings.frameRate;
+      engine.timer!.durationMs = state.settings.duration;
+      engine.audioManager!.sampleRate = state.settings.sampleRate;
+    }
+
+    // 얕은 비교로 변경 감지
+    if (state.tracks !== prevState.tracks) {
+      const newVideoTracks = state.tracks.filter(
+        (track) => track.type === 'video'
+      );
+      const newAudioTracks = state.tracks.filter(
+        (track) => track.type === 'audio'
+      );
+
+      syncVideoTracks(engine, newVideoTracks);
+      syncAudioTracks(engine, newAudioTracks);
+    }
+  });
+
+  console.groupEnd();
+
+  // Cleanup function
+  return () => {
+    console.log('[Binding] Cleaning up doc-to-engine bindings');
+    unsubscribe();
+  };
+}
+
+/**
  * Video 트랙 동기화
  */
 function syncVideoTracks(engine: EngineStore, tracks: IVideoTrack[]) {
   engine
     .renderer!.syncTracks(tracks)
     .then(({ syncedTrackIds, syncedClipIds }) => {
-      engine.setSyncedTrackIds(syncedTrackIds);
-      engine.setSyncedClipIds(syncedClipIds);
+      engine.applyRendererSyncResult({
+        trackIds: syncedTrackIds,
+        clipIds: syncedClipIds,
+      });
       console.log(
         `[Binding] Renderer 트랙 동기화 완료 - tracks: ${syncedTrackIds.length}개, clips: ${syncedClipIds.length}개`
       );
@@ -29,60 +85,12 @@ function syncAudioTracks(engine: EngineStore, tracks: IAudioTrack[]) {
   engine
     .audioManager!.syncTracks(tracks)
     .then(({ syncedTrackIds, syncedClipIds }) => {
-      engine.setSyncedAudioTrackIds(syncedTrackIds);
-      engine.setSyncedAudioClipIds(syncedClipIds);
+      engine.applyAudioSyncResult({
+        trackIds: syncedTrackIds,
+        clipIds: syncedClipIds,
+      });
       console.log(
         `[Binding] AudioManager 트랙 동기화 완료 - tracks: ${syncedTrackIds.length}개, clips: ${syncedClipIds.length}개`
       );
     });
-}
-
-/**
- * docStore의 변경사항을 engineStore에 자동으로 반영하는 바인딩 로직
- */
-export function bindDocToEngine(
-  docStore: StoreApi<DocStore>,
-  engineStore: StoreApi<EngineStore>
-) {
-  console.group('[Binding] Doc-Engine 을 바인딩 합니다');
-
-  const engine = engineStore.getState();
-  const doc = docStore.getState();
-
-  const videoTracks = doc.tracks.filter((track) => track.type === 'video');
-  const audioTracks = doc.tracks.filter((track) => track.type === 'audio');
-
-  syncVideoTracks(engine, videoTracks);
-  syncAudioTracks(engine, audioTracks);
-
-  const unsubscribe = docStore.subscribe((state, prevState) => {
-    if (!isEqual(state.settings, prevState.settings)) {
-      engine.renderer!.resize(state.settings.width, state.settings.height);
-      engine.renderer!.background = state.settings.background;
-      engine.renderer!.frameRate = state.settings.frameRate;
-      engine.timer!.durationMs = state.settings.duration;
-      engine.audioManager!.sampleRate = state.settings.sampleRate;
-    }
-
-    const tracksChanged = state.tracks !== prevState.tracks;
-    if (tracksChanged) {
-      const videoTracks = state.tracks.filter(
-        (track) => track.type === 'video'
-      );
-      const audioTracks = state.tracks.filter(
-        (track) => track.type === 'audio'
-      );
-
-      syncVideoTracks(engine, videoTracks);
-      syncAudioTracks(engine, audioTracks);
-    }
-  });
-
-  console.groupEnd();
-
-  // Cleanup function
-  return () => {
-    console.log('[Binding] Cleaning up doc-to-engine bindings');
-    unsubscribe();
-  };
 }

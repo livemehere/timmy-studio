@@ -25,19 +25,19 @@ export interface EngineState {
 }
 
 export interface EngineActions {
-  // Destruction
   destroy: () => void;
 
-  // Renderer sync state management
   setRendererReady: (ready: boolean) => void;
-  setSyncedTrackIds: (trackIds: string[]) => void;
-  setSyncedClipIds: (clipIds: string[]) => void;
-
-  // AudioManager sync state management
-  // TODO: AudioManager 구현 완료 후 사용
   setAudioReady: (ready: boolean) => void;
-  setSyncedAudioTrackIds: (trackIds: string[]) => void;
-  setSyncedAudioClipIds: (clipIds: string[]) => void;
+
+  applyRendererSyncResult: (payload: {
+    trackIds: string[];
+    clipIds: string[];
+  }) => void;
+  applyAudioSyncResult: (payload: {
+    trackIds: string[];
+    clipIds: string[];
+  }) => void;
 }
 
 export type EngineStore = EngineState & EngineActions;
@@ -106,31 +106,26 @@ export const createEngineStore = (docGetter: DocGetter) => {
       });
     },
 
-    // Renderer sync state management
     setRendererReady: (ready) => {
       set({ isRendererReady: ready });
     },
 
-    setSyncedTrackIds: (trackIds) => {
-      set({ syncedVideoTrackIds: trackIds });
-    },
-
-    setSyncedClipIds: (clipIds) => {
-      set({ syncedVideoClipIds: clipIds });
-    },
-
-    // AudioManager sync state management
-    // TODO: AudioManager 구현 완료 후 사용
     setAudioReady: (ready) => {
       set({ isAudioReady: ready });
     },
 
-    setSyncedAudioTrackIds: (trackIds) => {
-      set({ syncedAudioTrackIds: trackIds });
+    applyRendererSyncResult: ({ trackIds, clipIds }) => {
+      set({
+        syncedVideoTrackIds: trackIds,
+        syncedVideoClipIds: clipIds,
+      });
     },
 
-    setSyncedAudioClipIds: (clipIds) => {
-      set({ syncedAudioClipIds: clipIds });
+    applyAudioSyncResult: ({ trackIds, clipIds }) => {
+      set({
+        syncedAudioTrackIds: trackIds,
+        syncedAudioClipIds: clipIds,
+      });
     },
   }));
 };
