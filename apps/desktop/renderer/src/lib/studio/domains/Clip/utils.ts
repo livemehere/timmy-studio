@@ -79,6 +79,9 @@ export class ClipUtils {
       endTime: asset.metadata.durationMs ?? ClipUtils.DEFAULT_CLIP_DURATION_MS,
       effects: [],
       animations: [],
+      enabled: true,
+      trimStart: 0,
+      trimEnd: 0,
     };
   }
 
@@ -139,6 +142,9 @@ export class ClipUtils {
       name: shapeData.shapeType,
       startTime: 0,
       endTime: ClipUtils.DEFAULT_CLIP_DURATION_MS,
+      trimStart: 0,
+      trimEnd: 0,
+      enabled: true,
       effects: [],
       animations: [],
       transforms: {
@@ -162,6 +168,9 @@ export class ClipUtils {
       name: textData.content.substring(0, 10) || 'Text Clip',
       startTime: 0,
       endTime: ClipUtils.DEFAULT_CLIP_DURATION_MS,
+      trimStart: 0,
+      trimEnd: 0,
+      enabled: true,
       effects: [],
       animations: [],
       transforms: {
@@ -268,5 +277,15 @@ export class ClipUtils {
       position: { x, y },
       size: { width, height },
     };
+  }
+
+  static isClipVisibleAtTime(clip: IBaseClip, currentTimeMs: number) {
+    const trimStart = 'trimStart' in clip ? (clip.trimStart ?? 0) : 0;
+    const trimEnd = 'trimEnd' in clip ? (clip.trimEnd ?? 0) : 0;
+
+    const visibleStart = clip.startTime + trimStart;
+    const visibleEnd = clip.endTime - trimEnd;
+
+    return currentTimeMs >= visibleStart && currentTimeMs < visibleEnd;
   }
 }

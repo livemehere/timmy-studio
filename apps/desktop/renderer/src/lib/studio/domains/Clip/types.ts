@@ -12,8 +12,11 @@ export interface IBaseClip {
   name: string;
   startTime: number;
   endTime: number;
-  effects?: IEffect[];
-  animations?: IAnimation[];
+  trimStart: number;
+  trimEnd: number;
+  effects: IEffect[];
+  animations: IAnimation[];
+  enabled: boolean;
 }
 
 // Video Track Clips
@@ -25,8 +28,6 @@ export interface IGraphicClipBase extends IBaseClip {
 export interface IVideoClip extends IGraphicClipBase {
   type: 'video';
   assetId: string;
-  trimStart?: number;
-  trimEnd?: number;
 }
 
 export interface IImageClip extends IGraphicClipBase {
@@ -47,8 +48,6 @@ export interface ITextClip extends IGraphicClipBase {
 export interface IAudioClip extends IBaseClip {
   type: 'audio';
   assetId: string;
-  trimStart: number;
-  trimEnd: number;
   volume: number; // 0-1
 }
 

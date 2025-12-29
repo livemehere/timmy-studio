@@ -11,6 +11,7 @@ import type {
   ITransform,
   IVideoClip,
   IImageClip,
+  ClipType,
 } from '@renderer/lib/studio/domains/Clip/types';
 import type { Timer } from '@renderer/lib/studio/core/Timer';
 import type {
@@ -24,6 +25,14 @@ import {
 } from '@renderer/lib/studio/core/playbackGuards';
 import type { IVideoTrack } from '@renderer/lib/studio/domains/Track/types';
 import type { IProject } from '@renderer/lib/studio/types/project';
+import { ClipUtils } from '@renderer/lib/studio/domains/Clip/utils';
+import {
+  type ClipRenderer,
+  ImageClipRenderer,
+  ShapeClipRenderer,
+  TextClipRenderer,
+  VideoClipRenderer,
+} from '@renderer/lib/studio/core/ClipRenderer';
 
 export type DocGetter = () => IProject;
 
@@ -31,7 +40,6 @@ export type SeekingRenderMode = 'proxy' | 'origin';
 
 interface ClipState {
   clip: IGraphicClip;
-  trackId: string;
   element: HTMLVideoElement | HTMLImageElement; // clip별 DOM element
   proxyElement?: HTMLVideoElement; // video clip의 proxy element (optional)
   videoSource?: VideoSource; // video clip의 PixiJS VideoSource (메모리 관리용)
@@ -43,6 +51,15 @@ interface ClipState {
   dirtySessionId: number | null; // 현재 dirty가 속한 seek 세션
   pendingProxySwap: boolean; // origin → proxy 스왑 대기 중 (seeked 이벤트 대기)
   pendingOriginSwap: boolean; // proxy → origin 스왑 대기 중 (seeked 이벤트 대기)
+}
+
+export interface TickContext {
+  currentTime: number;
+  isPlaying: boolean;
+  wasPlaying: boolean;
+  lastTime: number;
+  playStateChanged: boolean;
+  isSeeking: boolean;
 }
 
 export class Renderer {
@@ -67,7 +84,7 @@ export class Renderer {
 
   // 외부 의존성
   private timer: Timer;
-  private readonly getDoc: DocGetter;
+  readonly getDoc: DocGetter;
 
   // seekAndWait 지원: 현재 seek 세션(타임라인 시킹)에서 dirty clip이 모두 해제될 때 resolve
   private seekSessionId = 0;
@@ -78,6 +95,8 @@ export class Renderer {
     started: boolean;
     resolve: () => void;
   } | null = null;
+
+  private clipRenderers = new Map<ClipType, ClipRenderer<IGraphicClip>>();
 
   static readonly LABELS = {
     SCENE_CONTAINER: 'SCENE_CONTAINER',
@@ -97,6 +116,36 @@ export class Renderer {
     this.sceneContainer = new Container();
     this.sceneContainer.label = Renderer.LABELS.SCENE_CONTAINER;
     this.app.stage.addChild(this.sceneContainer);
+
+    this.clipRenderers.set('video', new VideoClipRenderer(this));
+    this.clipRenderers.set('image', new ImageClipRenderer(this));
+    this.clipRenderers.set('text', new TextClipRenderer(this));
+    this.clipRenderers.set('shape', new ShapeClipRenderer(this));
+  }
+
+  private getClipRenderer<T extends IGraphicClip = IGraphicClip>(clip: T) {
+    const renderer = this.clipRenderers.get(clip.type);
+    if (!renderer) {
+      throw new Error(`No ClipRenderer for type: ${clip.type}`);
+    }
+    return renderer;
+  }
+
+  // ticker 에서 매 프레임 호출되어 현재 상태 캡처
+  private captureTickContext(): TickContext {
+    const currentTime = this.timer.currentMs;
+    const isPlaying = this.timer.isPlaying;
+    const wasPlaying = this.lastIsPlaying;
+    const lastTime = this.lastCurrentMs;
+
+    return {
+      currentTime,
+      isPlaying,
+      wasPlaying,
+      lastTime,
+      playStateChanged: isPlaying !== wasPlaying,
+      isSeeking: !isPlaying && currentTime !== lastTime,
+    };
   }
 
   async exportCurrentFrame() {
@@ -140,47 +189,6 @@ export class Renderer {
   }
 
   /**
-   * 전체 클립 강제 업데이트
-   * - 주로 외부에서 강제로 렌더러를 갱신해야 할 때 사용
-   * - forceRefreshClip()을 루프 돌리는 것보다 효율적일 수 있음
-   */
-  forceUpdateClips(): void {
-    const currentTime = this.timer.currentMs;
-
-    for (const [clipId, state] of this.clipStates) {
-      const { clip } = state;
-      const sprite = this.clipSprites.get(clipId);
-      if (!sprite) continue;
-
-      const isClipVisible =
-        currentTime >= clip.startTime && currentTime < clip.endTime;
-      sprite.visible = isClipVisible;
-
-      if (!isClipVisible) {
-        if (clip.type === 'video') {
-          this.pauseVideoClip(clip);
-        }
-        continue;
-      }
-
-      this.applyTransform(sprite, clip.transforms);
-
-      if (clip.type === 'video') {
-        const origin = state.element as HTMLVideoElement;
-        const proxy = state.proxyElement ?? null;
-        const clipRelativeTime = this.calcClipRelativeTime(clip, currentTime);
-
-        if (origin) {
-          origin.currentTime = clipRelativeTime;
-          if (proxy) {
-            proxy.currentTime = clipRelativeTime;
-          }
-        }
-      }
-    }
-  }
-
-  /**
    * timer.seek(ms) 이후, 해당 시간에 필요한 비디오 시킹(seeked)이 모두 끝날 때까지 대기
    * - 여러 비디오 클립이 동시에 시킹될 수 있음
    * - 비디오가 아닌 클립은 dirty로 잡지 않음
@@ -204,13 +212,8 @@ export class Renderer {
     });
   }
 
-  // ============================================================================
-  // Initialization
-  // ============================================================================
-
   async init(canvas: HTMLCanvasElement): Promise<void> {
     const { settings } = this.getDoc();
-    console.log(`[Renderer] 바인딩 완료(${settings.width},${settings.height})`);
     await this.app.init({
       canvas,
       width: settings.width,
@@ -223,6 +226,7 @@ export class Renderer {
     this.app.ticker.maxFPS = settings.frameRate;
     this.startLoop();
     this._isInitialized = true;
+    console.log(`[Renderer] init 완료(${settings.width},${settings.height})`);
   }
 
   getTrackContainer(trackId: string): Container | undefined {
@@ -272,10 +276,6 @@ export class Renderer {
     };
   }
 
-  /**
-   * @param track - 새로 추가 할 트랙
-   * @returns 추가된 트랙의 동기화 완료된 클립 ID 배열
-   */
   private async addTrack(track: IVideoTrack) {
     const container = new Container();
     container.label = `${Renderer.LABELS.TRACK_PREFIX}${track.id}`;
@@ -290,10 +290,6 @@ export class Renderer {
     return this.syncClips(track.id, track.clips);
   }
 
-  /**
-   * @param track - 업데이트 할 트랙
-   * @return 변경된 트랙의 동기화 완료된 클립 ID 배열
-   */
   private async updateTrack(track: IVideoTrack) {
     const container = this.trackContainers.get(track.id);
     if (!container) return [];
@@ -308,6 +304,8 @@ export class Renderer {
     if (container.zIndex !== track.zIndex) {
       container.zIndex = track.zIndex;
     }
+
+    console.log(`[Renderer] Track(${track.id})가 업데이트되었습니다`);
 
     return this.syncClips(track.id, track.clips);
   }
@@ -401,40 +399,57 @@ export class Renderer {
     img.removeAttribute('src');
   }
 
+  updateImageClip(...args: any[]) {
+    throw new Error('Method not implemented.');
+  }
+
+  private async syncSingleClip(
+    trackId: string,
+    clip: IGraphicClip
+  ): Promise<void> {
+    const renderer = this.clipRenderers.get(clip.type);
+    if (!renderer) return;
+
+    const container = this.trackContainers.get(trackId);
+    if (!container) return;
+
+    if (this.clipSprites.has(clip.id)) {
+      renderer.update(this, clip as any);
+    } else {
+      await renderer.add(this, trackId, clip as any, container);
+    }
+  }
+
   private async syncClips(
     trackId: string,
-    newClips: IGraphicClip[]
+    clips: IGraphicClip[]
   ): Promise<string[]> {
     const container = this.trackContainers.get(trackId);
-    if (!container) return [];
+    if (!container) {
+      throw new Error(`[Renderer] 존재하지 않는 Track(${trackId}) 입니다`);
+    }
 
-    const newClipIds = new Set(newClips.map((c) => c.id));
+    const newClipIds = new Set(clips.map((c) => c.id));
 
-    // 제거된 클립 정리
+    // 1. 제거된 클립 정리
     for (const [clipId, sprite] of this.clipSprites) {
       if (sprite.parent === container && !newClipIds.has(clipId)) {
         this.removeClip(clipId);
       }
     }
 
-    // 클립 추가 또는 업데이트
-    const addClipPromises: Promise<void>[] = [];
-    for (const clip of newClips) {
-      if (clip.type !== 'video' && clip.type !== 'image') continue;
-      if (this.clipSprites.has(clip.id)) {
-        this.updateClip(clip);
-      } else {
-        addClipPromises.push(this.addClip(trackId, clip));
-      }
+    // 2. 추가 / 업데이트
+    const tasks: Promise<void>[] = [];
+    for (const clip of clips) {
+      tasks.push(this.syncSingleClip(trackId, clip));
     }
-    // 모든 addClip 비동기 작업 완료 대기
-    await Promise.all(addClipPromises);
 
-    // 동기화된 클립 ID 반환
-    return Array.from(this.clipSprites.keys()).filter((clipId) => {
-      const sprite = this.clipSprites.get(clipId);
-      return sprite && sprite.parent === container;
-    });
+    await Promise.all(tasks);
+
+    // 3. 이 트랙에 속한 clip id 반환
+    return Array.from(this.clipSprites.entries())
+      .filter(([, sprite]) => sprite.parent === container)
+      .map(([clipId]) => clipId);
   }
 
   private async addClip(trackId: string, clip: IGraphicClip) {
@@ -457,7 +472,7 @@ export class Renderer {
     }
   }
 
-  private async addVideoClip(
+  async addVideoClip(
     trackId: string,
     clip: IVideoClip,
     asset: IVideoAsset,
@@ -526,7 +541,7 @@ export class Renderer {
     }
   }
 
-  private async addImageClip(
+  async addImageClip(
     trackId: string,
     clip: IImageClip,
     asset: IImageAsset,
@@ -549,7 +564,6 @@ export class Renderer {
       // Initialize clip state with element
       this.clipStates.set(clip.id, {
         clip,
-        trackId,
         element,
         isUsingProxy: false,
         lastSeekTime: -1,
@@ -574,20 +588,28 @@ export class Renderer {
   private updateClip(clip: IGraphicClip): void {
     // clipStates 업데이트
     const state = this.clipStates.get(clip.id);
-    if (!state) return;
+    if (!state) {
+      throw new Error(`[Renderer] Clip(${clip.id}) 상태가 존재하지 않습니다`);
+    }
 
-    // 클립의 원천 데이터를 갱신
+    // clip 은 무조건 갱신
     state.clip = clip;
 
     const sprite = this.clipSprites.get(clip.id);
-    if (!sprite) return;
+    if (!sprite) {
+      throw new Error(
+        `[Renderer] Clip(${clip.id}) 스프라이트가 존재하지 않습니다`
+      );
+    }
 
-    const currentTime = this.timer.currentMs;
-    const isClipVisible =
-      currentTime >= clip.startTime && currentTime < clip.endTime;
-    sprite.visible = isClipVisible;
+    const curTimeMs = this.timer.currentMs;
+    // 클립이 명시적으로 비활성화 되었거나, 현재 시간에 속하지 않는다면 비가시 처리
+    const isVisible =
+      clip.enabled && ClipUtils.isClipVisibleAtTime(clip, curTimeMs);
 
-    if (!isClipVisible) {
+    sprite.visible = isVisible;
+
+    if (!isVisible) {
       if (clip.type === 'video') {
         this.pauseVideoClip(clip);
       }
@@ -601,7 +623,7 @@ export class Renderer {
     if (clip.type === 'video') {
       const origin = state.element as HTMLVideoElement;
       const proxy = state.proxyElement ?? null;
-      const clipRelativeTime = this.calcClipRelativeTime(clip, currentTime);
+      const clipRelativeTime = this.calcClipRelativeTime(clip, curTimeMs);
 
       // 강제로 시간을 설정하여 화면 갱신 유도
       if (origin) {
@@ -614,7 +636,7 @@ export class Renderer {
   }
 
   // 클립과 관련된 모든 리소스 정리
-  private removeClip(clipId: string): void {
+  removeClip(clipId: string): void {
     const sprite = this.clipSprites.get(clipId);
     const state = this.clipStates.get(clipId);
 
@@ -765,69 +787,73 @@ export class Renderer {
     this._isInitialized = false;
   }
 
+  private updateClipsForFrame(ctx: TickContext): void {
+    for (const [clipId, state] of this.clipStates) {
+      const sprite = this.clipSprites.get(clipId);
+      if (!sprite) continue;
+
+      this.updateSingleClipForFrame(state, sprite, ctx);
+    }
+  }
+
+  private handleClipInvisible(clip: IGraphicClip): void {
+    if (clip.type === 'video') {
+      this.pauseVideoClip(clip);
+    }
+  }
+
+  private commitFrameContext(ctx: TickContext): void {
+    this.lastIsPlaying = ctx.isPlaying;
+    this.lastCurrentMs = ctx.currentTime;
+  }
+
+  private updateSingleClipForFrame(
+    state: ClipState,
+    sprite: Sprite,
+    ctx: TickContext
+  ): void {
+    const { clip } = state;
+    const { currentTime, isPlaying, playStateChanged, isSeeking } = ctx;
+
+    const wasClipVisible = sprite.visible;
+    const isClipVisible =
+      currentTime >= clip.startTime && currentTime < clip.endTime;
+
+    sprite.visible = isClipVisible;
+
+    const clipBecameVisible = didClipBecomeVisible({
+      wasVisible: wasClipVisible,
+      isVisible: isClipVisible,
+    });
+
+    if (!isClipVisible) {
+      this.handleClipInvisible(clip);
+      return;
+    }
+
+    this.applyTransform(sprite, clip.transforms);
+
+    if (clip.type === 'video') {
+      this.handleVideoClip(
+        clip,
+        sprite,
+        state,
+        currentTime,
+        isPlaying,
+        playStateChanged,
+        isSeeking,
+        clipBecameVisible
+      );
+    }
+  }
+
   private startLoop(): void {
     console.log('[Renderer] startLoop()');
     this.app.ticker.add(() => {
-      const currentTime = this.timer.currentMs;
-      const isPlaying = this.timer.isPlaying;
-      const wasPlaying = this.lastIsPlaying;
-      const lastTime = this.lastCurrentMs;
-
-      // 상태 변경 감지
-      const playStateChanged = isPlaying !== wasPlaying;
-      const isSeeking = !isPlaying && currentTime !== lastTime;
-
-      // Clip 단위 처리
-      for (const [clipId, state] of this.clipStates) {
-        const { clip } = state;
-        const sprite = this.clipSprites.get(clipId);
-        if (!sprite) continue;
-
-        // 이전 프레임의 가시성 (클립이 재생 중에 활성화되는 순간 감지용)
-        const wasClipVisible = sprite.visible;
-
-        // 클립 가시성 (시간 범위 체크)
-        const isClipVisible =
-          currentTime >= clip.startTime && currentTime < clip.endTime;
-        sprite.visible = isClipVisible;
-
-        const clipBecameVisible = didClipBecomeVisible({
-          wasVisible: wasClipVisible,
-          isVisible: isClipVisible,
-        });
-
-        if (!isClipVisible) {
-          // 클립이 보이지 않으면 비디오 일시정지
-          if (clip.type === 'video') {
-            this.pauseVideoClip(clip);
-          }
-          continue;
-        }
-
-        // Transform 업데이트 (애니메이션 지원을 위해 매 프레임)
-        this.applyTransform(sprite, clip.transforms);
-
-        // 비디오 클립 특별 처리
-        if (clip.type === 'video') {
-          this.handleVideoClip(
-            clip,
-            sprite,
-            state,
-            currentTime,
-            isPlaying,
-            playStateChanged,
-            isSeeking,
-            clipBecameVisible
-          );
-        }
-      }
-
-      // seekAndWait: 시킹 시작/완료 감지
-      this.maybeResolveSeekWait(isSeeking);
-
-      // 상태 저장
-      this.lastIsPlaying = isPlaying;
-      this.lastCurrentMs = currentTime;
+      const frameCtx = this.captureTickContext();
+      this.updateClipsForFrame(frameCtx);
+      this.maybeResolveSeekWait(frameCtx.isSeeking);
+      this.commitFrameContext(frameCtx);
     });
   }
 
@@ -1315,12 +1341,11 @@ export class Renderer {
     }
   }
 
-  /**
-   * 비디오 클립 일시정지 (클립이 화면 밖일 때)
-   */
   private pauseVideoClip(clip: IVideoClip): void {
     const state = this.clipStates.get(clip.id);
-    if (!state) return;
+    if (!state) {
+      throw new Error(`[Renderer] Clip(${clip.id}) 상태가 존재하지 않습니다`);
+    }
 
     const origin = state.element as HTMLVideoElement;
     const proxy = state.proxyElement ?? null;
