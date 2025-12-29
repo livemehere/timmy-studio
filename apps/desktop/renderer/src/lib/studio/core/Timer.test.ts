@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Timer } from '@renderer/lib/studio/core/Timer';
-import { advanceFrames } from './setup';
+import { advanceFrames } from '../__tests__/setup';
 
 describe('Timer', () => {
   it('초기 상태는 0ms, 정지 상태이다', () => {

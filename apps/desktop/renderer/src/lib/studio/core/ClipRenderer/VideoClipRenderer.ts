@@ -7,7 +7,7 @@ import { ClipUtils } from '../../domains/Clip/utils';
 import {
   didClipBecomeVisible,
   shouldStartVideoPlayback,
-} from '../playbackGuards';
+} from '../../utils/playbackGuards';
 import type { IVideoAsset } from '../../domains/Asset/types';
 import { ClipRenderer } from './ClipRenderer';
 

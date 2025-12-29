@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   didClipBecomeVisible,
   shouldStartVideoPlayback,
-} from '@renderer/lib/studio/core/playbackGuards';
+} from '@renderer/lib/studio/utils/playbackGuards';
 
 describe('playbackGuards', () => {
   describe('didClipBecomeVisible', () => {
