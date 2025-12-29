@@ -1,5 +1,6 @@
 import { Timer } from '../core/Timer';
-import { type DocGetter, Renderer } from '../core/Renderer';
+import { Renderer } from '../core/Renderer';
+import { type DocGetter } from '../core/types';
 import { AudioManager } from '../core/AudioManager';
 import { createStore } from 'zustand/vanilla';
 

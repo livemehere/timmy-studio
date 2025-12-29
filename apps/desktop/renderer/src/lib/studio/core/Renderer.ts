@@ -19,9 +19,6 @@ import type {
   DocGetter,
 } from './types';
 
-// Re-export for external usage (e.g. stores)
-export type { ClipState, TickContext, SeekingRenderMode, DocGetter };
-
 export class Renderer {
   private _isInitialized = false;
 
