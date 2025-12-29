@@ -20,7 +20,6 @@ export function TimelineClip({
   const getClipById = useDocStore((state) => state.getClipById);
   const updateClip = useDocStore((state) => state.updateClip);
   const clip = getClipById<IGraphicClip>(trackId, clipId)!;
-  const renderer = useEngineStore((state) => state.renderer);
 
   const syncedClipIds = useEngineStore((state) => state.syncedVideoClipIds);
   const isLoaded = syncedClipIds.includes(clipId);
@@ -68,7 +67,6 @@ export function TimelineClip({
           startTime: newStartTime,
           endTime: newEndTime,
         });
-        renderer!.refreshClip(clip.id);
         // TODO: y 값이 트랙의 높이 절반을 넘어가면, 해당 위치의 트랙으로 옮기기. (만약 트랙이 없으면 새로 만들어서 그 트랙으로 옮기기)
       }}
     >

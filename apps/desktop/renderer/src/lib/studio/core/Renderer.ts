@@ -85,17 +85,9 @@ export class Renderer {
     CLIP_PREFIX: 'Clip-',
   };
 
-  // ============================================================================
-  // Public Getters
-  // ============================================================================
-
   get isInitialized(): boolean {
     return this._isInitialized;
   }
-
-  // ============================================================================
-  // Constructor
-  // ============================================================================
 
   constructor(timer: Timer, docGetter: DocGetter) {
     console.log('[Renderer] 생성됨');
@@ -189,47 +181,6 @@ export class Renderer {
   }
 
   /**
-   * 특정 클립만 강제 업데이트
-   * - 드래그 등으로 특정 클립의 속성이 변경되었을 때 효율적으로 갱신
-   */
-  refreshClip(clipId: string): void {
-    const state = this.clipStates.get(clipId);
-    if (!state) return;
-
-    const { clip } = state;
-    const sprite = this.clipSprites.get(clipId);
-    if (!sprite) return;
-
-    const currentTime = this.timer.currentMs;
-    const isClipVisible =
-      currentTime >= clip.startTime && currentTime < clip.endTime;
-    sprite.visible = isClipVisible;
-
-    if (!isClipVisible) {
-      if (clip.type === 'video') {
-        this.pauseVideoClip(clip);
-      }
-      return;
-    }
-
-    this.applyTransform(sprite, clip.transforms);
-
-    if (clip.type === 'video') {
-      const origin = state.element as HTMLVideoElement;
-      const proxy = state.proxyElement ?? null;
-      const clipRelativeTime = this.calcClipRelativeTime(clip, currentTime);
-
-      // 강제로 시간을 설정하여 화면 갱신 유도
-      if (origin) {
-        origin.currentTime = clipRelativeTime;
-        if (proxy) {
-          proxy.currentTime = clipRelativeTime;
-        }
-      }
-    }
-  }
-
-  /**
    * timer.seek(ms) 이후, 해당 시간에 필요한 비디오 시킹(seeked)이 모두 끝날 때까지 대기
    * - 여러 비디오 클립이 동시에 시킹될 수 있음
    * - 비디오가 아닌 클립은 dirty로 잡지 않음
@@ -273,10 +224,6 @@ export class Renderer {
     this.startLoop();
     this._isInitialized = true;
   }
-
-  // ============================================================================
-  // Public Accessors (by ID)
-  // ============================================================================
 
   getTrackContainer(trackId: string): Container | undefined {
     return this.trackContainers.get(trackId);
@@ -622,21 +569,48 @@ export class Renderer {
     }
   }
 
-  // 이미 PIXI 에 존재하는 클립의 sprite 를 업데이트, 변화와 상관없이 무조건 set 처리합니다.
+  // 이미 PIXI 에 존재하는 클립의 sprite 를 업데이트하고,
+  // 변경된 속성(시간, 위치 등)에 맞춰 렌더링 상태를 즉시 갱신합니다.
   private updateClip(clip: IGraphicClip): void {
     // clipStates 업데이트
     const state = this.clipStates.get(clip.id);
+    if (!state) return;
 
-    if (state) {
-      // 클립의 원천 데이터를 갱신
-      state.clip = clip;
-    }
+    // 클립의 원천 데이터를 갱신
+    state.clip = clip;
+
     const sprite = this.clipSprites.get(clip.id);
     if (!sprite) return;
 
+    const currentTime = this.timer.currentMs;
+    const isClipVisible =
+      currentTime >= clip.startTime && currentTime < clip.endTime;
+    sprite.visible = isClipVisible;
+
+    if (!isClipVisible) {
+      if (clip.type === 'video') {
+        this.pauseVideoClip(clip);
+      }
+      return;
+    }
+
     // sprite 에 clip 속성을 반영할 것이 있다면 적용
     this.applyTransform(sprite, clip.transforms);
-    // TODO: 나머지 재생속도,필터 등등.. 추가되면 여기서 업데이트
+
+    // 비디오 클립인 경우 시간 동기화
+    if (clip.type === 'video') {
+      const origin = state.element as HTMLVideoElement;
+      const proxy = state.proxyElement ?? null;
+      const clipRelativeTime = this.calcClipRelativeTime(clip, currentTime);
+
+      // 강제로 시간을 설정하여 화면 갱신 유도
+      if (origin) {
+        origin.currentTime = clipRelativeTime;
+        if (proxy) {
+          proxy.currentTime = clipRelativeTime;
+        }
+      }
+    }
   }
 
   // 클립과 관련된 모든 리소스 정리
