@@ -45,11 +45,12 @@ export type EngineStore = EngineState & EngineActions;
 export const createEngineStore = (docGetter: DocGetter) => {
   console.group('[EngineStore] Engine 스토어 생성됨.');
 
-  const project = docGetter();
-  const timer = new Timer(project.settings.duration);
+  const initialProject = docGetter();
+  const timer = new Timer(initialProject.settings.duration);
   const renderer = new Renderer(timer, docGetter);
-  const audioManager = new AudioManager(project.settings.sampleRate);
+  const audioManager = new AudioManager(initialProject.settings.sampleRate);
 
+  // Timer가 seek 제어를 할 때 Renderer의 seek 처리 완료를 대기하도록 설정
   timer.setSeekWaiter((ms) => renderer.waitForSeekSettled(ms));
 
   console.groupEnd();
