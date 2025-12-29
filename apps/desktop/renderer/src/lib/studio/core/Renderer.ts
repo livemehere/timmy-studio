@@ -148,6 +148,88 @@ export class Renderer {
   }
 
   /**
+   * 전체 클립 강제 업데이트
+   * - 주로 외부에서 강제로 렌더러를 갱신해야 할 때 사용
+   * - forceRefreshClip()을 루프 돌리는 것보다 효율적일 수 있음
+   */
+  forceUpdateClips(): void {
+    const currentTime = this.timer.currentMs;
+
+    for (const [clipId, state] of this.clipStates) {
+      const { clip } = state;
+      const sprite = this.clipSprites.get(clipId);
+      if (!sprite) continue;
+
+      const isClipVisible =
+        currentTime >= clip.startTime && currentTime < clip.endTime;
+      sprite.visible = isClipVisible;
+
+      if (!isClipVisible) {
+        if (clip.type === 'video') {
+          this.pauseVideoClip(clip);
+        }
+        continue;
+      }
+
+      this.applyTransform(sprite, clip.transforms);
+
+      if (clip.type === 'video') {
+        const origin = state.element as HTMLVideoElement;
+        const proxy = state.proxyElement ?? null;
+        const clipRelativeTime = this.calcClipRelativeTime(clip, currentTime);
+
+        if (origin) {
+          origin.currentTime = clipRelativeTime;
+          if (proxy) {
+            proxy.currentTime = clipRelativeTime;
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * 특정 클립만 강제 업데이트
+   * - 드래그 등으로 특정 클립의 속성이 변경되었을 때 효율적으로 갱신
+   */
+  refreshClip(clipId: string): void {
+    const state = this.clipStates.get(clipId);
+    if (!state) return;
+
+    const { clip } = state;
+    const sprite = this.clipSprites.get(clipId);
+    if (!sprite) return;
+
+    const currentTime = this.timer.currentMs;
+    const isClipVisible =
+      currentTime >= clip.startTime && currentTime < clip.endTime;
+    sprite.visible = isClipVisible;
+
+    if (!isClipVisible) {
+      if (clip.type === 'video') {
+        this.pauseVideoClip(clip);
+      }
+      return;
+    }
+
+    this.applyTransform(sprite, clip.transforms);
+
+    if (clip.type === 'video') {
+      const origin = state.element as HTMLVideoElement;
+      const proxy = state.proxyElement ?? null;
+      const clipRelativeTime = this.calcClipRelativeTime(clip, currentTime);
+
+      // 강제로 시간을 설정하여 화면 갱신 유도
+      if (origin) {
+        origin.currentTime = clipRelativeTime;
+        if (proxy) {
+          proxy.currentTime = clipRelativeTime;
+        }
+      }
+    }
+  }
+
+  /**
    * timer.seek(ms) 이후, 해당 시간에 필요한 비디오 시킹(seeked)이 모두 끝날 때까지 대기
    * - 여러 비디오 클립이 동시에 시킹될 수 있음
    * - 비디오가 아닌 클립은 dirty로 잡지 않음

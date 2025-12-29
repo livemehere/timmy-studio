@@ -6,6 +6,7 @@ import {
 } from '../../hooks/useStudioStores';
 import { msToSec } from '../../utils/time';
 import type { IGraphicClip } from '@renderer/lib/studio/domains/Clip/types';
+import { cn } from '@renderer/utils/cn';
 
 export function TimelineClip({
   clipId,
@@ -18,11 +19,8 @@ export function TimelineClip({
 }) {
   const getClipById = useDocStore((state) => state.getClipById);
   const updateClip = useDocStore((state) => state.updateClip);
-  const clip = getClipById<IGraphicClip>(trackId, clipId);
-
-  if (!clip) {
-    throw new Error(`Clip(${clipId}) not found`);
-  }
+  const clip = getClipById<IGraphicClip>(trackId, clipId)!;
+  const renderer = useEngineStore((state) => state.renderer);
 
   const syncedClipIds = useEngineStore((state) => state.syncedVideoClipIds);
   const isLoaded = syncedClipIds.includes(clipId);
@@ -30,6 +28,9 @@ export function TimelineClip({
   const width = msToSec(clip.endTime - clip.startTime) * pxPerSec;
   const left = msToSec(clip.startTime) * pxPerSec;
 
+  const isSelected = useInteractionStore((state) =>
+    state.selectedClipIds.includes(clip.id)
+  );
   const setSelectedClipId = useInteractionStore(
     (state) => state.setSelectedClipId
   );
@@ -48,7 +49,10 @@ export function TimelineClip({
       dragMomentum={false}
       dragSnapToOrigin
       dragElastic={0}
-      className="absolute h-full bg-cyan-700 px-2 py-1 rounded overflow-hidden"
+      className={cn(
+        'absolute h-full bg-cyan-700 px-2 py-1 rounded overflow-hidden',
+        { 'border-1 border-white': isSelected }
+      )}
       onClick={(e) => {
         if (e.shiftKey) {
           addSelectedClipId(clip.id);
@@ -64,7 +68,7 @@ export function TimelineClip({
           startTime: newStartTime,
           endTime: newEndTime,
         });
-        // FIXME: 비디오 옮기고나서, timer pause -> play 하면 영상 시가닝 반영이 안됨.
+        renderer!.refreshClip(clip.id);
         // TODO: y 값이 트랙의 높이 절반을 넘어가면, 해당 위치의 트랙으로 옮기기. (만약 트랙이 없으면 새로 만들어서 그 트랙으로 옮기기)
       }}
     >
