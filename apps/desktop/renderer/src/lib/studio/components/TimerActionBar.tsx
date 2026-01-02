@@ -48,8 +48,8 @@ export function TimerActionBar() {
   const handleExport = async () => {
     if (!timer || !renderer) return;
 
-    const prevMode = renderer.getSeekingRenderMode();
-    renderer.setSeekingRenderMode('origin');
+    const prevMode = renderer.seekingRenderMode;
+    renderer.seekingRenderMode = 'origin';
 
     // export: pause 상태에서 0s~10s 프레임을 RGBA로 뽑아 ffmpeg로 mp4 생성
     timer.pause();
@@ -304,7 +304,7 @@ export function TimerActionBar() {
     } finally {
       unsubscribeProgress();
       unsubscribeError();
-      renderer.setSeekingRenderMode(prevMode);
+      renderer.seekingRenderMode = prevMode;
     }
   };
 

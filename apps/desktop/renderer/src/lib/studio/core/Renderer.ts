@@ -144,7 +144,7 @@ export class Renderer {
     return this._seekingRenderMode;
   }
 
-  setSeekingRenderMode(mode: SeekingRenderMode): void {
+  set seekingRenderMode(mode: SeekingRenderMode) {
     this._seekingRenderMode = mode;
   }
 
