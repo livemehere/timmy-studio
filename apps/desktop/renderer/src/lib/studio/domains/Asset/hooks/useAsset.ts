@@ -2,9 +2,9 @@ import type { IAsset } from '@renderer/lib/studio/domains/Asset/types';
 import { useDocStore } from '@renderer/lib/studio/hooks/useStudioStores';
 import { useMemo } from 'react';
 
-import { AssetUtils } from '@renderer/lib/studio/domains/Asset/utils';
-import { ClipUtils } from '@renderer/lib/studio/domains/Clip/utils';
-import { TrackUtils } from '@renderer/lib/studio/domains/Track/utils';
+import { Asset } from '@renderer/lib/studio/domains/Asset/Asset';
+import { Clip } from '@renderer/lib/studio/domains/Clip/Clip';
+import { Track } from '@renderer/lib/studio/domains/Track/Track';
 import type { ITrack } from '../../Track/types';
 
 export function useAsset(asset: IAsset) {
@@ -15,12 +15,12 @@ export function useAsset(asset: IAsset) {
   const settings = useDocStore((state) => state.settings);
 
   const status = useMemo(() => {
-    return AssetUtils.getAssetStatus(asset);
+    return Asset.getStatus(asset);
   }, [asset]);
 
   const firstTrackId = useMemo(() => {
-    const trackType = TrackUtils.AssetTypeToTrackType(asset.type);
-    const existTrack = TrackUtils.findFirstTrack(tracks, trackType);
+    const trackType = Track.AssetTypeToTrackType(asset.type);
+    const existTrack = Track.findFirstTrack(tracks, trackType);
     return existTrack?.id;
   }, [asset.type, tracks]);
 
@@ -30,7 +30,7 @@ export function useAsset(asset: IAsset) {
       trackId?: string;
 
       /** 비디오/이미지 에셋에 기본 placement preset 적용 */
-      placementPresetKey?: keyof typeof ClipUtils.ASSET_PLACEMENT_PRESETS;
+      placementPresetKey?: keyof typeof Clip.ASSET_PLACEMENT_PRESETS;
     } = {}
   ) => {
     if (!status.isReady) {
@@ -41,19 +41,18 @@ export function useAsset(asset: IAsset) {
     if (options.trackId) {
       targetTrack = getTrackById(options.trackId)!;
     } else {
-      targetTrack = TrackUtils.createTrack(
-        TrackUtils.AssetTypeToTrackType(asset.type)
+      targetTrack = Track.createTrackData(
+        Track.AssetTypeToTrackType(asset.type)
       );
       addTrackToDoc(targetTrack);
     }
 
-    const clip = ClipUtils.createFromAsset(asset);
+    const clip = Clip.createFromAsset(asset);
 
     // renderer 에 들어가는 clip 은 transform 정렬을 처리함.
     if (clip.type !== 'audio' && options.placementPresetKey) {
-      const preset =
-        ClipUtils.ASSET_PLACEMENT_PRESETS[options.placementPresetKey];
-      const computed = ClipUtils.computePlacement({
+      const preset = Clip.ASSET_PLACEMENT_PRESETS[options.placementPresetKey];
+      const computed = Clip.computePlacement({
         total: { width: settings.width, height: settings.height },
         target: {
           width: clip.transforms.size!.width,
@@ -66,7 +65,7 @@ export function useAsset(asset: IAsset) {
     }
 
     // 시작 시간을 트랙의 마지막 클립 끝나는 시간으로 조정
-    const startTime = TrackUtils.getLastestClipEndTime(targetTrack);
+    const startTime = Track.getLastestClipEndTime(targetTrack);
     clip.startTime = startTime;
     clip.endTime = startTime + (clip.endTime - clip.startTime);
 

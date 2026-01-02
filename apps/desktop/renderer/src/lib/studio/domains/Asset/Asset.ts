@@ -1,10 +1,7 @@
-import type {
-  AssetStatus,
-  IAsset,
-} from '@renderer/lib/studio/domains/Asset/types';
+import type { AssetStatus, IAsset } from './types';
 
-export class AssetUtils {
-  static getAssetStatus(asset: IAsset): AssetStatus {
+export class Asset {
+  static getStatus(asset: IAsset): AssetStatus {
     switch (asset.type) {
       case 'video':
         return {

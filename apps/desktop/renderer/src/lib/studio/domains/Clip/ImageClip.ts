@@ -4,7 +4,6 @@ import { Clip } from './Clip';
 import type { Renderer } from '@renderer/lib/studio/core/Renderer';
 import type { TickContext } from '@renderer/lib/studio/core/types';
 import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
-import { ClipUtils } from './utils';
 import type { IImageAsset } from '../Asset/types';
 
 export class ImageClip extends Clip {
@@ -41,8 +40,7 @@ export class ImageClip extends Clip {
   update(data: IImageClip): void {
     this.data = data;
     const curTimeMs = this.renderer.timer.currentMs;
-    const isVisible =
-      data.enabled && ClipUtils.isClipVisibleAtTime(data, curTimeMs);
+    const isVisible = data.enabled && this.isVisibleAt(curTimeMs);
     this.sprite.visible = isVisible;
     if (isVisible) {
       this.applyTransform(data.transforms);

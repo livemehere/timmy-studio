@@ -7,7 +7,6 @@ import type {
   SeekingRenderMode,
 } from '@renderer/lib/studio/core/types';
 import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
-import { ClipUtils } from './utils';
 import {
   didClipBecomeVisible,
   shouldStartVideoPlayback,
@@ -83,8 +82,7 @@ export class VideoClip extends Clip {
     this.data = data;
 
     const curTimeMs = this.renderer.timer.currentMs;
-    const isVisible =
-      data.enabled && ClipUtils.isClipVisibleAtTime(data, curTimeMs);
+    const isVisible = data.enabled && this.isVisibleAt(curTimeMs);
 
     this.sprite.visible = isVisible;
 
