@@ -1,22 +1,42 @@
-import { Sprite, Container } from 'pixi.js';
-import type {
-  ClipType,
-  IGraphicClip,
-  ITransform,
-} from '../../domains/Clip/types';
-import type { Renderer } from '../Renderer';
-import type { TickContext } from '../types';
+import { Container, Sprite } from 'pixi.js';
+import type { Renderer } from '@renderer/lib/studio/core/Renderer';
+import type { TickContext } from '@renderer/lib/studio/core/types';
+import type { IGraphicClip, ClipType, ITransform } from './types';
 
-export abstract class ClipRenderer<T extends IGraphicClip> {
+export abstract class Clip {
   abstract readonly type: ClipType;
-  protected constructor(public readonly renderer: Renderer) {}
+  public sprite: Sprite;
+  public id: string;
 
-  abstract add(clip: T, trackContainer: Container): Promise<void>;
-  abstract update(clip: T): void;
-  abstract remove(clipId: string): void;
+  // State for SeekSynchronizer
+  public dirty: boolean = false;
+  public dirtySessionId: number | null = null;
+
+  protected constructor(
+    public readonly renderer: Renderer,
+    public data: IGraphicClip
+  ) {
+    this.id = data.id;
+    this.sprite = new Sprite();
+    this.sprite.label = `Clip-${this.id}`;
+  }
+
+  abstract init(): Promise<void>;
+  abstract update(data: IGraphicClip): void;
+  abstract destroy(): void;
   abstract tick(ctx: TickContext): void;
 
-  protected applyTransform(sprite: Sprite, transforms: ITransform): void {
+  mount(container: Container) {
+    container.addChild(this.sprite);
+  }
+
+  unmount() {
+    this.sprite.parent?.removeChild(this.sprite);
+  }
+
+  protected applyTransform(transforms: ITransform): void {
+    const sprite = this.sprite;
+
     // 1) anchor
     if (transforms.anchorX !== undefined || transforms.anchorY !== undefined) {
       sprite.anchor.set(

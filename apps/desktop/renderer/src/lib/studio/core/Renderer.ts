@@ -1,26 +1,14 @@
 import { Application, Container, Sprite } from 'pixi.js';
-import type {
-  IGraphicClip,
-  ClipType,
-} from '@renderer/lib/studio/domains/Clip/types';
-import type { Timer } from '@renderer/lib/studio/core/Timer';
 import type { IVideoTrack } from '@renderer/lib/studio/domains/Track/types';
-import {
-  type ClipRenderer,
-  VideoClipRenderer,
-  ImageClipRenderer,
-  TextClipRenderer,
-  ShapeClipRenderer,
-} from '@renderer/lib/studio/core/ClipRenderer';
+import type { Timer } from '@renderer/lib/studio/core/Timer';
 import type {
-  ClipState,
   TickContext,
   SeekingRenderMode,
   DocGetter,
+  Dirtyable,
 } from './types';
-import { SeekSynchronizer } from './managers/SeekSynchronizer';
-import { SceneManager } from './managers/SceneManager';
 import { FrameExporter } from './managers/FrameExporter';
+import { Track } from '@renderer/lib/studio/domains/Track/Track';
 
 export class Renderer {
   // --------------------------------------------------------------------------
@@ -33,15 +21,22 @@ export class Renderer {
   private _isInitialized = false;
   private _seekingRenderMode: SeekingRenderMode = 'proxy'; // 탐색 시 렌더링 모드 (proxy 우선)
 
+  // Seek Synchronization State
+  private seekSessionId = 0;
+  private activeSeekWait: {
+    id: number;
+    targetMs: number;
+    remainingDirty: number;
+    started: boolean;
+    resolve: () => void;
+  } | null = null;
+
   // Pixi 어플리케이션
   private app: Application;
   private sceneContainer: Container;
 
-  // 관리되는 컨테이너 및 스프라이트 맵 -> SceneManager가 관리
-  // (Getter를 통해 접근 가능하도록 연결)
-
-  // 클립별 렌더링 상태 (dirty 체크 등)
-  public clipStates = new Map<string, ClipState>();
+  // Track 관리
+  public tracks = new Map<string, Track>();
 
   // 렌더링 루프 상태
   private lastIsPlaying = false;
@@ -52,12 +47,8 @@ export class Renderer {
   readonly getDoc: DocGetter;
 
   // 매니저
-  public seekSynchronizer: SeekSynchronizer;
-  public sceneManager: SceneManager;
+  // public seekSynchronizer: SeekSynchronizer; // REMOVED
   public frameExporter: FrameExporter;
-
-  // 클립 타입별 렌더러
-  private clipRenderers = new Map<ClipType, ClipRenderer<IGraphicClip>>();
 
   // --------------------------------------------------------------------------
   // 생성자 (Constructor)
@@ -66,7 +57,6 @@ export class Renderer {
     console.log('[Renderer] 생성됨');
     this.timer = timer;
     this.getDoc = docGetter;
-    this.seekSynchronizer = new SeekSynchronizer(timer);
 
     // Pixi 인스턴스 생성
     this.app = new Application();
@@ -76,19 +66,6 @@ export class Renderer {
 
     // 매니저 초기화
     this.frameExporter = new FrameExporter(this.app, docGetter);
-
-    // 각 클립 타입별 렌더러 초기화
-    this.clipRenderers.set('video', new VideoClipRenderer(this));
-    this.clipRenderers.set('image', new ImageClipRenderer(this));
-    this.clipRenderers.set('text', new TextClipRenderer(this));
-    this.clipRenderers.set('shape', new ShapeClipRenderer(this));
-
-    // SceneManager 초기화 (렌더러 의존성 주입)
-    this.sceneManager = new SceneManager(
-      this.sceneContainer,
-      this.clipStates,
-      this.clipRenderers
-    );
   }
 
   // --------------------------------------------------------------------------
@@ -121,14 +98,24 @@ export class Renderer {
     if (!this._isInitialized) return;
     if (!this.app || !this.app.stage) return;
 
-    this.sceneManager.destroy();
+    // 모든 트랙 정리
+    for (const trackId of this.tracks.keys()) {
+      this.removeTrack(trackId);
+    }
+    this.tracks.clear();
 
-    this.app.destroy(true);
-    this.app = null as any;
-    this.sceneContainer = null as any;
-    this.timer = null as any;
-    this.seekSynchronizer = null as any;
-    this.sceneManager = null as any;
+    // 씬 컨테이너 정리
+    if (this.sceneContainer) {
+      this.sceneContainer.destroy({ children: true });
+    }
+
+    // Pixi App 정리
+    this.app.destroy(true, {
+      children: true,
+      texture: true,
+      textureSource: true,
+    });
+
     this.frameExporter = null as any;
     this._isInitialized = false;
   }
@@ -149,16 +136,26 @@ export class Renderer {
   }
 
   get currentSeekSessionId(): number {
-    return this.seekSynchronizer.currentSeekSessionId;
+    return this.seekSessionId;
   }
 
-  // 하위 호환성을 위한 Getter들 (SceneManager로 위임)
+  // 하위 호환성을 위한 Getter들 (SceneManager로 위임되었던 것들 복구)
   get trackContainers(): Map<string, Container> {
-    return this.sceneManager.trackContainers;
+    const map = new Map<string, Container>();
+    for (const [id, track] of this.tracks) {
+      map.set(id, track.container);
+    }
+    return map;
   }
 
   get clipSprites(): Map<string, Sprite> {
-    return this.sceneManager.clipSprites;
+    const map = new Map<string, Sprite>();
+    for (const track of this.tracks.values()) {
+      for (const [id, clip] of track.clips) {
+        map.set(id, clip.sprite);
+      }
+    }
+    return map;
   }
 
   resize(width: number, height: number): void {
@@ -188,12 +185,85 @@ export class Renderer {
   // - 위임된 메서드들
   // --------------------------------------------------------------------------
 
-  async syncTracks(tracks: IVideoTrack[]) {
-    return this.sceneManager.syncTracks(tracks);
+  async syncTracks(tracksData: IVideoTrack[]) {
+    console.log(`[Renderer] 트랙 ${tracksData.length}개 동기화 시작`);
+    const trackIds = new Set(tracksData.map((t) => t.id));
+
+    // 1. 존재하지 않는 트랙 제거
+    for (const trackId of this.tracks.keys()) {
+      if (!trackIds.has(trackId)) {
+        this.removeTrack(trackId);
+      }
+    }
+
+    // 2. 트랙 추가 또는 업데이트
+    const tasks: Promise<void>[] = [];
+    for (const trackData of tracksData) {
+      if (this.tracks.has(trackData.id)) {
+        tasks.push(this.updateTrack(trackData));
+      } else {
+        tasks.push(this.addTrack(trackData));
+      }
+    }
+    await Promise.all(tasks);
+
+    // z-index 정렬 적용 (컨테이너 레벨)
+    this.sceneContainer.sortChildren();
+
+    // 동기화 결과 반환
+    const syncedClipIds: string[] = [];
+    for (const track of this.tracks.values()) {
+      for (const clipId of track.clips.keys()) {
+        syncedClipIds.push(clipId);
+      }
+    }
+
+    return {
+      syncedTrackIds: Array.from(this.tracks.keys()),
+      syncedClipIds: syncedClipIds,
+    };
+  }
+
+  private async addTrack(data: IVideoTrack) {
+    const track = new Track(this, data);
+
+    this.sceneContainer.addChild(track.container);
+    this.tracks.set(data.id, track);
+    console.log(`[Renderer] 트랙(${data.id}) 추가됨`);
+
+    await track.sync(data);
+  }
+
+  private async updateTrack(data: IVideoTrack) {
+    const track = this.tracks.get(data.id);
+    if (!track) return;
+
+    await track.sync(data);
+  }
+
+  private removeTrack(trackId: string): void {
+    const track = this.tracks.get(trackId);
+    if (!track) return;
+
+    this.sceneContainer.removeChild(track.container);
+    track.destroy();
+    this.tracks.delete(trackId);
+    console.log(`[Renderer] 트랙(${trackId}) 제거됨`);
   }
 
   removeClip(clipId: string): void {
-    this.sceneManager.removeClip(clipId);
+    for (const track of this.tracks.values()) {
+      if (track.clips.has(clipId)) {
+        // Track.ts의 clips public으로 접근하여 삭제 로직 수행
+        const clip = track.clips.get(clipId);
+        if (clip) {
+          clip.unmount();
+          clip.destroy();
+          track.clips.delete(clipId);
+        }
+        return;
+      }
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -205,12 +275,12 @@ export class Renderer {
     this.app.ticker.add(() => {
       const ctx = this.captureTickContext();
 
-      // 각 클립 렌더러에게 틱 위임
-      for (const renderer of this.clipRenderers.values()) {
-        renderer.tick(ctx);
+      // 각 트랙의 클립들에게 틱 위임
+      for (const track of this.tracks.values()) {
+        track.tick(ctx);
       }
 
-      this.seekSynchronizer.maybeResolveSeekWait(ctx.isSeeking);
+      this.maybeResolveSeekWait(ctx.isSeeking);
       this.commitFrameContext(ctx);
     });
   }
@@ -238,19 +308,89 @@ export class Renderer {
 
   // --------------------------------------------------------------------------
   // 탐색 대기 및 Dirty 관리 (Seek & Dirty Management)
-  // - 위임된 메서드들
   // --------------------------------------------------------------------------
 
+  /**
+   * 특정 시점으로의 탐색(Seek)이 렌더링적으로 완료될 때까지 대기합니다.
+   * 비디오 로딩이나 텍스처 업로드 등 비동기 작업이 완료되기를 기다립니다.
+   */
   waitForSeekSettled(targetMs: number): Promise<void> {
-    return this.seekSynchronizer.waitForSeekSettled(targetMs);
+    // 재생 중이 아니며 이미 해당 시간에 있다면 즉시 완료
+    if (!this.timer.isPlaying && this.timer.currentMs === targetMs) {
+      return Promise.resolve();
+    }
+
+    const id = ++this.seekSessionId;
+    return new Promise<void>((resolve) => {
+      this.activeSeekWait = {
+        id,
+        targetMs,
+        remainingDirty: 0,
+        started: false,
+        resolve,
+      };
+    });
   }
 
-  public markClipDirty(state: ClipState, sessionId: number | null): void {
-    this.seekSynchronizer.markClipDirty(state, sessionId);
+  /** 렌더 루프에서 호출되어 Seek 대기 상태를 해제할지 판단합니다. */
+  private maybeResolveSeekWait(isSeeking: boolean): void {
+    const wait = this.activeSeekWait;
+    if (!wait) return;
+
+    // 목표 시간에 도달했는지 확인
+    if (!this.timer.isPlaying && this.timer.currentMs === wait.targetMs) {
+      // Seek 중이거나 아직 시작 처리가 안 되었다면 시작 플래그 설정
+      if (isSeeking || !wait.started) {
+        wait.started = true;
+      }
+    }
+
+    // 대기 중인 비동기 작업(remainingDirty)이 없으면 완료 처리
+    if (wait.started && wait.remainingDirty === 0) {
+      this.activeSeekWait = null;
+      wait.resolve();
+    }
   }
 
-  public clearClipDirty(state: ClipState, sessionId: number | null): void {
-    this.seekSynchronizer.clearClipDirty(state, sessionId);
+  /** 클립의 상태가 변경되어 렌더링 업데이트가 필요함을 표시합니다. */
+  public markClipDirty(state: Dirtyable, sessionId: number | null): void {
+    if (!state.dirty) {
+      state.dirty = true;
+      state.dirtySessionId = sessionId;
+      const wait = this.activeSeekWait;
+      if (wait && sessionId != null && wait.id === sessionId) {
+        wait.remainingDirty += 1;
+      }
+      return;
+    }
+
+    if (state.dirtySessionId !== sessionId) {
+      state.dirtySessionId = sessionId;
+    }
+  }
+
+  /** 클립의 렌더링 업데이트가 완료되었음을 표시합니다. */
+  public clearClipDirty(state: Dirtyable, sessionId: number | null): void {
+    if (!state.dirty) return;
+
+    const wait = this.activeSeekWait;
+    if (
+      wait &&
+      sessionId != null &&
+      wait.id === sessionId &&
+      state.dirtySessionId === sessionId
+    ) {
+      wait.remainingDirty = Math.max(0, wait.remainingDirty - 1);
+    }
+
+    state.dirty = false;
+    state.dirtySessionId = null;
+
+    // 모든 작업이 완료되었다면 대기 해제
+    if (wait && wait.started && wait.remainingDirty === 0) {
+      this.activeSeekWait = null;
+      wait.resolve();
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -267,14 +407,21 @@ export class Renderer {
   }
 
   getTrackContainer(trackId: string): Container | undefined {
-    return this.sceneManager.getTrackContainer(trackId);
+    return this.tracks.get(trackId)?.container;
   }
 
   getClipSprite(clipId: string): Sprite | undefined {
-    return this.sceneManager.getClipSprite(clipId);
+    for (const track of this.tracks.values()) {
+      if (track.clips.has(clipId)) {
+        return track.clips.get(clipId)?.sprite;
+      }
+    }
+    return undefined;
   }
 
   getContainerByLabel(label: string): Container | undefined {
-    return this.sceneManager.getContainerByLabel(label);
+    return this.sceneContainer.children.find(
+      (child) => child.label === label
+    ) as Container | undefined;
   }
 }
