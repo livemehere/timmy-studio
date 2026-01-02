@@ -1,12 +1,13 @@
 import { Container, Sprite } from 'pixi.js';
 import { uid } from 'uid';
 import type { Renderer } from '@renderer/lib/studio/core/Renderer';
+import type { AudioRenderer } from '@renderer/lib/studio/core/AudioRenderer';
 import type { TickContext } from '@renderer/lib/studio/core/types';
 import type { IAsset } from '../Asset/types';
 import type { IShapeData } from '@renderer/lib/studio/types/shape';
 import type { ITextData } from '@renderer/lib/studio/types/text';
 import type {
-  IGraphicClip,
+  // IGraphicClip,
   ClipType,
   ITransform,
   IBaseClip,
@@ -15,6 +16,7 @@ import type {
   IAudioClip,
   IShapeClip,
   ITextClip,
+  IClip,
 } from './types';
 
 export type FitMode =
@@ -85,16 +87,16 @@ export abstract class Clip {
   public dirtySessionId: number | null = null;
 
   protected constructor(
-    public readonly renderer: Renderer,
-    public data: IGraphicClip
+    public readonly renderer: Renderer | AudioRenderer,
+    public data: IClip
   ) {
     this.id = data.id;
-    this.sprite = new Sprite();
+    this.sprite = new Sprite(); // AudioClip doesn't need this, but keeps it for now
     this.sprite.label = `Clip-${this.id}`;
   }
 
   abstract init(): Promise<void>;
-  abstract update(data: IGraphicClip): void;
+  abstract update(data: IClip): void;
   abstract destroy(): void;
   abstract tick(ctx: TickContext): void;
 
@@ -208,7 +210,7 @@ export abstract class Clip {
           type: 'video',
           assetId: asset.id,
           trimStart: 0,
-          trimEnd: asset.metadata.durationMs,
+          trimEnd: 0,
         } as IVideoClip;
       case 'image':
         return {
@@ -223,7 +225,7 @@ export abstract class Clip {
           type: 'audio',
           assetId: asset.id,
           trimStart: 0,
-          trimEnd: asset.metadata.durationMs!,
+          trimEnd: 0,
           volume: 1,
         } as IAudioClip;
       default:

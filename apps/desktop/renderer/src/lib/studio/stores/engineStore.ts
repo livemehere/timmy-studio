@@ -1,14 +1,14 @@
 import { Timer } from '../core/Timer';
 import { Renderer } from '../core/Renderer';
 import { type DocGetter } from '../core/types';
-import { AudioManager } from '../core/AudioManager';
+import { AudioRenderer } from '../core/AudioRenderer';
 import { createStore } from 'zustand/vanilla';
 
 export interface EngineState {
   // Engine instances (런타임 인스턴스 소유)
   timer: Timer | null;
   renderer: Renderer | null;
-  audioManager: AudioManager | null;
+  audioRenderer: AudioRenderer | null;
 
   // Lifecycle state
   isInitialized: boolean;
@@ -19,7 +19,7 @@ export interface EngineState {
   syncedVideoClipIds: string[];
 
   // AudioManager sync state (Audio 객체 접근용)
-  // TODO: AudioManager 구현 완료 후 사용
+  // TODO: AudioRenderer 구현 완료 후 사용
   isAudioReady: boolean;
   syncedAudioTrackIds: string[];
   syncedAudioClipIds: string[];
@@ -49,17 +49,22 @@ export const createEngineStore = (docGetter: DocGetter) => {
   const initialProject = docGetter();
   const timer = new Timer(initialProject.settings.duration);
   const renderer = new Renderer(timer, docGetter);
-  const audioManager = new AudioManager(initialProject.settings.sampleRate);
+  const audioRenderer = new AudioRenderer(timer, docGetter);
 
   // Timer가 seek 제어를 할 때 Renderer의 seek 처리 완료를 대기하도록 설정
   timer.setSeekWaiter((ms) => renderer.waitForSeekSettled(ms));
+
+  // AudioRenderer는 내부적으로 Timer를 구독하여 동작하므로 별도 연결 불필요
+  // renderer.addTickListener((ctx) => {
+  //   audioRenderer.tick(ctx);
+  // });
 
   console.groupEnd();
 
   return createStore<EngineStore>()((set, get) => ({
     timer,
     renderer,
-    audioManager,
+    audioRenderer,
     isInitialized: true,
 
     // Renderer sync state
@@ -84,8 +89,8 @@ export const createEngineStore = (docGetter: DocGetter) => {
         state.renderer.destroy();
       }
 
-      if (state.audioManager) {
-        state.audioManager.destroy();
+      if (state.audioRenderer) {
+        state.audioRenderer.destroy();
       }
 
       // Cleanup timer
@@ -97,7 +102,7 @@ export const createEngineStore = (docGetter: DocGetter) => {
       set({
         timer: null,
         renderer: null,
-        audioManager: null,
+        audioRenderer: null,
         isInitialized: false,
         isRendererReady: false,
         syncedVideoTrackIds: [],

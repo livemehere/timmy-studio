@@ -35,7 +35,7 @@ export function bindDocToEngine(
       engine.renderer!.background = state.settings.background;
       engine.renderer!.frameRate = state.settings.frameRate;
       engine.timer!.durationMs = state.settings.duration;
-      engine.audioManager!.sampleRate = state.settings.sampleRate;
+      // AudioRenderer는 sampleRate 변경을 지원하지 않거나 재초기화 필요. 일단 무시 혹은 TODO
     }
 
     // 얕은 비교로 변경 감지
@@ -82,14 +82,12 @@ function syncVideoTracks(engine: EngineStore, tracks: IVideoTrack[]) {
  */
 function syncAudioTracks(engine: EngineStore, tracks: IAudioTrack[]) {
   engine
-    .audioManager!.syncTracks(tracks)
+    .audioRenderer!.syncTracks(tracks)
     .then(({ syncedTrackIds, syncedClipIds }) => {
       engine.applyAudioSyncResult({
         trackIds: syncedTrackIds,
         clipIds: syncedClipIds,
       });
-      console.log(
-        `[AudioManager] 트랙 동기화 완료 - tracks: ${syncedTrackIds.length}개, clips: ${syncedClipIds.length}개`
-      );
+      console.log(`[AudioRenderer] 트랙 동기화 완료`);
     });
 }

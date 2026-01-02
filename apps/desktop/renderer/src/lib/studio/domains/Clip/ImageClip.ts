@@ -21,7 +21,7 @@ export class ImageClip extends Clip {
   async init(): Promise<void> {
     const asset = this.renderer
       .getDoc()
-      .assets.find((a) => a.id === this.data.assetId) as IImageAsset;
+      .assets.find((a: any) => a.id === this.data.assetId) as IImageAsset;
     if (!asset || asset.type !== 'image') return;
 
     try {

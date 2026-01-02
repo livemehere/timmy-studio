@@ -1,7 +1,7 @@
 import { Texture, VideoSource } from 'pixi.js';
 import type { IVideoClip } from './types';
 import { Clip } from './Clip';
-import type { Renderer } from '@renderer/lib/studio/core/Renderer';
+import { Renderer } from '@renderer/lib/studio/core/Renderer';
 import type {
   TickContext,
   SeekingRenderMode,
@@ -36,7 +36,7 @@ export class VideoClip extends Clip {
   async init(): Promise<void> {
     const asset = this.renderer
       .getDoc()
-      .assets.find((a) => a.id === this.data.assetId) as IVideoAsset;
+      .assets.find((a: any) => a.id === this.data.assetId) as IVideoAsset;
 
     if (!asset || asset.type !== 'video') {
       console.warn(
@@ -242,7 +242,11 @@ export class VideoClip extends Clip {
     clipRelativeTime: number
   ): void {
     const mode: SeekingRenderMode =
-      proxy && this.renderer.seekingRenderMode === 'proxy' ? 'proxy' : 'origin';
+      proxy &&
+      this.renderer instanceof Renderer && // Type guard
+      this.renderer.seekingRenderMode === 'proxy'
+        ? 'proxy'
+        : 'origin';
 
     if (mode === 'proxy') {
       if (this.isUsingProxy && proxy) {
@@ -272,6 +276,7 @@ export class VideoClip extends Clip {
     origin: HTMLVideoElement,
     proxy: HTMLVideoElement
   ): void {
+    if (!(this.renderer instanceof Renderer)) return;
     this.pendingOriginSwap = true;
     const sessionId = this.renderer.currentSeekSessionId;
     this.renderer.markClipDirty(this, sessionId);
@@ -287,13 +292,17 @@ export class VideoClip extends Clip {
         this.pendingOriginSwap = false;
         proxy.pause();
 
-        this.renderer.clearClipDirty(this, sessionId);
+        if (this.renderer instanceof Renderer) {
+          this.renderer.clearClipDirty(this, sessionId);
+        }
         if (this.renderer.timer.isPlaying) {
           this.startVideoPlayback(clip, origin);
         }
       } else {
         this.pendingOriginSwap = false;
-        this.renderer.clearClipDirty(this, sessionId);
+        if (this.renderer instanceof Renderer) {
+          this.renderer.clearClipDirty(this, sessionId);
+        }
       }
     };
     origin.addEventListener('seeked', onSeeked, { once: true });
@@ -305,6 +314,7 @@ export class VideoClip extends Clip {
     proxy: HTMLVideoElement,
     targetTime: number
   ): void {
+    if (!(this.renderer instanceof Renderer)) return;
     this.pendingOriginSwap = true;
     const sessionId = this.renderer.currentSeekSessionId;
     this.renderer.markClipDirty(this, sessionId);
@@ -322,7 +332,9 @@ export class VideoClip extends Clip {
       this.pendingOriginSwap = false;
       proxy.pause();
       proxy.currentTime = origin.currentTime;
-      this.renderer.clearClipDirty(this, sessionId);
+      if (this.renderer instanceof Renderer) {
+        this.renderer.clearClipDirty(this, sessionId);
+      }
     };
     origin.addEventListener('seeked', onSeeked, { once: true });
   }
@@ -332,6 +344,7 @@ export class VideoClip extends Clip {
     origin: HTMLVideoElement,
     proxy: HTMLVideoElement
   ): void {
+    if (!(this.renderer instanceof Renderer)) return;
     this.pendingProxySwap = true;
     const sessionId = this.renderer.currentSeekSessionId;
     this.renderer.markClipDirty(this, sessionId);
@@ -343,10 +356,14 @@ export class VideoClip extends Clip {
         this.swapVideoTexture(proxy);
         this.isUsingProxy = true;
         this.pendingProxySwap = false;
-        this.renderer.clearClipDirty(this, sessionId);
+        if (this.renderer instanceof Renderer) {
+          this.renderer.clearClipDirty(this, sessionId);
+        }
       } else {
         this.pendingProxySwap = false;
-        this.renderer.clearClipDirty(this, sessionId);
+        if (this.renderer instanceof Renderer) {
+          this.renderer.clearClipDirty(this, sessionId);
+        }
       }
     };
     proxy.addEventListener('seeked', onSeeked, { once: true });
@@ -385,6 +402,7 @@ export class VideoClip extends Clip {
       return;
     }
 
+    if (!(this.renderer instanceof Renderer)) return;
     this.lastSeekTime = targetTime;
     this.lastSeekTarget = target;
     const sessionId = this.renderer.currentSeekSessionId;
@@ -392,7 +410,9 @@ export class VideoClip extends Clip {
 
     const onSeeked = () => {
       video.removeEventListener('seeked', onSeeked);
-      this.renderer.clearClipDirty(this, sessionId);
+      if (this.renderer instanceof Renderer) {
+        this.renderer.clearClipDirty(this, sessionId);
+      }
     };
     video.addEventListener('seeked', onSeeked, { once: true });
     video.currentTime = targetTime;
