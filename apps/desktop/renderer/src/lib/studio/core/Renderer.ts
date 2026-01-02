@@ -1,4 +1,4 @@
-import { Application, Container, Sprite } from 'pixi.js';
+import { Application, Container, Sprite, Rectangle } from 'pixi.js';
 import type { IVideoTrack } from '@renderer/lib/studio/domains/Track/types';
 import type { Timer } from '@renderer/lib/studio/core/Timer';
 import type {
@@ -7,7 +7,6 @@ import type {
   DocGetter,
   Dirtyable,
 } from './types';
-import { FrameExporter } from './managers/FrameExporter';
 import { Track } from '@renderer/lib/studio/domains/Track/Track';
 
 export class Renderer {
@@ -48,7 +47,7 @@ export class Renderer {
 
   // 매니저
   // public seekSynchronizer: SeekSynchronizer; // REMOVED
-  public frameExporter: FrameExporter;
+  // public frameExporter: FrameExporter; // REMOVED
 
   // --------------------------------------------------------------------------
   // 생성자 (Constructor)
@@ -65,7 +64,7 @@ export class Renderer {
     this.app.stage.addChild(this.sceneContainer);
 
     // 매니저 초기화
-    this.frameExporter = new FrameExporter(this.app, docGetter);
+    // this.frameExporter = new FrameExporter(this.app, docGetter); // REMOVED
   }
 
   // --------------------------------------------------------------------------
@@ -116,7 +115,7 @@ export class Renderer {
       textureSource: true,
     });
 
-    this.frameExporter = null as any;
+    // this.frameExporter = null as any; // REMOVED
     this._isInitialized = false;
   }
 
@@ -395,15 +394,40 @@ export class Renderer {
 
   // --------------------------------------------------------------------------
   // 내보내기 및 헬퍼 메서드 (Export & Helpers)
-  // - 위임된 메서드들
   // --------------------------------------------------------------------------
 
-  async exportCurrentFrame() {
-    return this.frameExporter.exportCurrentFrame();
+  /** 현재 캔버스 화면을 HTMLCanvasElement로 추출합니다. */
+  async exportCurrentFrame(): Promise<HTMLCanvasElement> {
+    const canvas = this.app.renderer.extract.canvas(this.app.stage);
+    return canvas as unknown as HTMLCanvasElement;
   }
 
-  exportCurrentPixels() {
-    return this.frameExporter.exportCurrentPixels();
+  /** 현재 화면의 픽셀 데이터를 Uint8Array로 추출합니다. */
+  exportCurrentPixels(): { width: number; height: number; data: Uint8Array } {
+    const { settings } = this.getDoc();
+    const width = settings.width;
+    const height = settings.height;
+
+    const out = this.app.renderer.extract.pixels({
+      target: this.app.stage,
+      frame: new Rectangle(0, 0, width, height),
+      resolution: 1,
+    });
+
+    const data = new Uint8Array(
+      out.pixels.buffer,
+      out.pixels.byteOffset,
+      out.pixels.byteLength
+    );
+
+    const expectedBytes = width * height * 4;
+    if (data.byteLength !== expectedBytes) {
+      throw new Error(
+        `[Renderer] 바이트 길이 불일치: 결과 ${data.byteLength}, 예상 ${expectedBytes}`
+      );
+    }
+
+    return { width, height, data };
   }
 
   getTrackContainer(trackId: string): Container | undefined {
