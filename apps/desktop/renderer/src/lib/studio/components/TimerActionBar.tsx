@@ -29,6 +29,15 @@ export function TimerActionBar() {
     durationMs: 0,
   });
 
+  const [showExportSettings, setShowExportSettings] = useState(false);
+  const [exportRange, setExportRange] = useState({ start: 0, end: 0 });
+
+  useEffect(() => {
+    if (settings.duration) {
+      setExportRange((prev) => ({ ...prev, end: settings.duration }));
+    }
+  }, [settings.duration]);
+
   // Timer 상태 구독 (고주파 업데이트)
   useEffect(() => {
     if (!timer) return;
@@ -45,7 +54,10 @@ export function TimerActionBar() {
     }
   };
 
-  const handleExport = async () => {
+  const handleExport = async (options?: {
+    startMs?: number;
+    endMs?: number;
+  }) => {
     if (!timer || !renderer) return;
 
     const prevMode = renderer.seekingRenderMode;
@@ -68,8 +80,8 @@ export function TimerActionBar() {
       let invokeMsMax = 0;
       let framesSent = 0;
 
-      const startMs = 0;
-      const endMs = settings.duration;
+      const startMs = options?.startMs ?? 0;
+      const endMs = options?.endMs ?? settings.duration;
       const fps = Math.max(1, Math.round(settings.frameRate || 30));
       const stepMs = Math.max(1, Math.round(1000 / fps));
       const totalFrames = Math.floor((endMs - startMs) / stepMs) + 1;
@@ -327,7 +339,7 @@ export function TimerActionBar() {
         <div className="flex justify-end">
           <button
             className="flex items-center gap-2 bg-neutral-700 rounded px-2 py-0.5 hover:bg-neutral-600 cursor-pointer"
-            onClick={handleExport}
+            onClick={() => setShowExportSettings((prev) => !prev)}
           >
             <HardDriveUploadIcon size={16} />
             <span>내보내기</span>
@@ -335,28 +347,117 @@ export function TimerActionBar() {
         </div>
       </div>
 
-      <div className="fixed right-3 bottom-3 z-50 w-[420px] max-h-[70vh] overflow-auto rounded bg-neutral-800/90 border border-neutral-700 p-2">
-        <div className="text-xs text-neutral-200 mb-2">
-          Export (0~10s) → ~/Downloads/output.mp4
-        </div>
-
-        <div className="text-[10px] text-neutral-200 tabular-nums mb-2">
-          {exportState.error ? (
-            <span className="text-red-300">{exportState.error}</span>
-          ) : exportState.isExporting ? (
-            <span>
-              {exportState.percent.toFixed(1)}% ({exportState.writtenFrames}/
-              {exportState.totalFrames})
+      {showExportSettings && (
+        <div className="fixed right-3 bottom-12 z-50 w-[420px] max-h-[70vh] overflow-auto rounded bg-neutral-800/95 border border-neutral-700 p-3 shadow-xl backdrop-blur-sm">
+          <div className="flex justify-between items-center mb-3 border-b border-neutral-700 pb-2">
+            <span className="text-sm font-medium text-neutral-200">
+              내보내기 설정
             </span>
-          ) : exportState.outputPath ? (
-            <span>Done: {exportState.outputPath}</span>
-          ) : (
-            <span>Idle</span>
-          )}
-        </div>
+            <button
+              onClick={() => setShowExportSettings(false)}
+              className="text-neutral-400 hover:text-white"
+            >
+              ✕
+            </button>
+          </div>
 
-        <div ref={exportGridRef} className="grid grid-cols-2 gap-2" />
-      </div>
+          <div className="space-y-4">
+            {!exportState.isExporting && (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs text-neutral-400">
+                    <span>시작 시간</span>
+                    <span className="text-neutral-200 tabular-nums">
+                      {formatTime(exportRange.start)}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    className="w-full accent-blue-500 h-1 bg-neutral-600 rounded-lg appearance-none cursor-pointer"
+                    min={0}
+                    max={settings.duration}
+                    step={100}
+                    value={exportRange.start}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setExportRange((prev) => ({
+                        ...prev,
+                        start: Math.min(val, prev.end),
+                      }));
+                    }}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs text-neutral-400">
+                    <span>종료 시간</span>
+                    <span className="text-neutral-200 tabular-nums">
+                      {formatTime(exportRange.end)}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    className="w-full accent-blue-500 h-1 bg-neutral-600 rounded-lg appearance-none cursor-pointer"
+                    min={0}
+                    max={settings.duration}
+                    step={100}
+                    value={exportRange.end}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setExportRange((prev) => ({
+                        ...prev,
+                        end: Math.max(val, prev.start),
+                      }));
+                    }}
+                  />
+                </div>
+
+                <button
+                  className="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium py-2 rounded transition-colors"
+                  onClick={() =>
+                    handleExport({
+                      startMs: exportRange.start,
+                      endMs: exportRange.end,
+                    })
+                  }
+                >
+                  Export MP4 ({formatTime(exportRange.end - exportRange.start)})
+                </button>
+              </div>
+            )}
+
+            <div className="text-[10px] text-neutral-200 tabular-nums">
+              {exportState.error ? (
+                <div className="p-2 bg-red-900/50 rounded border border-red-800 text-red-200">
+                  {exportState.error}
+                </div>
+              ) : exportState.isExporting ? (
+                <div className="space-y-2">
+                  <div className="w-full bg-neutral-700 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="bg-blue-500 h-full transition-all duration-300"
+                      style={{ width: `${exportState.percent}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-neutral-400">
+                    <span>Exporting...</span>
+                    <span>
+                      {exportState.percent.toFixed(1)}% (
+                      {exportState.writtenFrames}/{exportState.totalFrames})
+                    </span>
+                  </div>
+                </div>
+              ) : exportState.outputPath ? (
+                <div className="p-2 bg-green-900/30 rounded border border-green-800 text-green-300">
+                  Done: {exportState.outputPath}
+                </div>
+              ) : null}
+            </div>
+
+            <div ref={exportGridRef} className="grid grid-cols-4 gap-1" />
+          </div>
+        </div>
+      )}
     </>
   );
 }
