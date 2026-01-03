@@ -1,5 +1,5 @@
 import { Clapperboard, House, Settings, Video } from 'lucide-react';
-import type { TDockItem } from '../components/UI/Docks';
+import type { TDockItem } from '../ui/Docks';
 
 export function createDockItems({
   navigate,
