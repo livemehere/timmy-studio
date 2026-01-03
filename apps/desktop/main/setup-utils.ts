@@ -37,8 +37,8 @@ export async function createWindow(options: CreateWindowOptions) {
       preload: getPreloadPath(),
       webSecurity: false,
       nodeIntegrationInWorker: true,
+      backgroundThrottling: false,
     },
-
     frame: false,
     titleBarStyle: 'hiddenInset',
   });
