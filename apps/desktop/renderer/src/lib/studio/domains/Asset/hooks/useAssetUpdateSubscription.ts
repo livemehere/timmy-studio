@@ -6,13 +6,13 @@ import type { IAsset } from '@renderer/lib/studio/domains/Asset/types';
  * @description main 프로세스에서 asset 의 비동기 처리가 끝나면 업데이트 이벤트가 오는데, 해당 에셋을 상태 업데이트
  */
 export function useAssetUpdateSubscription() {
-  const setAsset = useDocStore((state) => state.setAsset);
+  const updateAsset = useDocStore((state) => state.updateAsset);
 
   useEffect(() => {
     const unsubscribe = window.app.on('asset:update', (asset: IAsset) => {
-      setAsset(asset);
+      updateAsset(asset.id, asset);
     });
 
     return () => unsubscribe();
-  }, [setAsset]);
+  }, [updateAsset]);
 }

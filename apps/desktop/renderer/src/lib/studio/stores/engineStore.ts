@@ -10,26 +10,18 @@ export interface EngineState {
   renderer: Renderer | null;
   audioRenderer: AudioRenderer | null;
 
-  // Lifecycle state
-  isInitialized: boolean;
-
   // Renderer sync state (Pixi 객체 접근용)
-  isRendererReady: boolean;
   syncedGraphicTrackIds: string[];
   syncedGraphicClipIds: string[];
 
   // AudioManager sync state (Audio 객체 접근용)
   // TODO: AudioRenderer 구현 완료 후 사용
-  isAudioReady: boolean;
   syncedAudioTrackIds: string[];
   syncedAudioClipIds: string[];
 }
 
 export interface EngineActions {
   destroy: () => void;
-
-  setRendererReady: (ready: boolean) => void;
-  setAudioReady: (ready: boolean) => void;
 
   applyRendererSyncResult: (payload: {
     trackIds: string[];
@@ -65,15 +57,12 @@ export const createEngineStore = (docGetter: DocGetter) => {
     timer,
     renderer,
     audioRenderer,
-    isInitialized: true,
 
     // Renderer sync state
-    isRendererReady: true,
     syncedGraphicTrackIds: [],
     syncedGraphicClipIds: [],
 
     // AudioManager sync state
-    isAudioReady: true,
     syncedAudioTrackIds: [],
     syncedAudioClipIds: [],
 
@@ -103,24 +92,12 @@ export const createEngineStore = (docGetter: DocGetter) => {
         timer: null,
         renderer: null,
         audioRenderer: null,
-        isInitialized: false,
-        isRendererReady: false,
         syncedGraphicTrackIds: [],
         syncedGraphicClipIds: [],
-        isAudioReady: false,
         syncedAudioTrackIds: [],
         syncedAudioClipIds: [],
       });
     },
-
-    setRendererReady: (ready) => {
-      set({ isRendererReady: ready });
-    },
-
-    setAudioReady: (ready) => {
-      set({ isAudioReady: ready });
-    },
-
     applyRendererSyncResult: ({ trackIds, clipIds }) => {
       set({
         syncedGraphicTrackIds: trackIds,

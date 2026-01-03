@@ -62,18 +62,16 @@ export interface DocActions {
     clipId: string,
     updates: Partial<IClip>
   ) => void;
+  getClipById: <T extends IClip = IClip>(
+    trackId: string,
+    clipId: string
+  ) => T | undefined;
 
   // Asset actions
   addAsset: (asset: IAsset | IAsset[]) => void;
   removeAsset: (assetId: string | string[]) => void;
   updateAsset: (assetId: string, updates: Partial<IAsset>) => void;
-  setAsset: (asset: IAsset) => void;
   getAssetById: AssetGetter;
-
-  getClipById: <T extends IClip = IClip>(
-    trackId: string,
-    clipId: string
-  ) => T | undefined;
 
   // Reset
   reset: () => void;
@@ -238,15 +236,6 @@ export const createDocStore = (initialProject?: IProject) => {
         set({
           assets: currentAssets.map((asset) =>
             asset.id === assetId ? ({ ...asset, ...updates } as IAsset) : asset
-          ),
-        });
-      },
-
-      setAsset: (nextAsset) => {
-        const currentAssets = get().assets;
-        set({
-          assets: currentAssets.map((asset) =>
-            asset.id === nextAsset.id ? nextAsset : asset
           ),
         });
       },

@@ -4,6 +4,8 @@ import type { DocGetter } from './types';
 import { AudioTrack } from '@renderer/lib/studio/domains/Track/AudioTrack';
 
 export class AudioRenderer {
+  public sampleRate: number = 44100;
+
   // Audio Context
   public audioContext: AudioContext;
   public masterNode: GainNode;

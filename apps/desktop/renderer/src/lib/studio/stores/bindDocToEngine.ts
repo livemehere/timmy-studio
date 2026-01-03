@@ -19,15 +19,14 @@ export function bindDocToEngine(
   const engine = engineStore.getState();
   const doc = docStore.getState();
 
-  const initialVideoTracks = doc.tracks.filter(
-    (track) => track.type === 'graphic'
-  ) as IGraphicTrack[];
-  const initialAudioTracks = doc.tracks.filter(
-    (track) => track.type === 'audio'
-  ) as IAudioTrack[];
-
-  syncGraphicTracks(engine, initialVideoTracks);
-  syncAudioTracks(engine, initialAudioTracks);
+  syncGraphicTracks(
+    engine,
+    doc.tracks.filter((track) => track.type === 'graphic')
+  );
+  syncAudioTracks(
+    engine,
+    doc.tracks.filter((track) => track.type === 'audio')
+  );
 
   const unsubscribe = docStore.subscribe((state, prevState) => {
     if (!isEqual(state.settings, prevState.settings)) {
@@ -35,21 +34,21 @@ export function bindDocToEngine(
       engine.renderer!.background = state.settings.background;
       engine.renderer!.frameRate = state.settings.frameRate;
       engine.timer!.durationMs = state.settings.duration;
-      // AudioRenderer는 sampleRate 변경을 지원하지 않거나 재초기화 필요. 일단 무시 혹은 TODO
+      engine.audioRenderer!.sampleRate = state.settings.sampleRate;
     }
 
     // 얕은 비교로 변경 감지
     if (state.tracks !== prevState.tracks) {
       console.log('[Binding] 트랙 변경이 감지되었습니다');
-      const newVideoTracks = state.tracks.filter(
-        (track) => track.type === 'graphic'
-      ) as IGraphicTrack[];
-      const newAudioTracks = state.tracks.filter(
-        (track) => track.type === 'audio'
-      ) as IAudioTrack[];
 
-      syncGraphicTracks(engine, newVideoTracks);
-      syncAudioTracks(engine, newAudioTracks);
+      syncGraphicTracks(
+        engine,
+        doc.tracks.filter((track) => track.type === 'graphic')
+      );
+      syncAudioTracks(
+        engine,
+        doc.tracks.filter((track) => track.type === 'audio')
+      );
     }
   });
 
