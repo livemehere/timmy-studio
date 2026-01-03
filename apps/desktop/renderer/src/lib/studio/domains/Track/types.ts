@@ -3,7 +3,7 @@ import type {
   IGraphicClip,
 } from '@renderer/lib/studio/domains/Clip/types';
 
-export type TrackType = 'video' | 'audio';
+export type TrackType = 'graphic' | 'audio';
 
 export interface IBaseTrack {
   id: string;
@@ -13,8 +13,8 @@ export interface IBaseTrack {
   zIndex: number;
 }
 
-export interface IVideoTrack extends IBaseTrack {
-  type: 'video';
+export interface IGraphicTrack extends IBaseTrack {
+  type: 'graphic';
   clips: IGraphicClip[];
   opacity: number; // 0-1
 }
@@ -25,4 +25,4 @@ export interface IAudioTrack extends IBaseTrack {
   volume: number; // 0-3
 }
 
-export type ITrack = IVideoTrack | IAudioTrack;
+export type ITrack = IGraphicTrack | IAudioTrack;
