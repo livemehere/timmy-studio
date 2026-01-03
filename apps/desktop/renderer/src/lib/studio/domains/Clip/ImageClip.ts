@@ -1,8 +1,8 @@
 import { Texture } from 'pixi.js';
 import type { IImageClip } from './types';
 import { Clip } from './Clip';
-import type { Renderer } from '@renderer/lib/studio/core/Renderer';
-import type { TickContext } from '@renderer/lib/studio/core/types';
+import type { Renderer } from '@renderer/lib/studio/engine/Renderer';
+import type { TickContext } from '@renderer/lib/studio/engine/types';
 import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
 import type { IImageAsset } from '../Asset/types';
 

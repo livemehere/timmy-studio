@@ -1,7 +1,7 @@
 import type { IAudioTrack } from './types';
-import type { AudioRenderer } from '@renderer/lib/studio/core/AudioRenderer';
+import type { AudioRenderer } from '@renderer/lib/studio/engine/AudioRenderer';
 import { AudioClip } from '../Clip/AudioClip';
-import type { TickContext } from '@renderer/lib/studio/core/types';
+import type { TickContext } from '@renderer/lib/studio/engine/types';
 import type { IAudioClip } from '../Clip/types';
 
 export class AudioTrack {

@@ -273,48 +273,61 @@ export class MediaUtils {
 
   /** 에셋 생성 */
   static async createAsset(filePath: string): Promise<IAsset> {
-    const ffprobeData = await MediaUtils.ffprobe(filePath);
-    const metadata = MediaUtils.createAssetMetadata(ffprobeData);
-    const assetType = MediaUtils.detectAssetType(ffprobeData);
+    try {
+      const ffprobeData = await MediaUtils.ffprobe(filePath);
+      const metadata = MediaUtils.createAssetMetadata(ffprobeData);
+      const assetType = MediaUtils.detectAssetType(ffprobeData);
 
-    const baseAsset: IBaseAsset = {
-      id: uid(8),
-      name: path.basename(filePath),
-      filePath,
-      metadata,
-    };
+      const baseAsset: IBaseAsset = {
+        id: uid(8),
+        name: path.basename(filePath),
+        filePath,
+        metadata,
+      };
 
-    switch (assetType) {
-      case 'video':
-        const proxyFilePath = MediaUtils.getProxyFilePath(filePath);
-        const proxyAlreadyExists = fs.existsSync(proxyFilePath); // 이미 있으면 생성 안함
-        return {
-          ...baseAsset,
-          type: 'video',
-          thumbnailPath: await MediaUtils.createThumbnailImage(filePath),
-          proxyFilePath,
-          isProxyReady: proxyAlreadyExists,
-        };
-      case 'audio':
-        return {
-          ...baseAsset,
-          type: 'audio',
-          thumbnailPath: undefined,
-        };
-      case 'image':
-        return {
-          ...baseAsset,
-          type: 'image',
-          thumbnailPath: filePath, // 파일 자체를 썸네일로 사용
-        };
-      case 'animated-image':
-        return {
-          ...baseAsset,
-          type: 'animated-image',
-          thumbnailPath: filePath, // 파일 자체를 썸네일로 사용
-        };
-      default:
-        throw new Error(`Unsupported asset type: ${assetType}`);
+      switch (assetType) {
+        case 'video':
+          const proxyFilePath = MediaUtils.getProxyFilePath(filePath);
+          const proxyAlreadyExists = fs.existsSync(proxyFilePath); // 이미 있으면 생성 안함
+          return {
+            ...baseAsset,
+            type: 'video',
+            thumbnailPath: await MediaUtils.createThumbnailImage(filePath),
+            proxyFilePath,
+            isProxyReady: proxyAlreadyExists,
+          };
+        case 'audio':
+          return {
+            ...baseAsset,
+            type: 'audio',
+            thumbnailPath: undefined,
+          };
+        case 'image':
+          return {
+            ...baseAsset,
+            type: 'image',
+            thumbnailPath: filePath, // 파일 자체를 썸네일로 사용
+          };
+        case 'animated-image':
+          return {
+            ...baseAsset,
+            type: 'animated-image',
+            thumbnailPath: filePath, // 파일 자체를 썸네일로 사용
+          };
+        default:
+          throw new Error(`Unsupported asset type: ${assetType}`);
+      }
+    } catch (e) {
+      console.error(`[MediaUtils] 에셋 생성 실패 (${filePath}):`, e);
+      // 에러 발생 시 isLoadError 플래그와 함께 최소한의 정보 반환
+      return {
+        id: uid(8),
+        name: path.basename(filePath),
+        filePath,
+        metadata: { size: 0 },
+        type: 'video', // 기본값
+        isLoadError: true,
+      } as IAsset;
     }
   }
 

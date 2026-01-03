@@ -1,11 +1,11 @@
 import { Texture, VideoSource } from 'pixi.js';
 import type { IVideoClip } from './types';
 import { Clip } from './Clip';
-import { Renderer } from '@renderer/lib/studio/core/Renderer';
+import { Renderer } from '@renderer/lib/studio/engine/Renderer';
 import type {
   TickContext,
   SeekingRenderMode,
-} from '@renderer/lib/studio/core/types';
+} from '@renderer/lib/studio/engine/types';
 import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
 import {
   didClipBecomeVisible,

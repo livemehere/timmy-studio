@@ -1,8 +1,8 @@
 import { Container, Sprite } from 'pixi.js';
 import { uid } from 'uid';
-import type { Renderer } from '@renderer/lib/studio/core/Renderer';
-import type { AudioRenderer } from '@renderer/lib/studio/core/AudioRenderer';
-import type { TickContext } from '@renderer/lib/studio/core/types';
+import type { Renderer } from '@renderer/lib/studio/engine/Renderer';
+import type { AudioRenderer } from '@renderer/lib/studio/engine/AudioRenderer';
+import type { TickContext } from '@renderer/lib/studio/engine/types';
 import type { IAsset } from '../Asset/types';
 import type { IShapeData } from '@renderer/lib/studio/types/shape';
 import type { ITextData } from '@renderer/lib/studio/types/text';

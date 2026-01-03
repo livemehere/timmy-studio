@@ -1,8 +1,8 @@
 import type { IAudioClip } from './types';
-import type { AudioRenderer } from '@renderer/lib/studio/core/AudioRenderer';
+import type { AudioRenderer } from '@renderer/lib/studio/engine/AudioRenderer';
 import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
 import { Clip } from './Clip';
-import type { TickContext } from '@renderer/lib/studio/core/types';
+import type { TickContext } from '@renderer/lib/studio/engine/types';
 
 export class AudioClip extends Clip {
   readonly type = 'audio';

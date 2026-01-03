@@ -1,7 +1,7 @@
 import type { ITextClip } from './types';
 import { Clip } from './Clip';
-import type { Renderer } from '@renderer/lib/studio/core/Renderer';
-import type { TickContext } from '@renderer/lib/studio/core/types';
+import type { Renderer } from '@renderer/lib/studio/engine/Renderer';
+import type { TickContext } from '@renderer/lib/studio/engine/types';
 
 export class TextClip extends Clip {
   readonly type = 'text';

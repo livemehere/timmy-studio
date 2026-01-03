@@ -25,13 +25,19 @@ export function AssetItem({ asset }: { asset: IAsset }) {
       >
         <AssetPreviewContent asset={asset} />
         <MetadataOverlay metadata={asset.metadata} />
-        {!status.isReady && (
+        {!status.isReady && !status.isError && (
           <div className="absolute inset-0 bg-black/40 flex justify-center items-center">
             <Spinner strokeWidth={2} size={14} />
           </div>
         )}
+        {status.isError && (
+          <div className="absolute inset-0 bg-red-900/60 flex justify-center items-center">
+            <span className="text-red-200 text-[10px] font-bold">ERROR</span>
+          </div>
+        )}
         <button
-          className="absolute bottom-2.5 right-10 bg-[dodgerblue] rounded-full p-1 group-hover:block hidden cursor-pointer"
+          className="absolute bottom-2.5 right-10 bg-[dodgerblue] rounded-full p-1 group-hover:block hidden cursor-pointer disabled:hidden"
+          disabled={status.isError || !status.isReady}
           onClick={async () => {
             await addClip({
               placementPresetKey: 'containCenter',
@@ -43,7 +49,8 @@ export function AssetItem({ asset }: { asset: IAsset }) {
         </button>
 
         <button
-          className="absolute bottom-2.5 right-2.5 bg-[dodgerblue] rounded-full p-1 group-hover:block hidden cursor-pointer"
+          className="absolute bottom-2.5 right-2.5 bg-[dodgerblue] rounded-full p-1 group-hover:block hidden cursor-pointer disabled:hidden"
+          disabled={status.isError || !status.isReady}
           onClick={async () => {
             await addClip({
               trackId: firstTrackId, // 없으면 새로운 트랙 생성됨

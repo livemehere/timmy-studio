@@ -1,6 +1,6 @@
 import { Application, Container, Sprite, Rectangle } from 'pixi.js';
 import type { IVideoTrack } from '@renderer/lib/studio/domains/Track/types';
-import type { Timer } from '@renderer/lib/studio/core/Timer';
+import type { Timer } from '@renderer/lib/studio/engine/Timer';
 import type {
   TickContext,
   SeekingRenderMode,

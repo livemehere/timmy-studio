@@ -1,1 +1,0 @@
-export const NONE_VIDEO_CLIP_DEFAULT_DURATION_MS = 3000; // 3초

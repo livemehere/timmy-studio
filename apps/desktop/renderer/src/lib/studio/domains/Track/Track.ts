@@ -1,8 +1,8 @@
 import { Container } from 'pixi.js';
 import { uid } from 'uid';
-import type { Renderer } from '@renderer/lib/studio/core/Renderer';
+import type { Renderer } from '@renderer/lib/studio/engine/Renderer';
 import type { IVideoTrack, ITrack, TrackType, IAudioTrack } from './types';
-import type { TickContext } from '@renderer/lib/studio/core/types';
+import type { TickContext } from '@renderer/lib/studio/engine/types';
 import type {
   IGraphicClip,
   ClipType,

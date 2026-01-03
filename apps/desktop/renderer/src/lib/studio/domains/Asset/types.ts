@@ -16,6 +16,7 @@ export interface IBaseAsset {
   filePath: string;
   metadata: IAssetMetadata;
   thumbnailPath?: string;
+  isLoadError?: boolean;
 }
 
 export interface IVideoAsset extends IBaseAsset {
@@ -47,4 +48,5 @@ export type IAsset =
 export interface AssetStatus {
   isReady: boolean;
   trackType: TrackType;
+  isError?: boolean;
 }

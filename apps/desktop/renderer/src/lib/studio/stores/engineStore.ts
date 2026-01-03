@@ -1,7 +1,7 @@
-import { Timer } from '../core/Timer';
-import { Renderer } from '../core/Renderer';
-import { type DocGetter } from '../core/types';
-import { AudioRenderer } from '../core/AudioRenderer';
+import { Timer } from '../engine/Timer';
+import { Renderer } from '../engine/Renderer';
+import { type DocGetter } from '../engine/types';
+import { AudioRenderer } from '../engine/AudioRenderer';
 import { createStore } from 'zustand/vanilla';
 
 export interface EngineState {
