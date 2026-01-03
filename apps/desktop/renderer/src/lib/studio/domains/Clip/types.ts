@@ -35,6 +35,11 @@ export interface IImageClip extends IGraphicClipBase {
   assetId: string;
 }
 
+export interface IAnimatedImageClip extends IGraphicClipBase {
+  type: 'animated-image';
+  assetId: string;
+}
+
 export interface IShapeClip extends IGraphicClipBase {
   type: 'shape';
   shapeData: IShapeData;

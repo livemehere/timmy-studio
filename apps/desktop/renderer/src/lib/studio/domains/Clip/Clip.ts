@@ -17,6 +17,7 @@ import type {
   IShapeClip,
   ITextClip,
   IClip,
+  IAnimatedImageClip,
 } from './types';
 
 export type FitMode =
@@ -201,12 +202,12 @@ export abstract class Clip {
 
   static createFromAsset(asset: IAsset) {
     const base = this.createBaseClipFromAsset(asset);
+    const transforms = this.createTransformFromAsset(asset);
     switch (asset.type) {
       case 'video':
-      case 'animated-image':
         return {
           ...base,
-          transforms: this.createTransformFromAsset(asset),
+          transforms,
           type: 'video',
           assetId: asset.id,
           trimStart: 0,
@@ -215,10 +216,17 @@ export abstract class Clip {
       case 'image':
         return {
           ...base,
-          transforms: this.createTransformFromAsset(asset),
+          transforms,
           type: 'image',
           assetId: asset.id,
         } as IImageClip;
+      case 'animated-image':
+        return {
+          ...base,
+          transforms,
+          type: 'animated-image',
+          assetId: asset.id,
+        } as IAnimatedImageClip;
       case 'audio':
         return {
           ...base,
