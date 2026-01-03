@@ -24,7 +24,7 @@ export default function VideoEditorPage() {
             id: '0e04a7e4',
             name: 'New Video Track',
             zIndex: 0,
-            type: 'video',
+            type: 'graphic',
             enabled: true,
             locked: false,
             clips: [
@@ -40,8 +40,8 @@ export default function VideoEditorPage() {
                 trimEnd: 0,
                 transforms: {
                   position: {
-                    x: 0,
-                    y: 437.5,
+                    x: 100,
+                    y: 737.5,
                   },
                   size: {
                     width: 720,
@@ -64,7 +64,7 @@ export default function VideoEditorPage() {
             id: '0f096654',
             name: 'New Video Track',
             zIndex: 0,
-            type: 'video',
+            type: 'graphic',
             enabled: true,
             locked: false,
             clips: [

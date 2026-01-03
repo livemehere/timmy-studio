@@ -4,7 +4,7 @@ import type { EngineStore } from './engineStore';
 import isEqual from 'fast-deep-equal';
 import type {
   IAudioTrack,
-  IVideoTrack,
+  IGraphicTrack,
 } from '@renderer/lib/studio/domains/Track/types';
 
 /**
@@ -20,13 +20,13 @@ export function bindDocToEngine(
   const doc = docStore.getState();
 
   const initialVideoTracks = doc.tracks.filter(
-    (track) => track.type === 'video'
-  );
+    (track) => track.type === 'graphic'
+  ) as IGraphicTrack[];
   const initialAudioTracks = doc.tracks.filter(
     (track) => track.type === 'audio'
-  );
+  ) as IAudioTrack[];
 
-  syncVideoTracks(engine, initialVideoTracks);
+  syncGraphicTracks(engine, initialVideoTracks);
   syncAudioTracks(engine, initialAudioTracks);
 
   const unsubscribe = docStore.subscribe((state, prevState) => {
@@ -42,13 +42,13 @@ export function bindDocToEngine(
     if (state.tracks !== prevState.tracks) {
       console.log('[Binding] 트랙 변경이 감지되었습니다');
       const newVideoTracks = state.tracks.filter(
-        (track) => track.type === 'video'
-      );
+        (track) => track.type === 'graphic'
+      ) as IGraphicTrack[];
       const newAudioTracks = state.tracks.filter(
         (track) => track.type === 'audio'
-      );
+      ) as IAudioTrack[];
 
-      syncVideoTracks(engine, newVideoTracks);
+      syncGraphicTracks(engine, newVideoTracks);
       syncAudioTracks(engine, newAudioTracks);
     }
   });
@@ -63,7 +63,7 @@ export function bindDocToEngine(
 /**
  * Video 트랙 동기화
  */
-function syncVideoTracks(engine: EngineStore, tracks: IVideoTrack[]) {
+function syncGraphicTracks(engine: EngineStore, tracks: IGraphicTrack[]) {
   engine
     .renderer!.syncTracks(tracks)
     .then(({ syncedTrackIds, syncedClipIds }) => {

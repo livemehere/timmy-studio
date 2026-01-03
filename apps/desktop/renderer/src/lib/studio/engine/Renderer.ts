@@ -1,5 +1,5 @@
 import { Application, Container, Sprite, Rectangle } from 'pixi.js';
-import type { IVideoTrack } from '@renderer/lib/studio/domains/Track/types';
+import type { IGraphicTrack } from '@renderer/lib/studio/domains/Track/types';
 import type { Timer } from '@renderer/lib/studio/engine/Timer';
 import type {
   TickContext,
@@ -184,7 +184,7 @@ export class Renderer {
   // - 위임된 메서드들
   // --------------------------------------------------------------------------
 
-  async syncTracks(tracksData: IVideoTrack[]) {
+  async syncTracks(tracksData: IGraphicTrack[]) {
     console.log(`[Renderer] 트랙 ${tracksData.length}개 동기화 시작`);
     const trackIds = new Set(tracksData.map((t) => t.id));
 
@@ -223,7 +223,7 @@ export class Renderer {
     };
   }
 
-  private async addTrack(data: IVideoTrack) {
+  private async addTrack(data: IGraphicTrack) {
     const track = new Track(this, data);
 
     this.sceneContainer.addChild(track.container);
@@ -233,7 +233,7 @@ export class Renderer {
     await track.sync(data);
   }
 
-  private async updateTrack(data: IVideoTrack) {
+  private async updateTrack(data: IGraphicTrack) {
     const track = this.tracks.get(data.id);
     if (!track) return;
 

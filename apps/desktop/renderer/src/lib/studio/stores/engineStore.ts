@@ -15,8 +15,8 @@ export interface EngineState {
 
   // Renderer sync state (Pixi 객체 접근용)
   isRendererReady: boolean;
-  syncedVideoTrackIds: string[];
-  syncedVideoClipIds: string[];
+  syncedGraphicTrackIds: string[];
+  syncedGraphicClipIds: string[];
 
   // AudioManager sync state (Audio 객체 접근용)
   // TODO: AudioRenderer 구현 완료 후 사용
@@ -69,8 +69,8 @@ export const createEngineStore = (docGetter: DocGetter) => {
 
     // Renderer sync state
     isRendererReady: true,
-    syncedVideoTrackIds: [],
-    syncedVideoClipIds: [],
+    syncedGraphicTrackIds: [],
+    syncedGraphicClipIds: [],
 
     // AudioManager sync state
     isAudioReady: true,
@@ -105,8 +105,8 @@ export const createEngineStore = (docGetter: DocGetter) => {
         audioRenderer: null,
         isInitialized: false,
         isRendererReady: false,
-        syncedVideoTrackIds: [],
-        syncedVideoClipIds: [],
+        syncedGraphicTrackIds: [],
+        syncedGraphicClipIds: [],
         isAudioReady: false,
         syncedAudioTrackIds: [],
         syncedAudioClipIds: [],
@@ -123,8 +123,8 @@ export const createEngineStore = (docGetter: DocGetter) => {
 
     applyRendererSyncResult: ({ trackIds, clipIds }) => {
       set({
-        syncedVideoTrackIds: trackIds,
-        syncedVideoClipIds: clipIds,
+        syncedGraphicTrackIds: trackIds,
+        syncedGraphicClipIds: clipIds,
       });
     },
 
