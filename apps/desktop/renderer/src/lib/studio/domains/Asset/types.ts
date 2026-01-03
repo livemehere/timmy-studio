@@ -46,7 +46,7 @@ export type IAsset =
 
 // asset ui 에서 사용할 상태
 export interface AssetStatus {
-  isReady: boolean;
   trackType: TrackType;
-  isError?: boolean;
+  isReady: boolean;
+  isError: boolean;
 }

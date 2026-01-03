@@ -69,7 +69,7 @@ export function useAsset(asset: IAsset) {
     clip.startTime = startTime;
     clip.endTime = startTime + (clip.endTime - clip.startTime);
 
-    addClipToDoc(targetTrack.id, clip);
+    addClipToDoc(targetTrack.id, clip as any);
   };
 
   return { addClip, firstTrackId, status };

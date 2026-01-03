@@ -1,19 +1,15 @@
 import { Texture, VideoSource } from 'pixi.js';
 import type { IVideoClip } from './types';
-import { Clip } from './Clip';
+import { GraphicClip } from './Clip';
 import { Renderer } from '@renderer/lib/studio/engine/Renderer';
 import type {
-  TickContext,
   SeekingRenderMode,
+  TickContext,
 } from '@renderer/lib/studio/engine/types';
 import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
-import {
-  didClipBecomeVisible,
-  shouldStartVideoPlayback,
-} from '@renderer/lib/studio/utils/playbackGuards';
 import type { IVideoAsset } from '../Asset/types';
 
-export class VideoClip extends Clip {
+export class VideoClip extends GraphicClip {
   readonly type = 'video';
   public data: IVideoClip;
 
@@ -27,6 +23,7 @@ export class VideoClip extends Clip {
   private lastSeekTarget: 'origin' | 'proxy' | null = null;
   private pendingProxySwap = false;
   private pendingOriginSwap = false;
+  private wasVisible = false;
 
   constructor(renderer: Renderer, data: IVideoClip) {
     super(renderer, data);
@@ -36,12 +33,12 @@ export class VideoClip extends Clip {
   async init(): Promise<void> {
     const asset = this.renderer
       .getDoc()
-      .assets.find((a: any) => a.id === this.data.assetId) as IVideoAsset;
+      .assets.find((a) => a.id === this.data.assetId) as
+      | IVideoAsset
+      | undefined;
 
     if (!asset || asset.type !== 'video') {
-      console.warn(
-        `[VideoClip] Asset not found or invalid: ${this.data.assetId}`
-      );
+      console.warn(`[VideoClip] Asset not found ${this.data.assetId}`);
       return;
     }
 
@@ -60,8 +57,7 @@ export class VideoClip extends Clip {
         resource: this.element,
         autoPlay: false,
       });
-      const texture = Texture.from(this.videoSource);
-      this.sprite.texture = texture;
+      this.sprite.texture = Texture.from(this.videoSource);
 
       if (this.proxyElement) {
         this.proxyVideoSource = new VideoSource({
@@ -78,11 +74,12 @@ export class VideoClip extends Clip {
     }
   }
 
+  // 수동 업데이트
   update(data: IVideoClip): void {
     this.data = data;
 
     const curTimeMs = this.renderer.timer.currentMs;
-    const isVisible = data.enabled && this.isVisibleAt(curTimeMs);
+    const isVisible = this.shouldRender(curTimeMs);
 
     this.sprite.visible = isVisible;
 
@@ -120,27 +117,23 @@ export class VideoClip extends Clip {
   }
 
   tick(ctx: TickContext): void {
-    this.updateSingleClipForFrame(ctx);
-  }
-
-  private updateSingleClipForFrame(ctx: TickContext): void {
     const { currentTime, isPlaying, playStateChanged, isSeeking } = ctx;
 
-    const wasClipVisible = this.sprite.visible;
-    const isClipVisible =
-      currentTime >= this.data.startTime && currentTime < this.data.endTime;
-
-    this.sprite.visible = isClipVisible;
-
-    const clipBecameVisible = didClipBecomeVisible({
-      wasVisible: wasClipVisible,
-      isVisible: isClipVisible,
-    });
-
-    if (!isClipVisible) {
+    // 렌더링 해야되지 않으면, 비디오를 정지하고, 스프라이트를 숨김
+    if (!this.shouldRender(currentTime)) {
       this.pauseVideoClip();
+      this.wasVisible = false;
+      this.sprite.visible = false;
       return;
     }
+
+    // 매 틱 마다 호출되는 함수이기 때문에, visible 상태가 false 일때만 true 로 처리
+    if (!this.sprite.visible) {
+      this.sprite.visible = true;
+    }
+
+    // 전 tick 에서 보이지 않았었다면, 이번 프레임이 보이게 된 시점
+    const clipBecameVisible = !this.wasVisible;
 
     this.applyTransform(this.data.transforms);
 
@@ -152,6 +145,8 @@ export class VideoClip extends Clip {
       isSeeking,
       clipBecameVisible
     );
+
+    this.wasVisible = true;
   }
 
   private handleVideoClip(
@@ -169,6 +164,7 @@ export class VideoClip extends Clip {
     const clipRelativeTime = this.calcClipRelativeTime(clip, currentTime);
 
     if (isPlaying) {
+      // 비디오가 재생중이지 않다면, 재생하도록 만들어야한다.
       this.handleVideoPlaying(
         clip,
         origin,
@@ -197,16 +193,15 @@ export class VideoClip extends Clip {
     playStateChanged: boolean,
     clipBecameVisible: boolean
   ): void {
+    // proxy 로 스왑중이라면 취소
     this.cancelPendingSwaps('proxy');
 
+    // proxy 를 이미 사용중이라면, origin 으로 스왑 요청
     if (this.isUsingProxy && proxy && !this.pendingOriginSwap) {
       this.requestSwapToOrigin(clip, origin, proxy);
     }
 
-    const shouldStartPlayback = shouldStartVideoPlayback({
-      playStateChanged,
-      clipBecameVisible,
-    });
+    const shouldStartPlayback = playStateChanged || clipBecameVisible;
 
     if (shouldStartPlayback && !this.pendingOriginSwap && !this.isUsingProxy) {
       if (clipBecameVisible) {
@@ -231,8 +226,6 @@ export class VideoClip extends Clip {
     if (isSeeking) {
       this.handleSeeking(clip, origin, proxy, clipRelativeTime);
     }
-
-    this.ensureProxyPaused(proxy);
   }
 
   private handleSeeking(
@@ -242,11 +235,7 @@ export class VideoClip extends Clip {
     clipRelativeTime: number
   ): void {
     const mode: SeekingRenderMode =
-      proxy &&
-      this.renderer instanceof Renderer && // Type guard
-      this.renderer.seekingRenderMode === 'proxy'
-        ? 'proxy'
-        : 'origin';
+      proxy && this.renderer.seekingRenderMode === 'proxy' ? 'proxy' : 'origin';
 
     if (mode === 'proxy') {
       if (this.isUsingProxy && proxy) {
@@ -276,7 +265,6 @@ export class VideoClip extends Clip {
     origin: HTMLVideoElement,
     proxy: HTMLVideoElement
   ): void {
-    if (!(this.renderer instanceof Renderer)) return;
     this.pendingOriginSwap = true;
     const sessionId = this.renderer.currentSeekSessionId;
     this.renderer.markClipDirty(this, sessionId);
@@ -292,17 +280,13 @@ export class VideoClip extends Clip {
         this.pendingOriginSwap = false;
         proxy.pause();
 
-        if (this.renderer instanceof Renderer) {
-          this.renderer.clearClipDirty(this, sessionId);
-        }
+        this.renderer.clearClipDirty(this, sessionId);
         if (this.renderer.timer.isPlaying) {
           this.startVideoPlayback(clip, origin);
         }
       } else {
         this.pendingOriginSwap = false;
-        if (this.renderer instanceof Renderer) {
-          this.renderer.clearClipDirty(this, sessionId);
-        }
+        this.renderer.clearClipDirty(this, sessionId);
       }
     };
     origin.addEventListener('seeked', onSeeked, { once: true });
@@ -314,7 +298,6 @@ export class VideoClip extends Clip {
     proxy: HTMLVideoElement,
     targetTime: number
   ): void {
-    if (!(this.renderer instanceof Renderer)) return;
     this.pendingOriginSwap = true;
     const sessionId = this.renderer.currentSeekSessionId;
     this.renderer.markClipDirty(this, sessionId);
@@ -332,9 +315,7 @@ export class VideoClip extends Clip {
       this.pendingOriginSwap = false;
       proxy.pause();
       proxy.currentTime = origin.currentTime;
-      if (this.renderer instanceof Renderer) {
-        this.renderer.clearClipDirty(this, sessionId);
-      }
+      this.renderer.clearClipDirty(this, sessionId);
     };
     origin.addEventListener('seeked', onSeeked, { once: true });
   }
@@ -344,7 +325,6 @@ export class VideoClip extends Clip {
     origin: HTMLVideoElement,
     proxy: HTMLVideoElement
   ): void {
-    if (!(this.renderer instanceof Renderer)) return;
     this.pendingProxySwap = true;
     const sessionId = this.renderer.currentSeekSessionId;
     this.renderer.markClipDirty(this, sessionId);
@@ -356,14 +336,10 @@ export class VideoClip extends Clip {
         this.swapVideoTexture(proxy);
         this.isUsingProxy = true;
         this.pendingProxySwap = false;
-        if (this.renderer instanceof Renderer) {
-          this.renderer.clearClipDirty(this, sessionId);
-        }
+        this.renderer.clearClipDirty(this, sessionId);
       } else {
         this.pendingProxySwap = false;
-        if (this.renderer instanceof Renderer) {
-          this.renderer.clearClipDirty(this, sessionId);
-        }
+        this.renderer.clearClipDirty(this, sessionId);
       }
     };
     proxy.addEventListener('seeked', onSeeked, { once: true });
@@ -402,7 +378,6 @@ export class VideoClip extends Clip {
       return;
     }
 
-    if (!(this.renderer instanceof Renderer)) return;
     this.lastSeekTime = targetTime;
     this.lastSeekTarget = target;
     const sessionId = this.renderer.currentSeekSessionId;
@@ -410,9 +385,7 @@ export class VideoClip extends Clip {
 
     const onSeeked = () => {
       video.removeEventListener('seeked', onSeeked);
-      if (this.renderer instanceof Renderer) {
-        this.renderer.clearClipDirty(this, sessionId);
-      }
+      this.renderer.clearClipDirty(this, sessionId);
     };
     video.addEventListener('seeked', onSeeked, { once: true });
     video.currentTime = targetTime;
@@ -433,12 +406,6 @@ export class VideoClip extends Clip {
     origin.pause();
     if (proxy) {
       proxy.currentTime = actualOriginTime;
-      proxy.pause();
-    }
-  }
-
-  private ensureProxyPaused(proxy: HTMLVideoElement | null): void {
-    if (proxy && !proxy.paused) {
       proxy.pause();
     }
   }

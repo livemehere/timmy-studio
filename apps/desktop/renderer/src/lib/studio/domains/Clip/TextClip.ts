@@ -1,9 +1,9 @@
 import type { ITextClip } from './types';
-import { Clip } from './Clip';
+import { GraphicClip } from './Clip';
 import type { Renderer } from '@renderer/lib/studio/engine/Renderer';
 import type { TickContext } from '@renderer/lib/studio/engine/types';
 
-export class TextClip extends Clip {
+export class TextClip extends GraphicClip {
   readonly type = 'text';
   public data: ITextClip;
 

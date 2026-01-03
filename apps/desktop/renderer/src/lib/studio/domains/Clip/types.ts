@@ -4,8 +4,19 @@ import type { IShapeData } from '../../types/shape';
 import type { ITextData } from '../../types/text';
 
 export type IClip = IGraphicClip | IAudioClip;
-export type ClipType = 'video' | 'image' | 'shape' | 'text' | 'audio';
-export type IGraphicClip = IVideoClip | IImageClip | IShapeClip | ITextClip;
+export type ClipType =
+  | 'video'
+  | 'image'
+  | 'animated-image'
+  | 'shape'
+  | 'text'
+  | 'audio';
+export type IGraphicClip =
+  | IVideoClip
+  | IImageClip
+  | IAnimatedImageClip
+  | IShapeClip
+  | ITextClip;
 
 export interface IBaseClip {
   id: string;
@@ -72,4 +83,37 @@ export interface ITransform {
   opacity?: number; // 0-1
   anchorX?: number; // 0-1
   anchorY?: number; // 0-1
+}
+
+// Utility Types for Placement Calculation
+
+export type FitMode =
+  | 'original'
+  | 'stretch'
+  | 'contain'
+  | 'cover'
+  | 'fitWidth'
+  | 'fitHeight';
+export type AlignX = 'left' | 'center' | 'right';
+export type AlignY = 'top' | 'center' | 'bottom';
+
+export interface Size {
+  width: number;
+  height: number;
+}
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+export interface PlacementPreset {
+  fit: FitMode;
+  alignX: AlignX;
+  alignY: AlignY;
+}
+
+export interface PlacementResult {
+  position: Point;
+  size: Size;
 }

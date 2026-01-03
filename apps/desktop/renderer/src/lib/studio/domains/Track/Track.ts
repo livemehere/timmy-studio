@@ -1,34 +1,37 @@
 import { Container } from 'pixi.js';
 import { uid } from 'uid';
 import type { Renderer } from '@renderer/lib/studio/engine/Renderer';
-import type { IVideoTrack, ITrack, TrackType, IAudioTrack } from './types';
+import type { IGraphicTrack, ITrack, TrackType, IAudioTrack } from './types';
 import type { TickContext } from '@renderer/lib/studio/engine/types';
 import type {
   IGraphicClip,
   ClipType,
+  IVideoClip,
+  IImageClip,
+  ITextClip,
+  IShapeClip,
 } from '@renderer/lib/studio/domains/Clip/types';
 import type { AssetType } from '@renderer/lib/studio/domains/Asset/types';
 import {
-  Clip,
   VideoClip,
   ImageClip,
   TextClip,
   ShapeClip,
+  GraphicClip,
 } from '@renderer/lib/studio/domains/Clip';
 
 export class Track {
   public id: string;
   public container: Container;
-  public clips = new Map<string, Clip>();
+  public clips = new Map<string, GraphicClip>();
 
   static readonly LABELS = {
     TRACK_PREFIX: 'Track-',
-    CLIP_PREFIX: 'Clip-',
   };
 
   constructor(
     private renderer: Renderer,
-    data: IVideoTrack
+    data: IGraphicTrack
   ) {
     this.id = data.id;
     this.container = new Container();
@@ -39,12 +42,12 @@ export class Track {
   }
 
   /** 트랙 속성 및 내부 클립들을 동기화합니다. */
-  async sync(data: IVideoTrack): Promise<void> {
+  async sync(data: IGraphicTrack): Promise<void> {
     this.updateContainerProps(data);
     await this.syncClips(data.clips);
   }
 
-  private updateContainerProps(data: IVideoTrack) {
+  private updateContainerProps(data: IGraphicTrack) {
     if (this.container.visible !== data.enabled)
       this.container.visible = data.enabled;
     if (this.container.alpha !== data.opacity)
@@ -120,16 +123,16 @@ export class Track {
   // --------------------------------------------------------------------------
   // Factory Method (Moved from SceneManager)
   // --------------------------------------------------------------------------
-  private createClipInstance(data: IGraphicClip): Clip {
+  private createClipInstance(data: IGraphicClip): GraphicClip {
     switch (data.type) {
       case 'video':
-        return new VideoClip(this.renderer, data as any);
+        return new VideoClip(this.renderer, data as IVideoClip);
       case 'image':
-        return new ImageClip(this.renderer, data as any);
+        return new ImageClip(this.renderer, data as IImageClip);
       case 'text':
-        return new TextClip(this.renderer, data as any);
+        return new TextClip(this.renderer, data as ITextClip);
       case 'shape':
-        return new ShapeClip(this.renderer, data as any);
+        return new ShapeClip(this.renderer, data as IShapeClip);
       default:
         throw new Error(`Unsupported clip type: ${(data as any).type}`);
     }
@@ -148,25 +151,27 @@ export class Track {
 
   /** AssetType 을 TrackType 으로 좁힘 */
   static AssetTypeToTrackType(type: AssetType): TrackType {
-    return type === 'audio' ? 'audio' : 'video';
+    if (type === 'audio') return 'audio';
+    return 'graphic';
   }
 
   static ClipTypeToTrackType(type: ClipType): TrackType {
-    return type === 'audio' ? 'audio' : 'video';
+    if (type === 'audio') return 'audio';
+    return 'graphic';
   }
 
   static createTrackData(type: TrackType) {
-    if (type === 'video') {
+    if (type === 'graphic') {
       return {
         id: uid(8),
-        name: 'New Video Track',
+        name: 'New Graphic Track',
         zIndex: 0,
-        type: 'video',
+        type: 'graphic',
         enabled: true,
         locked: false,
         clips: [],
         opacity: 1,
-      } as IVideoTrack;
+      } as IGraphicTrack;
     } else {
       return {
         id: uid(8),

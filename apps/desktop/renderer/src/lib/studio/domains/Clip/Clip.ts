@@ -1,56 +1,26 @@
 import { Container, Sprite } from 'pixi.js';
 import { uid } from 'uid';
 import type { Renderer } from '@renderer/lib/studio/engine/Renderer';
-import type { AudioRenderer } from '@renderer/lib/studio/engine/AudioRenderer';
 import type { TickContext } from '@renderer/lib/studio/engine/types';
 import type { IAsset } from '../Asset/types';
 import type { IShapeData } from '@renderer/lib/studio/types/shape';
 import type { ITextData } from '@renderer/lib/studio/types/text';
 import type {
-  // IGraphicClip,
   ClipType,
-  ITransform,
-  IBaseClip,
-  IVideoClip,
-  IImageClip,
+  IAnimatedImageClip,
   IAudioClip,
+  IBaseClip,
+  IClip,
+  IImageClip,
   IShapeClip,
   ITextClip,
-  IClip,
-  IAnimatedImageClip,
+  ITransform,
+  IVideoClip,
+  PlacementPreset,
+  PlacementResult,
+  Size,
 } from './types';
-
-export type FitMode =
-  | 'original'
-  | 'stretch'
-  | 'contain'
-  | 'cover'
-  | 'fitWidth'
-  | 'fitHeight';
-
-export type AlignX = 'left' | 'center' | 'right';
-export type AlignY = 'top' | 'center' | 'bottom';
-
-export interface Size {
-  width: number;
-  height: number;
-}
-
-export interface Point {
-  x: number;
-  y: number;
-}
-
-export interface PlacementPreset {
-  fit: FitMode;
-  alignX: AlignX;
-  alignY: AlignY;
-}
-
-export interface PlacementResult {
-  position: Point;
-  size: Size;
-}
+import type { AudioRenderer } from '@renderer/lib/studio/engine/AudioRenderer';
 
 export abstract class Clip {
   static readonly ASSET_PLACEMENT_PRESETS = {
@@ -80,10 +50,8 @@ export abstract class Clip {
   };
 
   abstract readonly type: ClipType;
-  public sprite: Sprite;
   public id: string;
 
-  // State for SeekSynchronizer
   public dirty: boolean = false;
   public dirtySessionId: number | null = null;
 
@@ -92,22 +60,12 @@ export abstract class Clip {
     public data: IClip
   ) {
     this.id = data.id;
-    this.sprite = new Sprite(); // AudioClip doesn't need this, but keeps it for now
-    this.sprite.label = `Clip-${this.id}`;
   }
 
   abstract init(): Promise<void>;
   abstract update(data: IClip): void;
   abstract destroy(): void;
   abstract tick(ctx: TickContext): void;
-
-  mount(container: Container) {
-    container.addChild(this.sprite);
-  }
-
-  unmount() {
-    this.sprite.parent?.removeChild(this.sprite);
-  }
 
   isVisibleAt(timeMs: number): boolean {
     const trimStart = 'trimStart' in this.data ? (this.data.trimStart ?? 0) : 0;
@@ -119,51 +77,8 @@ export abstract class Clip {
     return timeMs >= visibleStart && timeMs < visibleEnd;
   }
 
-  protected applyTransform(transforms: ITransform): void {
-    const sprite = this.sprite;
-
-    // 1) anchor
-    if (transforms.anchorX !== undefined || transforms.anchorY !== undefined) {
-      sprite.anchor.set(
-        transforms.anchorX ?? sprite.anchor.x,
-        transforms.anchorY ?? sprite.anchor.y
-      );
-    }
-
-    // 2) position
-    if (transforms.position) {
-      sprite.x = transforms.position.x;
-      sprite.y = transforms.position.y;
-    }
-
-    // 3) base scale (size -> scale)
-    let baseScaleX = 1;
-    let baseScaleY = 1;
-
-    if (transforms.size) {
-      const tex = sprite.texture;
-      const srcW = tex?.orig?.width || tex?.width || 0;
-      const srcH = tex?.orig?.height || tex?.height || 0;
-
-      if (srcW > 0 && srcH > 0) {
-        baseScaleX = transforms.size.width / srcW;
-        baseScaleY = transforms.size.height / srcH;
-      }
-    }
-
-    // 4) user scale
-    const userScaleX = transforms.scaleX ?? 1;
-    const userScaleY = transforms.scaleY ?? 1;
-
-    sprite.scale.set(baseScaleX * userScaleX, baseScaleY * userScaleY);
-
-    // 5) rotation / alpha
-    if (transforms.rotation !== undefined) {
-      sprite.rotation = transforms.rotation;
-    }
-    if (transforms.opacity !== undefined) {
-      sprite.alpha = transforms.opacity;
-    }
+  shouldRender(timeMs: number): boolean {
+    return this.data.enabled && this.isVisibleAt(timeMs);
   }
 
   // --------------------------------------------------------------------------
@@ -382,5 +297,74 @@ export abstract class Clip {
       position: { x, y },
       size: { width, height },
     };
+  }
+}
+
+export abstract class GraphicClip extends Clip {
+  public sprite: Sprite;
+  declare public data: IClip;
+
+  protected constructor(
+    public readonly renderer: Renderer,
+    data: IClip
+  ) {
+    super(renderer, data);
+    this.sprite = new Sprite();
+    this.sprite.label = `Clip-${this.id}`;
+  }
+
+  mount(container: Container) {
+    container.addChild(this.sprite);
+  }
+
+  unmount() {
+    this.sprite.parent?.removeChild(this.sprite);
+  }
+
+  protected applyTransform(transforms: ITransform): void {
+    const sprite = this.sprite;
+
+    // 1) anchor
+    if (transforms.anchorX !== undefined || transforms.anchorY !== undefined) {
+      sprite.anchor.set(
+        transforms.anchorX ?? sprite.anchor.x,
+        transforms.anchorY ?? sprite.anchor.y
+      );
+    }
+
+    // 2) position
+    if (transforms.position) {
+      sprite.x = transforms.position.x;
+      sprite.y = transforms.position.y;
+    }
+
+    // 3) base scale (size -> scale)
+    let baseScaleX = 1;
+    let baseScaleY = 1;
+
+    if (transforms.size) {
+      const tex = sprite.texture;
+      const srcW = tex?.orig?.width || tex?.width || 0;
+      const srcH = tex?.orig?.height || tex?.height || 0;
+
+      if (srcW > 0 && srcH > 0) {
+        baseScaleX = transforms.size.width / srcW;
+        baseScaleY = transforms.size.height / srcH;
+      }
+    }
+
+    // 4) user scale
+    const userScaleX = transforms.scaleX ?? 1;
+    const userScaleY = transforms.scaleY ?? 1;
+
+    sprite.scale.set(baseScaleX * userScaleX, baseScaleY * userScaleY);
+
+    // 5) rotation / alpha
+    if (transforms.rotation !== undefined) {
+      sprite.rotation = transforms.rotation;
+    }
+    if (transforms.opacity !== undefined) {
+      sprite.alpha = transforms.opacity;
+    }
   }
 }

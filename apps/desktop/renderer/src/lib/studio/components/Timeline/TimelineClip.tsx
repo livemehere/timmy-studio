@@ -21,7 +21,9 @@ export function TimelineClip({
   const updateClip = useDocStore((state) => state.updateClip);
   const clip = getClipById<IGraphicClip>(trackId, clipId)!;
 
-  const syncedClipIds = useEngineStore((state) => state.syncedVideoClipIds);
+  const syncedClipIds = useEngineStore(
+    (state) => state.syncedGraphicClipIds || []
+  );
   const isLoaded = syncedClipIds.includes(clipId);
 
   const width = msToSec(clip.endTime - clip.startTime) * pxPerSec;

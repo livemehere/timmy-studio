@@ -1,12 +1,12 @@
 import { Texture } from 'pixi.js';
 import type { IImageClip } from './types';
-import { Clip } from './Clip';
+import { GraphicClip } from './Clip';
 import type { Renderer } from '@renderer/lib/studio/engine/Renderer';
 import type { TickContext } from '@renderer/lib/studio/engine/types';
 import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
 import type { IImageAsset } from '../Asset/types';
 
-export class ImageClip extends Clip {
+export class ImageClip extends GraphicClip {
   readonly type = 'image';
   public data: IImageClip;
 
@@ -59,8 +59,7 @@ export class ImageClip extends Clip {
 
   tick(ctx: TickContext): void {
     const { currentTime } = ctx;
-    const isVisible =
-      currentTime >= this.data.startTime && currentTime < this.data.endTime;
+    const isVisible = this.shouldRender(currentTime);
     this.sprite.visible = isVisible;
 
     if (isVisible) {

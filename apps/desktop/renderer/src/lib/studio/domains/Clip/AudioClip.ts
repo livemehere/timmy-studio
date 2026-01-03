@@ -73,7 +73,7 @@ export class AudioClip extends Clip {
     if (!this.audioBuffer) return;
 
     const { isPlaying, currentTime, playStateChanged, isSeeking } = ctx;
-    const isVisible = this.isVisibleAt(currentTime);
+    const isVisible = this.shouldRender(currentTime);
 
     // 1. 재생 상태 변경 or 탐색 시
     if (playStateChanged || isSeeking) {
