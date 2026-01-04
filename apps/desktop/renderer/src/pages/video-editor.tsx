@@ -21,18 +21,18 @@ export default function VideoEditorPage() {
         },
         tracks: [
           {
-            id: '0e04a7e4',
-            name: 'New Video Track',
+            id: '27c56d28',
+            name: 'New Graphic Track',
             zIndex: 0,
             type: 'graphic',
             enabled: true,
             locked: false,
             clips: [
               {
-                id: 'e04a7e4f',
-                name: '스포애니.mp4',
-                startTime: 4912.5,
-                endTime: 92939.5,
+                id: '7c56d288',
+                name: 'sample-user sample-document.png',
+                startTime: 0,
+                endTime: 3000,
                 effects: [],
                 animations: [],
                 enabled: true,
@@ -40,8 +40,49 @@ export default function VideoEditorPage() {
                 trimEnd: 0,
                 transforms: {
                   position: {
-                    x: 100,
-                    y: 737.5,
+                    x: 0,
+                    y: 0.39999999999997726,
+                  },
+                  size: {
+                    width: 720,
+                    height: 1279.2,
+                  },
+                  scaleX: 1,
+                  scaleY: 1,
+                  rotation: 0,
+                  opacity: 1,
+                  anchorX: 0,
+                  anchorY: 0,
+                },
+                type: 'image',
+                assetId: '9b49e893',
+                zIndex: 0,
+              },
+            ],
+            opacity: 1,
+          },
+          {
+            id: '6b66cfbe',
+            name: 'New Graphic Track',
+            zIndex: 0,
+            type: 'graphic',
+            enabled: true,
+            locked: false,
+            clips: [
+              {
+                id: 'b66cfbe3',
+                name: '스포애니.mp4',
+                startTime: 0,
+                endTime: 88027,
+                effects: [],
+                animations: [],
+                enabled: true,
+                trimStart: 0,
+                trimEnd: 0,
+                transforms: {
+                  position: {
+                    x: 0,
+                    y: 837.5,
                   },
                   size: {
                     width: 720,
@@ -56,20 +97,21 @@ export default function VideoEditorPage() {
                 },
                 type: 'video',
                 assetId: '2f00907e',
+                zIndex: 0,
               },
             ],
             opacity: 1,
           },
           {
-            id: '0f096654',
-            name: 'New Video Track',
+            id: 'c6b81a11',
+            name: 'New Graphic Track',
             zIndex: 0,
             type: 'graphic',
             enabled: true,
             locked: false,
             clips: [
               {
-                id: 'f0966541',
+                id: '6b81a117',
                 name: '305657_small.mp4',
                 startTime: 0,
                 endTime: 14200,
@@ -81,7 +123,7 @@ export default function VideoEditorPage() {
                 transforms: {
                   position: {
                     x: 0,
-                    y: 437.5,
+                    y: 237.5,
                   },
                   size: {
                     width: 720,
@@ -96,6 +138,7 @@ export default function VideoEditorPage() {
                 },
                 type: 'video',
                 assetId: '5f330a0a',
+                zIndex: 0,
               },
             ],
             opacity: 1,
@@ -141,6 +184,22 @@ export default function VideoEditorPage() {
             proxyFilePath:
               '/path/to/sample-media.mp4',
             isProxyReady: true,
+          },
+          {
+            id: '9b49e893',
+            name: 'sample-user sample-document.png',
+            filePath: '/path/to/sample-media.png',
+            metadata: {
+              size: 183310,
+              createdAt: '2025-06-04T15:18:04.660Z',
+              width: 600,
+              height: 1066,
+              codec: 'png',
+              frameRate: 25,
+            },
+            type: 'image',
+            thumbnailPath:
+              '/path/to/sample-media.png',
           },
         ],
       }}

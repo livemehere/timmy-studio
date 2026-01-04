@@ -9,13 +9,13 @@ import { useEffect } from 'react';
 
 export function StudioApp() {
   useAssetUpdateSubscription();
-
-  const docStore = useDocStore((store) => store);
-
-  useEffect(() => {
-    console.log('doc changed');
-    console.log(JSON.stringify(docStore.getProject(), null, 2));
-  }, [docStore]);
+  //
+  // const docStore = useDocStore((store) => store);
+  //
+  // useEffect(() => {
+  //   console.log('doc changed');
+  //   console.log(JSON.stringify(docStore.getProject(), null, 2));
+  // }, [docStore]);
 
   return (
     <div className="h-full p-2 overflow-hidden">

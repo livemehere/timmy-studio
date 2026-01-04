@@ -12,6 +12,8 @@ import { VideoAssets } from '@renderer/lib/studio/domains/Asset/components/Video
 import { ImageAssets } from '@renderer/lib/studio/domains/Asset/components/ImageAssets';
 import { AudioAssets } from '@renderer/lib/studio/domains/Asset/components/AudioAssets';
 
+import { TextAssets } from '@renderer/lib/studio/domains/Asset/components/TextAssets';
+
 export interface IResourceTab {
   name: string;
   subTabs?: IResourceTab[];
@@ -31,7 +33,7 @@ export const RESOURCE_TABS: IResourceTab[] = [
       },
       { name: '이미지', IconComp: Image, ContentComp: ImageAssets },
       { name: '오디오', IconComp: Headphones, ContentComp: AudioAssets },
-      { name: '텍스트', IconComp: Type, ContentComp: null },
+      { name: '텍스트', IconComp: Type, ContentComp: TextAssets },
       { name: '도형', IconComp: Pentagon, ContentComp: null },
     ],
     IconComp: Box,

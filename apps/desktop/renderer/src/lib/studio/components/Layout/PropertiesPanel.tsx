@@ -1,10 +1,7 @@
 import { useDocStore, useInteractionStore } from '../../hooks/useStudioStores';
 import { type ReactNode } from 'react';
 import type { ITrack } from '@renderer/lib/studio/domains/Track/types';
-import type {
-  IClip,
-  IGraphicClip,
-} from '@renderer/lib/studio/domains/Clip/types';
+import type { IClip, ITextClip } from '@renderer/lib/studio/domains/Clip/types';
 
 function findClipInTracks(
   tracks: ITrack[],
@@ -229,7 +226,10 @@ export function PropertiesPanel() {
   }
 
   const { clip, trackId } = result;
-  const videoClip = clip.type !== 'audio' ? (clip as IGraphicClip) : null;
+  const videoClip =
+    clip.type !== 'audio' && clip.type === 'video' ? (clip as any) : null;
+  const textClip = clip.type === 'text' ? (clip as ITextClip) : null;
+
   const updateClip = (updates: Partial<IClip>) => {
     updateClipInTrack(trackId, clip.id, updates);
   };
@@ -307,6 +307,33 @@ export function PropertiesPanel() {
             updateClip({ transforms: nextTransforms } as any);
           }}
         />
+      )}
+
+      {textClip && (
+        <>
+          <div className="h-px bg-neutral-700 my-2" />
+          <h3 className="font-bold mb-2">Text Properties</h3>
+          <ObjectFieldInputs
+            label="textData"
+            value={textClip.textData}
+            readOnly={false}
+            onChange={(path, next) => {
+              const nextTextData = setAtPath(textClip.textData, path, next);
+              updateClip({ textData: nextTextData } as any);
+            }}
+          />
+          <div className="h-px bg-neutral-700 my-2" />
+          <h3 className="font-bold mb-2">Transforms</h3>
+          <ObjectFieldInputs
+            label="transforms"
+            value={textClip.transforms}
+            readOnly={false}
+            onChange={(path, next) => {
+              const nextTransforms = setAtPath(textClip.transforms, path, next);
+              updateClip({ transforms: nextTransforms } as any);
+            }}
+          />
+        </>
       )}
     </div>
   );
