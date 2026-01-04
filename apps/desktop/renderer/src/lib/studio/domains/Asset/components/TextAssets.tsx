@@ -21,10 +21,10 @@ export function TextAssets() {
     // 2. 텍스트 클립 생성
     const newClip = Clip.createText({
       content: '기본 텍스트',
-      fontSize: 16,
+      fontSize: 50,
       fontFamily: 'Arial',
       color: '#ffffff',
-      align: 'center',
+      align: 'left',
     });
 
     // 3. 트랙의 마지막 위치에 추가 (겹치지 않게)

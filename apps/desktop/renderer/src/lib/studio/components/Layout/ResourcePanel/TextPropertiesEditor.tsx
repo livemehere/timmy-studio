@@ -83,6 +83,33 @@ export function TextPropertiesEditor({
       </div>
 
       <div className="flex flex-col gap-2">
+        <label className="text-xs text-neutral-400">Spacing</label>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <label className="text-xs w-12">Letter</label>
+            <input
+              type="number"
+              value={data.letterSpacing ?? 0}
+              onChange={(e) =>
+                onChange({ letterSpacing: Number(e.target.value) })
+              }
+              className="bg-neutral-800 text-white p-1 rounded text-sm w-16"
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <label className="text-xs w-12">Line</label>
+            <input
+              type="number"
+              step="0.1"
+              value={data.lineHeight ?? 1}
+              onChange={(e) => onChange({ lineHeight: Number(e.target.value) })}
+              className="bg-neutral-800 text-white p-1 rounded text-sm w-16"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
         <label className="text-xs text-neutral-400">Alignment</label>
         <div className="flex items-center bg-neutral-800 rounded p-1 gap-1 w-fit">
           <button

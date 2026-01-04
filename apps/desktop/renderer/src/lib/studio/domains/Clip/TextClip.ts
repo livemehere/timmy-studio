@@ -78,17 +78,10 @@ export class TextClip extends GraphicClip {
     const sprite = this.sprite;
 
     // 1) anchor
-    // For TextClip, we apply anchor to the text child.
-    // However, removing default anchor (0.5) as requested to fix background alignment issues.
-    // If transforms has explicit anchor, use it, otherwise default to 0 (top-left).
+    // Text uses top-left anchor (0, 0) by default for consistent background alignment
     if (this.text) {
-      this.text.anchor.set(transforms.anchorX ?? 0, transforms.anchorY ?? 0);
+      this.text.anchor.set(0, 0);
     }
-
-    // Background and selection bounds also need to be centered if we use center anchor for text
-    // The previous implementation of background used negative half width/height which assumes center anchor
-    // Let's ensure background and selection bounds follow the anchor logic if possible,
-    // OR we just assume they are drawn relative to the sprite center which is consistent with the text anchor
 
     // 2) position
     if (transforms.position) {
@@ -103,7 +96,7 @@ export class TextClip extends GraphicClip {
 
     // 3) Scale
     // We intentionally IGNORE transforms.size for scaling purposes.
-    // Text size is determined by fontSize and wordWrapWidth (handled in updateTextStyle).
+    // Text size is determined by fontSize and wordWrapWidth.
     // We only apply the explicit scale transform.
     const userScaleX = transforms.scaleX ?? 1;
     const userScaleY = transforms.scaleY ?? 1;
@@ -130,13 +123,16 @@ export class TextClip extends GraphicClip {
 
     // 1. Create Text
     const shadow = this.data.textData.shadow;
+    const fontSize = this.data.textData.fontSize;
     const style = new TextStyle({
       fontFamily: this.data.textData.fontFamily,
-      fontSize: this.data.textData.fontSize,
+      fontSize: fontSize,
       fill: this.data.textData.color,
-      align: this.data.textData.align,
+      align: this.data.textData.align ?? 'left',
       fontWeight: this.data.textData.bold ? 'bold' : 'normal',
       fontStyle: this.data.textData.italic ? 'italic' : 'normal',
+      letterSpacing: this.data.textData.letterSpacing ?? 0,
+      lineHeight: (this.data.textData.lineHeight ?? 1) * fontSize,
       stroke: this.data.textData.border?.color
         ? {
             color: this.data.textData.border.color,
@@ -154,14 +150,9 @@ export class TextClip extends GraphicClip {
             alpha: shadow.alpha ?? 1,
           }
         : undefined,
-      wordWrap: true,
-      wordWrapWidth: this.data.transforms?.size?.width ?? 150, // 텍스트 래핑 너비 안전 처리
     });
 
-    this.text = new Text({
-      text: this.data.textData.content,
-      style,
-    });
+    this.text = new Text(this.data.textData.content, style);
     // Anchor defaults to 0 (top-left) now as requested
     this.text.anchor.set(0);
 
@@ -183,13 +174,17 @@ export class TextClip extends GraphicClip {
     if (!this.text) return;
 
     // Update Text Style
+    const fontSize = this.data.textData.fontSize;
     this.text.text = this.data.textData.content;
     this.text.style.fontFamily = this.data.textData.fontFamily;
-    this.text.style.fontSize = this.data.textData.fontSize;
+    this.text.style.fontSize = fontSize;
     this.text.style.fill = this.data.textData.color;
-    this.text.style.align = this.data.textData.align;
+    this.text.style.align = this.data.textData.align ?? 'left';
     this.text.style.fontWeight = this.data.textData.bold ? 'bold' : 'normal';
     this.text.style.fontStyle = this.data.textData.italic ? 'italic' : 'normal';
+    this.text.style.letterSpacing = this.data.textData.letterSpacing ?? 0;
+    this.text.style.lineHeight =
+      (this.data.textData.lineHeight ?? 1) * fontSize;
 
     if (this.data.textData.border) {
       this.text.style.stroke = {
@@ -216,10 +211,6 @@ export class TextClip extends GraphicClip {
       this.text.style.dropShadow = false;
     }
 
-    // Update Word Wrap
-    this.text.style.wordWrap = true;
-    this.text.style.wordWrapWidth = this.data.transforms?.size?.width ?? 150;
-
     // Update Background
     this.updateBackground();
 
@@ -233,7 +224,7 @@ export class TextClip extends GraphicClip {
     if (bgData && typeof bgData === 'object') {
       if (!this.background) {
         this.background = new Graphics();
-        this.sprite.addChildAt(this.background, 0); // Ensure background is behind text
+        this.sprite.addChildAt(this.background, 0);
       }
 
       const paddingX = bgData.paddingX ?? 0;
@@ -241,7 +232,6 @@ export class TextClip extends GraphicClip {
       const radius = bgData.radius ?? 0;
       const alpha = bgData.alpha ?? 1;
 
-      // Calculate background dimensions based on text metrics + padding
       const textWidth = this.text?.width ?? 0;
       const textHeight = this.text?.height ?? 0;
 
@@ -250,11 +240,8 @@ export class TextClip extends GraphicClip {
 
       this.background.clear();
 
-      const anchorX = this.text?.anchor.x ?? 0;
-      const anchorY = this.text?.anchor.y ?? 0;
-
-      const x = -(textWidth * anchorX) - paddingX;
-      const y = -(textHeight * anchorY) - paddingY;
+      const x = -paddingX;
+      const y = -paddingY;
 
       this.background.roundRect(x, y, bgWidth, bgHeight, radius);
       this.background.fill({ color: bgData.color, alpha: alpha });
@@ -274,36 +261,15 @@ export class TextClip extends GraphicClip {
       this.sprite.addChild(this.selectionBounds);
     }
 
-    const width = this.data.transforms?.size?.width ?? this.text?.width ?? 0;
-    const height = this.data.transforms?.size?.height ?? this.text?.height ?? 0;
+    const width = this.text?.width ?? 0;
+    const height = this.text?.height ?? 0;
 
-    const anchorX = this.text?.anchor.x ?? 0;
-    const anchorY = this.text?.anchor.y ?? 0;
-
-    const x = -(width * anchorX);
-    const y = -(height * anchorY);
+    const x = 0;
+    const y = 0;
 
     if (width > 0 && height > 0) {
       this.selectionBounds.rect(x, y, width, height);
       this.selectionBounds.stroke({ width: 1, color: 0x00ffff, alpha: 0.5 });
-    }
-
-    if (this.data.transforms?.size?.height) {
-      const maxHeight = this.data.transforms.size.height;
-
-      if (this.text && this.text.height > maxHeight) {
-        const mask = new Graphics();
-        mask.rect(x, y, width, maxHeight);
-        mask.fill(0xffffff);
-
-        this.sprite.addChild(mask);
-        mask.renderable = false;
-        this.sprite.mask = mask;
-      } else {
-        this.sprite.mask = null;
-      }
-    } else {
-      this.sprite.mask = null;
     }
   }
 

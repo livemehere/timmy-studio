@@ -7,8 +7,10 @@ export interface ITextData {
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
+  letterSpacing?: number;
+  lineHeight?: number;
   shadow?: {
-    color: string; // number | string 에서 string으로 통일 권장, 일단 유지
+    color: string;
     blur: number;
     offsetX: number;
     offsetY: number;
@@ -21,11 +23,9 @@ export interface ITextData {
     radius: number;
     alpha?: number;
   };
-  // Deprecated: padding is now part of background
-  // padding?: number | [number, number] | [number, number, number, number];
   border?: {
     color: number | string;
     width: number;
-    radius?: number; // border radius? background radius와 겹칠 수 있음.
+    radius?: number;
   };
 }
