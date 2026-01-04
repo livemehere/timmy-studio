@@ -1,4 +1,4 @@
-import { Application, Container, Sprite, Rectangle } from 'pixi.js';
+import { Application, Container, Rectangle } from 'pixi.js';
 import type { IGraphicTrack } from '@renderer/lib/studio/domains/Track/types';
 import type { Timer } from '@renderer/lib/studio/engine/Timer';
 import type {
@@ -7,9 +7,9 @@ import type {
   DocGetter,
   Dirtyable,
 } from './types';
-import { Track } from '@renderer/lib/studio/domains/Track/Track';
+import { GraphicTrack } from '@renderer/lib/studio/domains/Track/GraphicTrack';
 
-export class Renderer {
+export class GraphicRenderer {
   // --------------------------------------------------------------------------
   // 상수 및 상태 속성
   // --------------------------------------------------------------------------
@@ -35,7 +35,7 @@ export class Renderer {
   private sceneContainer: Container;
 
   // Track 관리
-  public tracks = new Map<string, Track>();
+  public tracks = new Map<string, GraphicTrack>();
 
   // 렌더링 루프 상태
   private lastIsPlaying = false;
@@ -60,7 +60,7 @@ export class Renderer {
     // Pixi 인스턴스 생성
     this.app = new Application();
     this.sceneContainer = new Container();
-    this.sceneContainer.label = Renderer.LABELS.SCENE_CONTAINER;
+    this.sceneContainer.label = GraphicRenderer.LABELS.SCENE_CONTAINER;
     this.app.stage.addChild(this.sceneContainer);
 
     // 매니저 초기화
@@ -138,25 +138,6 @@ export class Renderer {
     return this.seekSessionId;
   }
 
-  // 하위 호환성을 위한 Getter들 (SceneManager로 위임되었던 것들 복구)
-  get trackContainers(): Map<string, Container> {
-    const map = new Map<string, Container>();
-    for (const [id, track] of this.tracks) {
-      map.set(id, track.container);
-    }
-    return map;
-  }
-
-  get clipSprites(): Map<string, Sprite> {
-    const map = new Map<string, Sprite>();
-    for (const track of this.tracks.values()) {
-      for (const [id, clip] of track.clips) {
-        map.set(id, clip.sprite);
-      }
-    }
-    return map;
-  }
-
   resize(width: number, height: number): void {
     if (!this._isInitialized) return;
     if (
@@ -224,7 +205,7 @@ export class Renderer {
   }
 
   private async addTrack(data: IGraphicTrack) {
-    const track = new Track(this, data);
+    const track = new GraphicTrack(this, data);
 
     this.sceneContainer.addChild(track.container);
     this.tracks.set(data.id, track);
@@ -248,21 +229,6 @@ export class Renderer {
     track.destroy();
     this.tracks.delete(trackId);
     console.log(`[Renderer] 트랙(${trackId}) 제거됨`);
-  }
-
-  removeClip(clipId: string): void {
-    for (const track of this.tracks.values()) {
-      if (track.clips.has(clipId)) {
-        // Track.ts의 clips public으로 접근하여 삭제 로직 수행
-        const clip = track.clips.get(clipId);
-        if (clip) {
-          clip.unmount();
-          clip.destroy();
-          track.clips.delete(clipId);
-        }
-        return;
-      }
-    }
   }
 
   // --------------------------------------------------------------------------
@@ -428,24 +394,5 @@ export class Renderer {
     }
 
     return { width, height, data };
-  }
-
-  getTrackContainer(trackId: string): Container | undefined {
-    return this.tracks.get(trackId)?.container;
-  }
-
-  getClipSprite(clipId: string): Sprite | undefined {
-    for (const track of this.tracks.values()) {
-      if (track.clips.has(clipId)) {
-        return track.clips.get(clipId)?.sprite;
-      }
-    }
-    return undefined;
-  }
-
-  getContainerByLabel(label: string): Container | undefined {
-    return this.sceneContainer.children.find(
-      (child) => child.label === label
-    ) as Container | undefined;
   }
 }

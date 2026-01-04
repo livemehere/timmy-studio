@@ -1,7 +1,7 @@
 import { Texture, VideoSource } from 'pixi.js';
 import type { IVideoClip } from './types';
-import { GraphicClip } from './Clip';
-import { Renderer } from '@renderer/lib/studio/engine/Renderer';
+import { GraphicClip } from './GraphicClip';
+import { GraphicRenderer } from '@renderer/lib/studio/engine/GraphicRenderer';
 import type {
   SeekingRenderMode,
   TickContext,
@@ -25,7 +25,7 @@ export class VideoClip extends GraphicClip {
   private pendingOriginSwap = false;
   private wasVisible = false;
 
-  constructor(renderer: Renderer, data: IVideoClip) {
+  constructor(renderer: GraphicRenderer, data: IVideoClip) {
     super(renderer, data);
     this.data = data;
   }

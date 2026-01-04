@@ -4,8 +4,10 @@ import { useMemo } from 'react';
 
 import { Asset } from '@renderer/lib/studio/domains/Asset/Asset';
 import { Clip } from '@renderer/lib/studio/domains/Clip/Clip';
-import { Track } from '@renderer/lib/studio/domains/Track/Track';
+import { GraphicClip } from '@renderer/lib/studio/domains/Clip/GraphicClip';
+import { GraphicTrack } from '@renderer/lib/studio/domains/Track/GraphicTrack';
 import type { ITrack } from '../../Track/types';
+import { Track } from '@renderer/lib/studio/domains/Track/Track';
 
 export function useAsset(asset: IAsset) {
   const getTrackById = useDocStore((state) => state.getTrackById);
@@ -19,8 +21,8 @@ export function useAsset(asset: IAsset) {
   }, [asset]);
 
   const firstTrackId = useMemo(() => {
-    const trackType = Track.AssetTypeToTrackType(asset.type);
-    const existTrack = Track.findFirstTrack(tracks, trackType);
+    const trackType = GraphicTrack.AssetTypeToTrackType(asset.type);
+    const existTrack = GraphicTrack.findFirstTrack(tracks, trackType);
     return existTrack?.id;
   }, [asset.type, tracks]);
 
@@ -30,7 +32,7 @@ export function useAsset(asset: IAsset) {
       trackId?: string;
 
       /** 비디오/이미지 에셋에 기본 placement preset 적용 */
-      placementPresetKey?: keyof typeof Clip.ASSET_PLACEMENT_PRESETS;
+      placementPresetKey?: keyof typeof GraphicClip.ASSET_PLACEMENT_PRESETS;
     } = {}
   ) => {
     if (!status.isReady) {
@@ -41,9 +43,7 @@ export function useAsset(asset: IAsset) {
     if (options.trackId) {
       targetTrack = getTrackById(options.trackId)!;
     } else {
-      targetTrack = Track.createTrackData(
-        Track.AssetTypeToTrackType(asset.type)
-      );
+      targetTrack = Track.create(Track.AssetTypeToTrackType(asset.type));
       addTrackToDoc(targetTrack);
     }
 
@@ -51,8 +51,9 @@ export function useAsset(asset: IAsset) {
 
     // renderer 에 들어가는 clip 은 transform 정렬을 처리함.
     if (clip.type !== 'audio' && options.placementPresetKey) {
-      const preset = Clip.ASSET_PLACEMENT_PRESETS[options.placementPresetKey];
-      const computed = Clip.computePlacement({
+      const preset =
+        GraphicClip.ASSET_PLACEMENT_PRESETS[options.placementPresetKey];
+      const computed = GraphicClip.computePlacement({
         total: { width: settings.width, height: settings.height },
         target: {
           width: clip.transforms.size!.width,
@@ -65,7 +66,7 @@ export function useAsset(asset: IAsset) {
     }
 
     // 시작 시간을 트랙의 마지막 클립 끝나는 시간으로 조정
-    const startTime = Track.getLastestClipEndTime(targetTrack);
+    const startTime = GraphicTrack.getLastestClipEndTime(targetTrack);
     clip.startTime = startTime;
     clip.endTime = startTime + (clip.endTime - clip.startTime);
 

@@ -1,5 +1,5 @@
 import { Timer } from '../engine/Timer';
-import { Renderer } from '../engine/Renderer';
+import { GraphicRenderer } from '../engine/GraphicRenderer';
 import { type DocGetter } from '../engine/types';
 import { AudioRenderer } from '../engine/AudioRenderer';
 import { createStore } from 'zustand/vanilla';
@@ -7,7 +7,7 @@ import { createStore } from 'zustand/vanilla';
 export interface EngineState {
   // Engine instances (런타임 인스턴스 소유)
   timer: Timer | null;
-  renderer: Renderer | null;
+  renderer: GraphicRenderer | null;
   audioRenderer: AudioRenderer | null;
 
   // Renderer sync state (Pixi 객체 접근용)
@@ -40,7 +40,7 @@ export const createEngineStore = (docGetter: DocGetter) => {
 
   const initialProject = docGetter();
   const timer = new Timer(initialProject.settings.duration);
-  const renderer = new Renderer(timer, docGetter);
+  const renderer = new GraphicRenderer(timer, docGetter);
   const audioRenderer = new AudioRenderer(timer, docGetter);
 
   // Timer가 seek 제어를 할 때 Renderer의 seek 처리 완료를 대기하도록 설정

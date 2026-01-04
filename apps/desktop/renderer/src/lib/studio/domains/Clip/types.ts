@@ -34,6 +34,7 @@ export interface IBaseClip {
 
 export interface IGraphicClipBase extends IBaseClip {
   transforms: ITransform;
+  zIndex: number;
 }
 
 export interface IVideoClip extends IGraphicClipBase {

@@ -1,22 +1,16 @@
 import type { IAudioTrack } from './types';
 import type { AudioRenderer } from '@renderer/lib/studio/engine/AudioRenderer';
 import { AudioClip } from '../Clip/AudioClip';
-import type { TickContext } from '@renderer/lib/studio/engine/types';
 import type { IAudioClip } from '../Clip/types';
+import { Track } from './Track';
 
-export class AudioTrack {
-  public id: string;
-  public clips = new Map<string, AudioClip>();
-
+export class AudioTrack extends Track<IAudioClip, AudioRenderer, AudioClip> {
   // Audio Graph
   public inputNode: GainNode; // 클립들이 여기로 연결됨
   public outputNode: GainNode; // 최종적으로 Master로 연결됨
 
-  constructor(
-    private renderer: AudioRenderer,
-    data: IAudioTrack
-  ) {
-    this.id = data.id;
+  constructor(renderer: AudioRenderer, data: IAudioTrack) {
+    super(renderer, data);
 
     const ctx = renderer.audioContext;
     this.inputNode = ctx.createGain();
@@ -41,10 +35,29 @@ export class AudioTrack {
     this.outputNode.gain.value = volume;
   }
 
-  private async syncClips(clipsData: IAudioClip[]): Promise<void> {
+  protected async addClip(data: IAudioClip): Promise<void> {
+    const dataWithTrackId = { ...data, trackId: this.id };
+    const clip = new AudioClip(this.renderer, dataWithTrackId);
+    this.clips.set(data.id, clip);
+    await clip.init();
+  }
+
+  protected removeClip(clipId: string): void {
+    const clip = this.clips.get(clipId);
+    if (clip) {
+      clip.destroy();
+      this.clips.delete(clipId);
+    }
+  }
+
+  /**
+   * Override syncClips to inject trackId into clip data.
+   * Or we can just let addClip handle new clips, and update existing ones.
+   */
+  protected async syncClips(clipsData: IAudioClip[]): Promise<void> {
     const newClipIds = new Set(clipsData.map((c) => c.id));
 
-    // 제거
+    // 1. 제거된 클립 처리
     for (const [clipId, clip] of this.clips) {
       if (!newClipIds.has(clipId)) {
         clip.destroy();
@@ -52,27 +65,19 @@ export class AudioTrack {
       }
     }
 
-    // 추가/업데이트
+    // 2. 추가되거나 업데이트된 클립 처리
     const tasks: Promise<void>[] = [];
     for (const clipData of clipsData) {
-      // clipData에 trackId 주입 (AudioClip에서 찾을 수 있도록)
+      // trackId 주입
       const dataWithTrackId = { ...clipData, trackId: this.id };
 
       if (this.clips.has(clipData.id)) {
         this.clips.get(clipData.id)?.update(dataWithTrackId);
       } else {
-        const clip = new AudioClip(this.renderer, dataWithTrackId);
-        this.clips.set(clipData.id, clip);
-        tasks.push(clip.init());
+        tasks.push(this.addClip(clipData));
       }
     }
     await Promise.all(tasks);
-  }
-
-  tick(ctx: TickContext): void {
-    for (const clip of this.clips.values()) {
-      clip.tick(ctx);
-    }
   }
 
   destroy(): void {

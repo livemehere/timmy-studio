@@ -1,7 +1,7 @@
 import { Texture } from 'pixi.js';
 import type { IImageClip } from './types';
-import { GraphicClip } from './Clip';
-import type { Renderer } from '@renderer/lib/studio/engine/Renderer';
+import { GraphicClip } from './GraphicClip';
+import type { GraphicRenderer } from '@renderer/lib/studio/engine/GraphicRenderer';
 import type { TickContext } from '@renderer/lib/studio/engine/types';
 import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
 import type { IImageAsset } from '../Asset/types';
@@ -13,7 +13,7 @@ export class ImageClip extends GraphicClip {
   // State
   private element: HTMLImageElement | null = null;
 
-  constructor(renderer: Renderer, data: IImageClip) {
+  constructor(renderer: GraphicRenderer, data: IImageClip) {
     super(renderer, data);
     this.data = data;
   }

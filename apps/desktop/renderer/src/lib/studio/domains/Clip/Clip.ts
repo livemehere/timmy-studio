@@ -1,6 +1,5 @@
-import { Container, Sprite } from 'pixi.js';
 import { uid } from 'uid';
-import type { Renderer } from '@renderer/lib/studio/engine/Renderer';
+import type { GraphicRenderer } from '@renderer/lib/studio/engine/GraphicRenderer';
 import type { TickContext } from '@renderer/lib/studio/engine/types';
 import type { IAsset } from '../Asset/types';
 import type { IShapeData } from '@renderer/lib/studio/types/shape';
@@ -16,33 +15,11 @@ import type {
   ITextClip,
   ITransform,
   IVideoClip,
-  PlacementPreset,
-  PlacementResult,
-  Size,
 } from './types';
 import type { AudioRenderer } from '@renderer/lib/studio/engine/AudioRenderer';
+import type { TrackType } from '@renderer/lib/studio/domains/Track/types';
 
 export abstract class Clip {
-  static readonly ASSET_PLACEMENT_PRESETS = {
-    containCenter: { fit: 'contain', alignX: 'center', alignY: 'center' },
-
-    // Vertical align (top/middle/bottom)
-    containTop: { fit: 'contain', alignX: 'center', alignY: 'top' },
-    containBottom: { fit: 'contain', alignX: 'center', alignY: 'bottom' },
-
-    // Horizontal align (left/center/right)
-    containLeft: { fit: 'contain', alignX: 'left', alignY: 'center' },
-    containRight: { fit: 'contain', alignX: 'right', alignY: 'center' },
-
-    // Fit by one axis (keep aspect)
-    fitWidthCenter: { fit: 'fitWidth', alignX: 'center', alignY: 'center' },
-    fitHeightCenter: { fit: 'fitHeight', alignX: 'center', alignY: 'center' },
-
-    // Fill
-    coverCenter: { fit: 'cover', alignX: 'center', alignY: 'center' },
-    stretch: { fit: 'stretch', alignX: 'center', alignY: 'center' },
-  } as const satisfies Record<string, PlacementPreset>;
-
   static readonly DEFAULT_CLIP_DURATION_MS = 3000; //ms
   static readonly DEFAULT_TRANSFORM_SIZE = {
     width: 150,
@@ -56,7 +33,7 @@ export abstract class Clip {
   public dirtySessionId: number | null = null;
 
   protected constructor(
-    public readonly renderer: Renderer | AudioRenderer,
+    public readonly renderer: GraphicRenderer | AudioRenderer,
     public data: IClip
   ) {
     this.id = data.id;
@@ -120,37 +97,44 @@ export abstract class Clip {
     const transforms = this.createTransformFromAsset(asset);
     switch (asset.type) {
       case 'video':
-        return {
+        const videoClip: IVideoClip = {
           ...base,
           transforms,
           type: 'video',
           assetId: asset.id,
           trimStart: 0,
           trimEnd: 0,
-        } as IVideoClip;
+          zIndex: 0,
+        };
+        return videoClip;
       case 'image':
-        return {
+        const imageClip: IImageClip = {
           ...base,
           transforms,
           type: 'image',
           assetId: asset.id,
-        } as IImageClip;
+          zIndex: 0,
+        };
+        return imageClip;
       case 'animated-image':
-        return {
+        const animatedImageClip: IAnimatedImageClip = {
           ...base,
           transforms,
           type: 'animated-image',
           assetId: asset.id,
-        } as IAnimatedImageClip;
+          zIndex: 0,
+        };
+        return animatedImageClip;
       case 'audio':
-        return {
+        const audioClip: IAudioClip = {
           ...base,
           type: 'audio',
           assetId: asset.id,
           trimStart: 0,
           trimEnd: 0,
           volume: 1,
-        } as IAudioClip;
+        };
+        return audioClip;
       default:
         throw new Error('Unsupported asset type for clip creation');
     }
@@ -167,6 +151,7 @@ export abstract class Clip {
       enabled: true,
       effects: [],
       animations: [],
+      zIndex: 0,
       transforms: {
         position: { x: 0, y: 0 },
         size: { ...Clip.DEFAULT_TRANSFORM_SIZE },
@@ -193,6 +178,7 @@ export abstract class Clip {
       enabled: true,
       effects: [],
       animations: [],
+      zIndex: 0,
       transforms: {
         position: { x: 0, y: 0 },
         size: { ...Clip.DEFAULT_TRANSFORM_SIZE },
@@ -208,163 +194,8 @@ export abstract class Clip {
     };
   }
 
-  static computePlacement({
-    total,
-    target,
-    preset,
-  }: {
-    total: Size;
-    target: Size;
-    preset: PlacementPreset;
-  }): PlacementResult {
-    const totalW = Number(total.width);
-    const totalH = Number(total.height);
-    const targetW = Number(target.width);
-    const targetH = Number(target.height);
-
-    if (
-      !Number.isFinite(totalW) ||
-      !Number.isFinite(totalH) ||
-      !Number.isFinite(targetW) ||
-      !Number.isFinite(targetH) ||
-      totalW <= 0 ||
-      totalH <= 0 ||
-      targetW <= 0 ||
-      targetH <= 0
-    ) {
-      return {
-        position: { x: 0, y: 0 },
-        size: {
-          width: Math.max(0, totalW || 0),
-          height: Math.max(0, totalH || 0),
-        },
-      };
-    }
-
-    let width = total.width;
-    let height = total.height;
-
-    switch (preset.fit) {
-      case 'original': {
-        width = targetW;
-        height = targetH;
-        break;
-      }
-      case 'stretch': {
-        width = totalW;
-        height = totalH;
-        break;
-      }
-      case 'fitWidth': {
-        width = totalW;
-        height = (totalW * targetH) / targetW;
-        break;
-      }
-      case 'fitHeight': {
-        height = totalH;
-        width = (totalH * targetW) / targetH;
-        break;
-      }
-      case 'contain': {
-        const scale = Math.min(totalW / targetW, totalH / targetH);
-        width = targetW * scale;
-        height = targetH * scale;
-        break;
-      }
-      case 'cover': {
-        const scale = Math.max(totalW / targetW, totalH / targetH);
-        width = targetW * scale;
-        height = targetH * scale;
-        break;
-      }
-    }
-
-    const x =
-      preset.alignX === 'left'
-        ? 0
-        : preset.alignX === 'center'
-          ? (totalW - width) / 2
-          : totalW - width;
-
-    const y =
-      preset.alignY === 'top'
-        ? 0
-        : preset.alignY === 'center'
-          ? (totalH - height) / 2
-          : totalH - height;
-
-    return {
-      position: { x, y },
-      size: { width, height },
-    };
-  }
-}
-
-export abstract class GraphicClip extends Clip {
-  public sprite: Sprite;
-  declare public data: IClip;
-
-  protected constructor(
-    public readonly renderer: Renderer,
-    data: IClip
-  ) {
-    super(renderer, data);
-    this.sprite = new Sprite();
-    this.sprite.label = `Clip-${this.id}`;
-  }
-
-  mount(container: Container) {
-    container.addChild(this.sprite);
-  }
-
-  unmount() {
-    this.sprite.parent?.removeChild(this.sprite);
-  }
-
-  protected applyTransform(transforms: ITransform): void {
-    const sprite = this.sprite;
-
-    // 1) anchor
-    if (transforms.anchorX !== undefined || transforms.anchorY !== undefined) {
-      sprite.anchor.set(
-        transforms.anchorX ?? sprite.anchor.x,
-        transforms.anchorY ?? sprite.anchor.y
-      );
-    }
-
-    // 2) position
-    if (transforms.position) {
-      sprite.x = transforms.position.x;
-      sprite.y = transforms.position.y;
-    }
-
-    // 3) base scale (size -> scale)
-    let baseScaleX = 1;
-    let baseScaleY = 1;
-
-    if (transforms.size) {
-      const tex = sprite.texture;
-      const srcW = tex?.orig?.width || tex?.width || 0;
-      const srcH = tex?.orig?.height || tex?.height || 0;
-
-      if (srcW > 0 && srcH > 0) {
-        baseScaleX = transforms.size.width / srcW;
-        baseScaleY = transforms.size.height / srcH;
-      }
-    }
-
-    // 4) user scale
-    const userScaleX = transforms.scaleX ?? 1;
-    const userScaleY = transforms.scaleY ?? 1;
-
-    sprite.scale.set(baseScaleX * userScaleX, baseScaleY * userScaleY);
-
-    // 5) rotation / alpha
-    if (transforms.rotation !== undefined) {
-      sprite.rotation = transforms.rotation;
-    }
-    if (transforms.opacity !== undefined) {
-      sprite.alpha = transforms.opacity;
-    }
+  static ClipTypeToTrackType(type: ClipType): TrackType {
+    if (type === 'audio') return 'audio';
+    return 'graphic';
   }
 }

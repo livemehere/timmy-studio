@@ -1,13 +1,13 @@
 import type { ITextClip } from './types';
-import { GraphicClip } from './Clip';
-import type { Renderer } from '@renderer/lib/studio/engine/Renderer';
+import { GraphicClip } from './GraphicClip';
+import type { GraphicRenderer } from '@renderer/lib/studio/engine/GraphicRenderer';
 import type { TickContext } from '@renderer/lib/studio/engine/types';
 
 export class TextClip extends GraphicClip {
   readonly type = 'text';
   public data: ITextClip;
 
-  constructor(renderer: Renderer, data: ITextClip) {
+  constructor(renderer: GraphicRenderer, data: ITextClip) {
     super(renderer, data);
     this.data = data;
   }

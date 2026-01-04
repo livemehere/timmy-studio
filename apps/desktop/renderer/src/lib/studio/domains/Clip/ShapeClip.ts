@@ -1,12 +1,12 @@
 import type { IGraphicClip } from './types';
-import { GraphicClip } from './Clip';
-import type { Renderer } from '@renderer/lib/studio/engine/Renderer';
+import { GraphicClip } from './GraphicClip';
+import type { GraphicRenderer } from '@renderer/lib/studio/engine/GraphicRenderer';
 import type { TickContext } from '@renderer/lib/studio/engine/types';
 
 export class ShapeClip extends GraphicClip {
   readonly type = 'shape';
 
-  constructor(renderer: Renderer, data: IGraphicClip) {
+  constructor(renderer: GraphicRenderer, data: IGraphicClip) {
     super(renderer, data);
   }
 
