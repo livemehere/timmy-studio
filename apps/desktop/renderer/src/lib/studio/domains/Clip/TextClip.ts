@@ -10,6 +10,7 @@ export class TextClip extends GraphicClip {
   private text: Text | null = null;
   private background: Graphics | null = null;
   private selectionBounds: Graphics | null = null; // 선택 영역 표시용
+  private underline: Graphics | null = null; // 언더라인 표시용
 
   constructor(renderer: GraphicRenderer, data: ITextClip) {
     super(renderer, data);
@@ -56,6 +57,10 @@ export class TextClip extends GraphicClip {
       this.selectionBounds.destroy();
       this.selectionBounds = null;
     }
+    if (this.underline) {
+      this.underline.destroy();
+      this.underline = null;
+    }
     this.sprite.destroy(true);
   }
 
@@ -78,9 +83,11 @@ export class TextClip extends GraphicClip {
     const sprite = this.sprite;
 
     // 1) anchor
-    // Text uses top-left anchor (0, 0) by default for consistent background alignment
+    // Apply anchor to text for rotation to work correctly
+    const anchorX = transforms.anchorX ?? 0;
+    const anchorY = transforms.anchorY ?? 0;
     if (this.text) {
-      this.text.anchor.set(0, 0);
+      this.text.anchor.set(anchorX, anchorY);
     }
 
     // 2) position
@@ -168,6 +175,9 @@ export class TextClip extends GraphicClip {
 
     // 4. Create Selection Bounds
     this.updateSelectionBounds();
+
+    // 5. Create Underline
+    this.updateUnderline();
   }
 
   private updateContent(): void {
@@ -216,6 +226,9 @@ export class TextClip extends GraphicClip {
 
     // Update Selection Bounds
     this.updateSelectionBounds();
+
+    // Update Underline
+    this.updateUnderline();
   }
 
   private updateBackground(): void {
@@ -234,14 +247,16 @@ export class TextClip extends GraphicClip {
 
       const textWidth = this.text?.width ?? 0;
       const textHeight = this.text?.height ?? 0;
+      const anchorX = this.text?.anchor.x ?? 0;
+      const anchorY = this.text?.anchor.y ?? 0;
 
       const bgWidth = textWidth + paddingX * 2;
       const bgHeight = textHeight + paddingY * 2;
 
       this.background.clear();
 
-      const x = -paddingX;
-      const y = -paddingY;
+      const x = -(textWidth * anchorX) - paddingX;
+      const y = -(textHeight * anchorY) - paddingY;
 
       this.background.roundRect(x, y, bgWidth, bgHeight, radius);
       this.background.fill({ color: bgData.color, alpha: alpha });
@@ -263,13 +278,58 @@ export class TextClip extends GraphicClip {
 
     const width = this.text?.width ?? 0;
     const height = this.text?.height ?? 0;
+    const anchorX = this.text?.anchor.x ?? 0;
+    const anchorY = this.text?.anchor.y ?? 0;
 
-    const x = 0;
-    const y = 0;
+    const x = -(width * anchorX);
+    const y = -(height * anchorY);
 
     if (width > 0 && height > 0) {
       this.selectionBounds.rect(x, y, width, height);
       this.selectionBounds.stroke({ width: 1, color: 0x00ffff, alpha: 0.5 });
+    }
+  }
+
+  private updateUnderline(): void {
+    const underlineEnabled = this.data.textData.underline ?? false;
+
+    if (underlineEnabled) {
+      if (!this.underline) {
+        this.underline = new Graphics();
+        this.sprite.addChild(this.underline);
+      }
+
+      this.underline.clear();
+
+      if (!this.text) return;
+
+      const textWidth = this.text.width;
+      const textHeight = this.text.height;
+      const fontSize = this.data.textData.fontSize;
+      const anchorX = this.text.anchor.x;
+      const anchorY = this.text.anchor.y;
+
+      // Calculate underline position (2 pixels below baseline)
+      const underlineY = fontSize * 0.15;
+      const underlineHeight = fontSize * 0.05;
+
+      this.underline.moveTo(
+        -(textWidth * anchorX),
+        underlineY - textHeight * anchorY
+      );
+      this.underline.lineTo(
+        textWidth - textWidth * anchorX,
+        underlineY - textHeight * anchorY
+      );
+      this.underline.stroke({
+        width: underlineHeight,
+        color: this.data.textData.color,
+      });
+    } else {
+      if (this.underline) {
+        this.underline.destroy();
+        this.underline = null;
+      }
     }
   }
 
