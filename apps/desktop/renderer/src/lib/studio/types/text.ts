@@ -8,16 +8,24 @@ export interface ITextData {
   italic?: boolean;
   underline?: boolean;
   shadow?: {
-    color: number | string;
+    color: string; // number | string 에서 string으로 통일 권장, 일단 유지
+    blur: number;
     offsetX: number;
     offsetY: number;
-    blur: number;
+    alpha?: number;
   };
-  background?: number | string;
+  background?: {
+    color: string;
+    paddingX: number;
+    paddingY: number;
+    radius: number;
+    alpha?: number;
+  };
+  // Deprecated: padding is now part of background
+  // padding?: number | [number, number] | [number, number, number, number];
   border?: {
     color: number | string;
     width: number;
-    radius?: number;
+    radius?: number; // border radius? background radius와 겹칠 수 있음.
   };
-  padding?: number | [number, number] | [number, number, number, number];
 }

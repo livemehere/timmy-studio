@@ -33,6 +33,7 @@ export class GraphicTrack extends Track<
     super(renderer, data);
     this.container = new Container();
     this.container.label = `${GraphicTrack.LABELS.TRACK_PREFIX}${this.id}`;
+    this.container.sortableChildren = true;
 
     // 초기 속성 설정
     this.updateContainerProps(data);
@@ -42,6 +43,7 @@ export class GraphicTrack extends Track<
   async sync(data: IGraphicTrack): Promise<void> {
     this.updateContainerProps(data);
     await this.syncClips(data.clips);
+    this.container.sortChildren();
   }
 
   private updateContainerProps(data: IGraphicTrack) {

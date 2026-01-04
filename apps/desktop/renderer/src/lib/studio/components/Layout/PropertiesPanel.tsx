@@ -298,6 +298,14 @@ export function PropertiesPanel() {
           onChange={(next) => updateClip({ volume: Number(next) } as any)}
         />
       )}
+      {'zIndex' in clip && (
+        <Field
+          label="zIndex"
+          type="number"
+          value={clip.zIndex ?? 0}
+          onChange={(next) => updateClip({ zIndex: Number(next) } as any)}
+        />
+      )}
 
       {videoClip && (
         <ObjectFieldInputs
