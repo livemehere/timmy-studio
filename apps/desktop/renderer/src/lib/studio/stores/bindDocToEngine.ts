@@ -43,11 +43,11 @@ export function bindDocToEngine(
 
       syncGraphicTracks(
         engine,
-        doc.tracks.filter((track) => track.type === 'graphic')
+        state.tracks.filter((track) => track.type === 'graphic')
       );
       syncAudioTracks(
         engine,
-        doc.tracks.filter((track) => track.type === 'audio')
+        state.tracks.filter((track) => track.type === 'audio')
       );
     }
   });

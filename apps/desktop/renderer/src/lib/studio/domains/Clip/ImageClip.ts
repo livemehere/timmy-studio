@@ -26,8 +26,7 @@ export class ImageClip extends GraphicClip {
 
     try {
       this.element = await this.createImageElement(asset);
-      const texture = Texture.from(this.element);
-      this.sprite.texture = texture;
+      this.sprite.texture = Texture.from(this.element);
 
       this.applyTransform(this.data.transforms);
 
