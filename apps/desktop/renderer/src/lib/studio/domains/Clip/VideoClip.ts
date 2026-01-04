@@ -19,8 +19,6 @@ export class VideoClip extends GraphicClip {
   private videoSource: VideoSource | undefined;
   private proxyVideoSource: VideoSource | undefined;
   private isUsingProxy = false;
-  private lastSeekTime = -1;
-  private lastSeekTarget: 'origin' | 'proxy' | null = null;
   private pendingProxySwap = false;
   private pendingOriginSwap = false;
   private wasVisible = false;
@@ -157,9 +155,8 @@ export class VideoClip extends GraphicClip {
     isSeeking: boolean,
     clipBecameVisible: boolean
   ): void {
-    const origin = this.element;
+    const origin = this.element!;
     const proxy = this.proxyElement ?? null;
-    if (!origin) return;
 
     const clipRelativeTime = this.calcClipRelativeTime(clip, currentTime);
 
@@ -174,6 +171,7 @@ export class VideoClip extends GraphicClip {
         clipBecameVisible
       );
     } else {
+      // 일시 정지를 유지하며, 시간 동기화
       this.handleVideoPaused(
         clip,
         origin,
@@ -198,15 +196,13 @@ export class VideoClip extends GraphicClip {
 
     // proxy 를 이미 사용중이라면, origin 으로 스왑 요청
     if (this.isUsingProxy && proxy && !this.pendingOriginSwap) {
-      this.requestSwapToOrigin(clip, origin, proxy);
+      this.requestSwapToOriginWhilePlaying(clip, origin, proxy);
     }
 
     const shouldStartPlayback = playStateChanged || clipBecameVisible;
 
     if (shouldStartPlayback && !this.pendingOriginSwap && !this.isUsingProxy) {
-      if (clipBecameVisible) {
-        origin.currentTime = clipRelativeTime;
-      }
+      origin.currentTime = clipRelativeTime;
       this.startVideoPlayback(clip, origin);
     }
   }
@@ -219,10 +215,12 @@ export class VideoClip extends GraphicClip {
     playStateChanged: boolean,
     isSeeking: boolean
   ): void {
+    // 재생 -> 일시정지 전환 시 origin 시간을 proxy 에 동기화 후 모두 일시정지
     if (playStateChanged) {
       this.syncOnPause(clip, origin, proxy);
     }
 
+    // seeking 중이라면 currentTime 및 seek 완료 이벤트 처리
     if (isSeeking) {
       this.handleSeeking(clip, origin, proxy, clipRelativeTime);
     }
@@ -234,33 +232,42 @@ export class VideoClip extends GraphicClip {
     proxy: HTMLVideoElement | null,
     clipRelativeTime: number
   ): void {
+    // seeking 은 proxy 로도가능하고, origin 으로도 가능
     const mode: SeekingRenderMode =
       proxy && this.renderer.seekingRenderMode === 'proxy' ? 'proxy' : 'origin';
 
+    // === proxy 모드인 경우 ===
     if (mode === 'proxy') {
+      // proxy 가 사용가능하면
       if (this.isUsingProxy && proxy) {
-        this.updateVideoCurrentTimeIfNeeded(proxy, clipRelativeTime, 'proxy');
+        this.updateVideoCurrentTimeIfNeeded(proxy, clipRelativeTime);
       } else {
-        this.updateVideoCurrentTimeIfNeeded(origin, clipRelativeTime, 'origin');
+        // proxy 가 없다면 origin 으로 처리 (fallback)
+        this.updateVideoCurrentTimeIfNeeded(origin, clipRelativeTime);
       }
 
+      // proxy 로 전환이 필요하다면, 전환 요청 (1회)
       if (proxy && !this.isUsingProxy && !this.pendingProxySwap) {
         this.requestSwapToProxy(clip, origin, proxy);
       }
       return;
     }
 
-    this.cancelPendingSwaps('proxy');
+    // === origin 모드인 경우 === (프레임별로 최종 추출할떄 사용)
+    this.cancelPendingSwaps('proxy'); // proxy 스왑 요청 취소
 
+    // proxy 를 사용중이라면 origin 으로 스왑 요청
     if (proxy && this.isUsingProxy && !this.pendingOriginSwap) {
       this.requestSwapToOriginAtTime(clip, origin, proxy, clipRelativeTime);
       return;
     }
 
-    this.updateVideoCurrentTimeIfNeeded(origin, clipRelativeTime, 'origin');
+    // texture 를 origin 으로 사용중인 경우, 시간 동기화만 처리
+    this.updateVideoCurrentTimeIfNeeded(origin, clipRelativeTime);
   }
 
-  private requestSwapToOrigin(
+  // proxy -> origin 으로 스왑이 필요할 떄 호출
+  private requestSwapToOriginWhilePlaying(
     clip: IVideoClip,
     origin: HTMLVideoElement,
     proxy: HTMLVideoElement
@@ -269,27 +276,25 @@ export class VideoClip extends GraphicClip {
     const sessionId = this.renderer.currentSeekSessionId;
     this.renderer.markClipDirty(this, sessionId);
 
-    origin.currentTime = proxy.currentTime;
-
     const onSeeked = () => {
       origin.removeEventListener('seeked', onSeeked);
 
       if (this.pendingOriginSwap && this.isUsingProxy) {
+        // texture 스왑
         this.swapVideoTexture(origin);
         this.isUsingProxy = false;
-        this.pendingOriginSwap = false;
         proxy.pause();
 
-        this.renderer.clearClipDirty(this, sessionId);
+        // 타이머가 재생중이라면, 재생 처리
         if (this.renderer.timer.isPlaying) {
           this.startVideoPlayback(clip, origin);
         }
-      } else {
-        this.pendingOriginSwap = false;
-        this.renderer.clearClipDirty(this, sessionId);
       }
+      this.pendingOriginSwap = false;
+      this.renderer.clearClipDirty(this, sessionId);
     };
     origin.addEventListener('seeked', onSeeked, { once: true });
+    origin.currentTime = proxy.currentTime;
   }
 
   private requestSwapToOriginAtTime(
@@ -301,7 +306,6 @@ export class VideoClip extends GraphicClip {
     this.pendingOriginSwap = true;
     const sessionId = this.renderer.currentSeekSessionId;
     this.renderer.markClipDirty(this, sessionId);
-    origin.currentTime = targetTime;
 
     const onSeeked = () => {
       origin.removeEventListener('seeked', onSeeked);
@@ -318,35 +322,38 @@ export class VideoClip extends GraphicClip {
       this.renderer.clearClipDirty(this, sessionId);
     };
     origin.addEventListener('seeked', onSeeked, { once: true });
+
+    origin.currentTime = targetTime;
   }
 
+  // proxy 로 스왑 요청 + dirty 처리 + 시간동기화
   private requestSwapToProxy(
     _clip: IVideoClip,
     origin: HTMLVideoElement,
     proxy: HTMLVideoElement
   ): void {
-    this.pendingProxySwap = true;
+    this.pendingProxySwap = true; // 스왑 요청 플래그 ON
     const sessionId = this.renderer.currentSeekSessionId;
     this.renderer.markClipDirty(this, sessionId);
-    proxy.currentTime = origin.currentTime;
 
     const onSeeked = () => {
       proxy.removeEventListener('seeked', onSeeked);
       if (!this.renderer.timer.isPlaying && this.pendingProxySwap) {
-        this.swapVideoTexture(proxy);
-        this.isUsingProxy = true;
-        this.pendingProxySwap = false;
-        this.renderer.clearClipDirty(this, sessionId);
-      } else {
-        this.pendingProxySwap = false;
-        this.renderer.clearClipDirty(this, sessionId);
+        // 중복 스왑되지 않게, pending 플래그 확인
+        this.swapVideoTexture(proxy); // texture 스왑
+        this.isUsingProxy = true; // proxy 사용중으로 상태 변경
       }
+      this.pendingProxySwap = false; // 스왑 요청 플래그 해제
+      this.renderer.clearClipDirty(this, sessionId); // dirty 해제
     };
     proxy.addEventListener('seeked', onSeeked, { once: true });
+    proxy.currentTime = origin.currentTime; // 시간 동기화 및 seek 시작
   }
 
+  // origin/proxy 로 texture 스왑 처리
   private swapVideoTexture(videoElement: HTMLVideoElement): void {
     const oldTexture = this.sprite.texture;
+    // texture 를 제거하되, VideoSource 는 유지
     if (oldTexture) {
       oldTexture.destroy(false);
     }
@@ -355,31 +362,25 @@ export class VideoClip extends GraphicClip {
       ? this.videoSource
       : this.proxyVideoSource;
 
-    if (!videoSource) return;
-
-    this.sprite.texture = Texture.from(videoSource);
+    // 만들어져있는 videoSource 를 가지고 texture 생성 및 교체
+    this.sprite.texture = Texture.from(videoSource!);
+    // 일시정지 상태라면 비디오도 일시정지
     if (!this.renderer.timer.isPlaying) {
       videoElement.pause();
     }
   }
 
+  // currentTime 업데이트 및 dirty 처리
   private updateVideoCurrentTimeIfNeeded(
     video: HTMLVideoElement,
-    targetTime: number,
-    target: 'origin' | 'proxy'
+    targetTime: number
   ): void {
     const EPSILON = 0.001;
-    if (Math.abs(video.currentTime - targetTime) < EPSILON) return;
+    const isTimeClose = Math.abs(video.currentTime - targetTime) < EPSILON;
 
-    if (
-      this.lastSeekTarget === target &&
-      Math.abs(this.lastSeekTime - targetTime) < EPSILON
-    ) {
-      return;
-    }
+    // 미미한 시간 차이는 무시
+    if (isTimeClose) return;
 
-    this.lastSeekTime = targetTime;
-    this.lastSeekTarget = target;
     const sessionId = this.renderer.currentSeekSessionId;
     this.renderer.markClipDirty(this, sessionId);
 
@@ -397,6 +398,7 @@ export class VideoClip extends GraphicClip {
     });
   }
 
+  // 일시정지 시, proxy 시간을 origin 시간으로 동기화
   private syncOnPause(
     _clip: IVideoClip,
     origin: HTMLVideoElement,
