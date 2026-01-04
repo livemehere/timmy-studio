@@ -1,9 +1,32 @@
 import { useDocStore, useInteractionStore } from '../../hooks/useStudioStores';
 import { type ReactNode } from 'react';
 import type { ITrack } from '@renderer/lib/studio/domains/Track/types';
-import type { IClip, ITextClip } from '@renderer/lib/studio/domains/Clip/types';
+import type {
+  IClip,
+  IGraphicClip,
+  ITextClip,
+} from '@renderer/lib/studio/domains/Clip/types';
 
 import { TextPropertiesEditor } from './ResourcePanel/TextPropertiesEditor';
+
+function TransformsEditor({
+  value,
+  onChange,
+  label = 'transforms',
+}: {
+  value: unknown;
+  onChange: (path: JsonPath, next: string | number | boolean | null) => void;
+  label?: string;
+}) {
+  return (
+    <ObjectFieldInputs
+      label={label}
+      value={value}
+      readOnly={false}
+      onChange={onChange}
+    />
+  );
+}
 
 function findClipInTracks(
   tracks: ITrack[],
@@ -228,8 +251,7 @@ export function PropertiesPanel() {
   }
 
   const { clip, trackId } = result;
-  const videoClip =
-    clip.type !== 'audio' && clip.type === 'video' ? (clip as any) : null;
+  const graphicClip = clip.type !== 'audio' ? (clip as IGraphicClip) : null;
   const textClip = clip.type === 'text' ? (clip as ITextClip) : null;
 
   const updateClip = (updates: Partial<IClip>) => {
@@ -307,13 +329,15 @@ export function PropertiesPanel() {
         />
       )}
 
-      {videoClip && (
-        <ObjectFieldInputs
-          label="transforms"
-          value={videoClip.transforms}
-          readOnly={false}
+      {graphicClip && !textClip && (
+        <TransformsEditor
+          value={graphicClip.transforms}
           onChange={(path, next) => {
-            const nextTransforms = setAtPath(videoClip.transforms, path, next);
+            const nextTransforms = setAtPath(
+              graphicClip.transforms,
+              path,
+              next
+            );
             updateClip({ transforms: nextTransforms } as any);
           }}
         />
@@ -331,10 +355,8 @@ export function PropertiesPanel() {
           />
           <div className="h-px bg-neutral-700 my-2" />
           <h3 className="font-bold mb-2">Transforms</h3>
-          <ObjectFieldInputs
-            label="transforms"
+          <TransformsEditor
             value={textClip.transforms}
-            readOnly={false}
             onChange={(path, next) => {
               const nextTransforms = setAtPath(textClip.transforms, path, next);
               updateClip({ transforms: nextTransforms } as any);
