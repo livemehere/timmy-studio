@@ -3,6 +3,8 @@ import { type ReactNode } from 'react';
 import type { ITrack } from '@renderer/lib/studio/domains/Track/types';
 import type { IClip, ITextClip } from '@renderer/lib/studio/domains/Clip/types';
 
+import { TextPropertiesEditor } from './ResourcePanel/TextPropertiesEditor';
+
 function findClipInTracks(
   tracks: ITrack[],
   clipId: string
@@ -313,14 +315,11 @@ export function PropertiesPanel() {
         <>
           <div className="h-px bg-neutral-700 my-2" />
           <h3 className="font-bold mb-2">Text Properties</h3>
-          <ObjectFieldInputs
-            label="textData"
-            value={textClip.textData}
-            readOnly={false}
-            onChange={(path, next) => {
-              const nextTextData = setAtPath(textClip.textData, path, next);
-              updateClip({ textData: nextTextData } as any);
-            }}
+          <TextPropertiesEditor
+            data={textClip.textData}
+            onChange={(updates) =>
+              updateClip({ textData: { ...textClip.textData, ...updates } })
+            }
           />
           <div className="h-px bg-neutral-700 my-2" />
           <h3 className="font-bold mb-2">Transforms</h3>
