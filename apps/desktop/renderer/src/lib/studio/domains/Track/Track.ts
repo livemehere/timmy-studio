@@ -6,6 +6,9 @@ import type { AudioRenderer } from '@renderer/lib/studio/engine/AudioRenderer';
 import type { AssetType } from '@renderer/lib/studio/domains/Asset/types';
 import { uid } from 'uid';
 
+// 기본 트랙의 zIndex (위/아래로 최대 50개씩 트랙 추가 가능)
+export const DEFAULT_TRACK_Z_INDEX = 50;
+
 export abstract class Track<
   TClipData extends IClip = IClip,
   TRenderer extends GraphicRenderer | AudioRenderer =
@@ -95,7 +98,7 @@ export abstract class Track<
       return {
         id: uid(8),
         name: 'New Graphic Track',
-        zIndex: 0,
+        zIndex: DEFAULT_TRACK_Z_INDEX,
         type: 'graphic',
         enabled: true,
         locked: false,
@@ -106,7 +109,7 @@ export abstract class Track<
       return {
         id: uid(8),
         name: 'New Audio Track',
-        zIndex: 0,
+        zIndex: DEFAULT_TRACK_Z_INDEX,
         type: 'audio',
         enabled: true,
         locked: false,

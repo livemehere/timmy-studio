@@ -24,7 +24,7 @@ const mock: IProject = {
       type: 'graphic',
       enabled: true,
       locked: false,
-      zIndex: 1,
+      zIndex: 0,
       opacity: 1,
       clips: [],
     },

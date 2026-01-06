@@ -88,6 +88,12 @@ export const createDocStore = (initialProject?: IProject) => {
   const project = initialProject ?? DEFAULT_PROJECT;
 
   console.log(`[DocStore] Doc 스토어 생성됨`);
+
+  // Helper function to sort tracks by zIndex (descending)
+  const sortTracksByZIndex = (tracks: ITrack[]): ITrack[] => {
+    return [...tracks].sort((a, b) => b.zIndex - a.zIndex);
+  };
+
   return createStore<DocStore>()((set, get) => {
     return {
       id: project.id,
@@ -134,24 +140,27 @@ export const createDocStore = (initialProject?: IProject) => {
       addTrack: (track) => {
         const trackArr = Array.isArray(track) ? track : [track];
         const currentTracks = get().tracks;
-        set({ tracks: [...currentTracks, ...trackArr] });
+        const newTracks = sortTracksByZIndex([...currentTracks, ...trackArr]);
+        set({ tracks: newTracks });
       },
 
       removeTrack: (trackId) => {
         const trackIdArr = Array.isArray(trackId) ? trackId : [trackId];
         const currentTracks = get().tracks;
-        set({
-          tracks: currentTracks.filter((t) => !trackIdArr.includes(t.id)),
-        });
+        const newTracks = sortTracksByZIndex(
+          currentTracks.filter((t) => !trackIdArr.includes(t.id))
+        );
+        set({ tracks: newTracks });
       },
 
       updateTrack: (trackId, updates) => {
         const currentTracks = get().tracks;
-        set({
-          tracks: currentTracks.map((track) =>
+        const newTracks = sortTracksByZIndex(
+          currentTracks.map((track) =>
             track.id === trackId ? ({ ...track, ...updates } as ITrack) : track
-          ),
-        });
+          )
+        );
+        set({ tracks: newTracks });
       },
 
       getTrackById: (trackId) => {

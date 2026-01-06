@@ -68,18 +68,23 @@ export function TimelineTrack({
     >
       <div
         className={
-          'sticky left-0 z-50 bg-neutral-800 shrink-0 flex items-center justify-center gap-1.5'
+          'sticky left-0 z-50 bg-neutral-800 shrink-0 flex items-center justify-between gap-1.5 px-2'
         }
         style={{ width: trackTitleWidth }}
       >
-        <TrackButton
-          icon={LockKeyhole}
-          active={track.locked}
-          onClick={() => toggleTrackLock(track.id, !track.locked)}
-        />
-        <TrackButton icon={Eye} />
-        <TrackButton icon={VolumeOff} />
-        <TrackButton icon={Ellipsis} />
+        <div className="flex items-center gap-1.5">
+          <TrackButton
+            icon={LockKeyhole}
+            active={track.locked}
+            onClick={() => toggleTrackLock(track.id, !track.locked)}
+          />
+          <TrackButton icon={Eye} />
+          <TrackButton icon={VolumeOff} />
+          <TrackButton icon={Ellipsis} />
+        </div>
+        <span className="text-xs text-neutral-400 font-mono pointer-events-none relative">
+          z:{track.zIndex}
+        </span>
       </div>
 
       <div

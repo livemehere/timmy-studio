@@ -16,9 +16,7 @@ export function TimelineTracks({
 }) {
   const tracks = useDocStore((state) => state.tracks);
 
-  // zIndex 기반으로 내림차순 정렬 (높은 zIndex가 위에)
-  const sortedTracks = [...tracks].sort((a, b) => b.zIndex - a.zIndex);
-
+  // tracks는 이미 docStore에서 zIndex 기반 정렬됨
   return (
     <div
       style={{
@@ -26,7 +24,7 @@ export function TimelineTracks({
         height,
       }}
     >
-      {sortedTracks.map((track) => (
+      {tracks.map((track) => (
         <TimelineTrack
           key={track.id}
           trackId={track.id}

@@ -1,5 +1,8 @@
 import type { IAsset } from '@renderer/lib/studio/domains/Asset/types';
-import { useDocStore } from '@renderer/lib/studio/hooks/useStudioStores';
+import {
+  useDocStore,
+  useStudioStores,
+} from '@renderer/lib/studio/hooks/useStudioStores';
 import { useMemo } from 'react';
 
 import { Asset } from '@renderer/lib/studio/domains/Asset/Asset';
@@ -10,7 +13,7 @@ import type { ITrack } from '../../Track/types';
 import { Track } from '@renderer/lib/studio/domains/Track/Track';
 
 export function useAsset(asset: IAsset) {
-  const getTrackById = useDocStore((state) => state.getTrackById);
+  const { docStore } = useStudioStores();
   const addTrackToDoc = useDocStore((state) => state.addTrack);
   const addClipToDoc = useDocStore((state) => state.addClip);
   const tracks = useDocStore((state) => state.tracks);
@@ -41,9 +44,14 @@ export function useAsset(asset: IAsset) {
 
     let targetTrack: ITrack;
     if (options.trackId) {
-      targetTrack = getTrackById(options.trackId)!;
+      targetTrack = docStore.getState().getTrackById(options.trackId)!;
     } else {
       targetTrack = Track.create(Track.AssetTypeToTrackType(asset.type));
+      // 가장 낮은 zIndex에서 -1한 값으로 설정 (아래에 추가)
+      if (tracks.length > 0) {
+        const minZIndex = Math.min(...tracks.map((t) => t.zIndex));
+        targetTrack.zIndex = minZIndex - 1;
+      }
       addTrackToDoc(targetTrack);
     }
 
@@ -66,7 +74,9 @@ export function useAsset(asset: IAsset) {
     }
 
     // 시작 시간을 트랙의 마지막 클립 끝나는 시간으로 조정
-    const startTime = GraphicTrack.getLastestClipEndTime(targetTrack);
+    // NOTE: targetTrack을 다시 가져와서 최신 clips 상태를 반영
+    const latestTargetTrack = docStore.getState().getTrackById(targetTrack.id)!;
+    const startTime = GraphicTrack.getLastestClipEndTime(latestTargetTrack);
     clip.startTime = startTime;
     clip.endTime = startTime + (clip.endTime - clip.startTime);
 
