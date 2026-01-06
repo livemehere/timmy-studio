@@ -5,14 +5,49 @@ export type ShapeType =
   | 'ellipse'
   | 'polygon';
 
+export type FillType = 'solid' | 'linear-gradient' | 'radial-gradient';
+
+export interface ISolidFill {
+  type: 'solid';
+  color: number | string;
+  opacity?: number;
+}
+
+export interface ILinearGradientFill {
+  type: 'linear-gradient';
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  colorStops: Array<{
+    offset: number; // 0-1
+    color: number | string;
+    alpha?: number;
+  }>;
+}
+
+export interface IRadialGradientFill {
+  type: 'radial-gradient';
+  x0: number;
+  y0: number;
+  radius0: number;
+  x1: number;
+  y1: number;
+  radius1: number;
+  colorStops: Array<{
+    offset: number; // 0-1
+    color: number | string;
+    alpha?: number;
+  }>;
+}
+
+export type IFill = ISolidFill | ILinearGradientFill | IRadialGradientFill;
+
 export interface IShapeDataBase {
   shapeType: ShapeType;
   width: number;
   height: number;
-  fill: {
-    color: number | string;
-    opacity?: number;
-  };
+  fill: IFill;
   stroke?: {
     color: number | string;
     width: number;

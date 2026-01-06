@@ -52,7 +52,7 @@ export function ShapeAssets() {
               shapeType: 'rectangle',
               width: 200,
               height: 150,
-              fill: { color: '#3b82f6', opacity: 1 },
+              fill: { type: 'solid', color: '#3b82f6', opacity: 1 },
               stroke: { color: '#1e40af', width: 2, opacity: 1 },
             })
           }
@@ -71,7 +71,7 @@ export function ShapeAssets() {
               width: 200,
               height: 150,
               cornerRadius: 20,
-              fill: { color: '#8b5cf6', opacity: 1 },
+              fill: { type: 'solid', color: '#8b5cf6', opacity: 1 },
               stroke: { color: '#6d28d9', width: 2, opacity: 1 },
             })
           }
@@ -89,7 +89,7 @@ export function ShapeAssets() {
               shapeType: 'circle',
               width: 150,
               height: 150,
-              fill: { color: '#10b981', opacity: 1 },
+              fill: { type: 'solid', color: '#10b981', opacity: 1 },
               stroke: { color: '#059669', width: 2, opacity: 1 },
             })
           }
@@ -107,7 +107,7 @@ export function ShapeAssets() {
               shapeType: 'ellipse',
               width: 200,
               height: 120,
-              fill: { color: '#f59e0b', opacity: 1 },
+              fill: { type: 'solid', color: '#f59e0b', opacity: 1 },
               stroke: { color: '#d97706', width: 2, opacity: 1 },
             })
           }
@@ -126,7 +126,7 @@ export function ShapeAssets() {
               sides: 3,
               width: 150,
               height: 150,
-              fill: { color: '#ef4444', opacity: 1 },
+              fill: { type: 'solid', color: '#ef4444', opacity: 1 },
               stroke: { color: '#dc2626', width: 2, opacity: 1 },
             })
           }
@@ -145,7 +145,7 @@ export function ShapeAssets() {
               sides: 5,
               width: 150,
               height: 150,
-              fill: { color: '#ec4899', opacity: 1 },
+              fill: { type: 'solid', color: '#ec4899', opacity: 1 },
               stroke: { color: '#db2777', width: 2, opacity: 1 },
             })
           }
@@ -164,7 +164,7 @@ export function ShapeAssets() {
               sides: 6,
               width: 150,
               height: 150,
-              fill: { color: '#06b6d4', opacity: 1 },
+              fill: { type: 'solid', color: '#06b6d4', opacity: 1 },
               stroke: { color: '#0891b2', width: 2, opacity: 1 },
             })
           }
@@ -196,7 +196,7 @@ export function ShapeAssets() {
                 sides: polygonSides,
                 width: 150,
                 height: 150,
-                fill: { color: '#a855f7', opacity: 1 },
+                fill: { type: 'solid', color: '#a855f7', opacity: 1 },
                 stroke: { color: '#9333ea', width: 2, opacity: 1 },
               })
             }

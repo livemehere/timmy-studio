@@ -2,7 +2,7 @@ import type { IGraphicClip, IShapeClip, ITransform } from './types';
 import { GraphicClip } from './GraphicClip';
 import type { GraphicRenderer } from '@renderer/lib/studio/engine/GraphicRenderer';
 import type { TickContext } from '@renderer/lib/studio/engine/types';
-import { Graphics } from 'pixi.js';
+import { Graphics, FillGradient } from 'pixi.js';
 
 export class ShapeClip extends GraphicClip {
   readonly type = 'shape';
@@ -125,29 +125,57 @@ export class ShapeClip extends GraphicClip {
 
     graphics.clear();
 
-    // Fill 색상 설정
-    const fillColor =
-      typeof shape.fill.color === 'string'
-        ? shape.fill.color
-        : shape.fill.color;
-    const fillAlpha = shape.fill.opacity ?? 1;
+    // Prepare fill
+    let fillStyle: any;
+    if (shape.fill.type === 'solid') {
+      const fillColor =
+        typeof shape.fill.color === 'string'
+          ? shape.fill.color
+          : shape.fill.color;
+      const fillAlpha = shape.fill.opacity ?? 1;
+      fillStyle = { color: fillColor, alpha: fillAlpha };
+    } else if (shape.fill.type === 'linear-gradient') {
+      const gradient = new FillGradient({
+        type: 'linear',
+        start: { x: shape.fill.x0, y: shape.fill.y0 },
+        end: { x: shape.fill.x1, y: shape.fill.y1 },
+        colorStops: shape.fill.colorStops.map((stop) => ({
+          offset: stop.offset,
+          color: stop.color,
+        })),
+      });
+      fillStyle = gradient;
+    } else if (shape.fill.type === 'radial-gradient') {
+      const gradient = new FillGradient({
+        type: 'radial',
+        center: { x: shape.fill.x0, y: shape.fill.y0 },
+        innerRadius: shape.fill.radius0,
+        outerCenter: { x: shape.fill.x1, y: shape.fill.y1 },
+        outerRadius: shape.fill.radius1,
+        colorStops: shape.fill.colorStops.map((stop) => ({
+          offset: stop.offset,
+          color: stop.color,
+        })),
+      });
+      fillStyle = gradient;
+    }
 
     // 도형 타입별 렌더링 - 체이닝 방식으로 fill 호출
     switch (shape.shapeType) {
       case 'rectangle':
         graphics.rect(0, 0, shape.width, shape.height);
-        graphics.fill({ color: fillColor, alpha: fillAlpha });
+        graphics.fill(fillStyle);
         break;
 
       case 'rounded-rectangle':
         graphics.roundRect(0, 0, shape.width, shape.height, shape.cornerRadius);
-        graphics.fill({ color: fillColor, alpha: fillAlpha });
+        graphics.fill(fillStyle);
         break;
 
       case 'circle': {
         const radius = Math.min(shape.width, shape.height) / 2;
         graphics.circle(shape.width / 2, shape.height / 2, radius);
-        graphics.fill({ color: fillColor, alpha: fillAlpha });
+        graphics.fill(fillStyle);
         break;
       }
 
@@ -158,7 +186,7 @@ export class ShapeClip extends GraphicClip {
           shape.width / 2,
           shape.height / 2
         );
-        graphics.fill({ color: fillColor, alpha: fillAlpha });
+        graphics.fill(fillStyle);
         break;
 
       case 'polygon': {
@@ -170,7 +198,7 @@ export class ShapeClip extends GraphicClip {
           sides
         );
         graphics.poly(points);
-        graphics.fill({ color: fillColor, alpha: fillAlpha });
+        graphics.fill(fillStyle);
         break;
       }
     }

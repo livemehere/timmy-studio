@@ -1,5 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { Application, Graphics, Text, TextStyle, Sprite } from 'pixi.js';
+import {
+  Application,
+  Graphics,
+  Text,
+  TextStyle,
+  Sprite,
+  FillGradient,
+} from 'pixi.js';
 
 // ==================== 상수 ====================
 const CANVAS_WIDTH = 1280;
@@ -43,28 +50,63 @@ export default function PixiPlayground() {
         rect.y = 100;
         app.stage.addChild(rect);
 
-        // 예제 2: 원 그리기
-        const circle = new Graphics();
-        circle.circle(75, 75, 75);
-        circle.fill({ color: '#10b981', alpha: 1 });
-        circle.circle(75, 75, 75);
-        circle.stroke({ width: 2, color: '#059669', alpha: 1 });
-        circle.x = 400;
-        circle.y = 100;
-        app.stage.addChild(circle);
+        // 예제 2: Linear Gradient 사각형
+        const linearGradientRect = new Graphics();
+        const linearGradient = new FillGradient({
+          type: 'linear',
+          start: { x: 0, y: 0 },
+          end: { x: 1, y: 1 },
+          colorStops: [
+            { offset: 0, color: '#3b82f6' },
+            { offset: 1, color: '#8b5cf6' },
+          ],
+        });
+        linearGradientRect.rect(0, 0, 200, 150);
+        linearGradientRect.fill(linearGradient);
+        linearGradientRect.x = 350;
+        linearGradientRect.y = 100;
+        app.stage.addChild(linearGradientRect);
 
-        // 예제 3: 다각형 (육각형)
+        // 예제 3: Radial Gradient 원
+        const radialGradientCircle = new Graphics();
+        const radialGradient = new FillGradient({
+          type: 'radial',
+          center: { x: 0.5, y: 0.5 },
+          innerRadius: 0.2,
+          outerCenter: { x: 0.5, y: 0.5 },
+          outerRadius: 0.5,
+          colorStops: [
+            { offset: 0, color: '#f59e0b' },
+            { offset: 1, color: '#dc2626' },
+          ],
+        });
+        radialGradientCircle.circle(75, 75, 75);
+        radialGradientCircle.fill(radialGradient);
+        radialGradientCircle.x = 600;
+        radialGradientCircle.y = 100;
+        app.stage.addChild(radialGradientCircle);
+
+        // 예제 4: 다각형 (육각형) with gradient
         const hexagon = new Graphics();
+        const hexGradient = new FillGradient({
+          type: 'linear',
+          start: { x: 0, y: 0 },
+          end: { x: 0, y: 1 },
+          colorStops: [
+            { offset: 0, color: '#10b981' },
+            { offset: 1, color: '#059669' },
+          ],
+        });
         const hexPoints = calculatePolygonPoints(75, 75, 70, 6);
         hexagon.poly(hexPoints);
-        hexagon.fill({ color: '#f59e0b', alpha: 1 });
+        hexagon.fill(hexGradient);
         hexagon.poly(hexPoints);
-        hexagon.stroke({ width: 2, color: '#d97706', alpha: 1 });
-        hexagon.x = 700;
+        hexagon.stroke({ width: 2, color: '#047857', alpha: 1 });
+        hexagon.x = 850;
         hexagon.y = 100;
         app.stage.addChild(hexagon);
 
-        // 예제 4: Pivot 테스트 (회전 중심)
+        // 예제 5: Pivot 테스트 (회전 중심)
         const rotatingRect = new Graphics();
         rotatingRect.rect(0, 0, 150, 100);
         rotatingRect.fill({ color: '#ec4899', alpha: 1 });
@@ -73,7 +115,7 @@ export default function PixiPlayground() {
         rotatingRect.y = 400;
         app.stage.addChild(rotatingRect);
 
-        // 예제 5: Sprite 안에 Graphics 넣기 (ShapeClip 방식)
+        // 예제 6: Sprite 안에 Graphics 넣기 (ShapeClip 방식)
         const sprite = new Sprite();
         sprite.x = 550;
         sprite.y = 350;
@@ -87,9 +129,10 @@ export default function PixiPlayground() {
 
         // 텍스트 레이블
         const labels = [
-          { text: 'Rectangle', x: 200, y: 260 },
-          { text: 'Circle', x: 475, y: 260 },
-          { text: 'Hexagon', x: 775, y: 260 },
+          { text: 'Solid Rectangle', x: 200, y: 260 },
+          { text: 'Linear Gradient', x: 450, y: 260 },
+          { text: 'Radial Gradient', x: 675, y: 260 },
+          { text: 'Gradient Hexagon', x: 925, y: 260 },
           { text: 'Rotating Rect\n(pivot center)', x: 275, y: 510 },
           { text: 'Graphics in Sprite', x: 625, y: 460 },
         ];
