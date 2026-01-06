@@ -1,4 +1,5 @@
 import { motion } from 'motion/react';
+import { useRef } from 'react';
 import {
   useDocStore,
   useEngineStore,
@@ -50,6 +51,9 @@ export function TimelineClip({
   );
   const setHoverTrackId = useInteractionStore((state) => state.setHoverTrackId);
 
+  const wheelDeltaRef = useRef({ x: 0, y: 0 });
+  const isDraggingRef = useRef(false);
+
   return (
     <motion.div
       style={{
@@ -62,9 +66,11 @@ export function TimelineClip({
       dragElastic={0}
       onDragStart={() => {
         setDraggingClipId(clip.id);
+        isDraggingRef.current = true;
+        wheelDeltaRef.current = { x: 0, y: 0 };
       }}
       onDrag={(_, info) => {
-        const offsetY = info.offset.y;
+        const offsetY = info.offset.y + wheelDeltaRef.current.y;
         const trackIndexDelta = Math.round(offsetY / trackHeight);
 
         if (trackIndexDelta !== 0) {
@@ -81,6 +87,13 @@ export function TimelineClip({
           setHoverTrackId(null);
         }
       }}
+      onWheel={(e) => {
+        if (isDraggingRef.current) {
+          e.preventDefault();
+          wheelDeltaRef.current.x += e.deltaX;
+          wheelDeltaRef.current.y += e.deltaY;
+        }
+      }}
       className={cn(
         'absolute h-full bg-cyan-700 px-2 py-1 rounded overflow-hidden z-5',
         { 'border-1 border-white': isSelected }
@@ -93,16 +106,19 @@ export function TimelineClip({
         }
       }}
       onDragEnd={(_, info) => {
+        isDraggingRef.current = false;
         setDraggingClipId(null);
         setHoverTrackId(null);
 
-        const deltaStartTime = (info.offset.x / pxPerSec) * 1000;
+        const totalOffsetX = info.offset.x + wheelDeltaRef.current.x;
+        const totalOffsetY = info.offset.y + wheelDeltaRef.current.y;
+
+        const deltaStartTime = (totalOffsetX / pxPerSec) * 1000;
         const newStartTime = Math.max(0, clip.startTime + deltaStartTime);
         const newEndTime = newStartTime + (clip.endTime - clip.startTime);
 
         // 트랙 간 이동 로직
-        const offsetY = info.offset.y;
-        const trackIndexDelta = Math.round(offsetY / trackHeight);
+        const trackIndexDelta = Math.round(totalOffsetY / trackHeight);
 
         if (trackIndexDelta !== 0) {
           // 현재 트랙의 인덱스 찾기
