@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@renderer/utils/cn';
 import { TimelineClip } from '@renderer/lib/studio/components/Timeline/TimelineClip';
-import { useDocStore } from '../../hooks/useStudioStores';
+import { useDocStore, useInteractionStore } from '../../hooks/useStudioStores';
 
 function TrackButton({
   icon: IconComp,
@@ -46,6 +46,11 @@ export function TimelineTrack({
   const updateTrack = useDocStore((state) => state.updateTrack);
   const track = getTrackById(trackId);
 
+  const draggingClipId = useInteractionStore((state) => state.draggingClipId);
+  const hoverTrackId = useInteractionStore((state) => state.hoverTrackId);
+
+  const isHovering = draggingClipId && hoverTrackId === trackId;
+
   if (!track) {
     throw new Error(`Track(${trackId}) not found`);
   }
@@ -77,13 +82,18 @@ export function TimelineTrack({
         <TrackButton icon={Ellipsis} />
       </div>
 
-      <div className={'bg-neutral-800 flex-1 relative'}>
+      <div
+        className={cn('bg-neutral-800 flex-1 relative transition-colors', {
+          'bg-cyan-900/30': isHovering,
+        })}
+      >
         {track.clips.map((clip) => (
           <TimelineClip
             key={clip.id}
             trackId={track.id}
             clipId={clip.id}
             pxPerSec={pxPerSec}
+            trackHeight={trackHeight}
           />
         ))}
       </div>

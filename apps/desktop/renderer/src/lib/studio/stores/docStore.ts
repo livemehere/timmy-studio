@@ -62,6 +62,11 @@ export interface DocActions {
     clipId: string,
     updates: Partial<IClip>
   ) => void;
+  moveClipToTrack: (
+    sourceTrackId: string,
+    targetTrackId: string,
+    clipId: string
+  ) => void;
   getClipById: <T extends IClip = IClip>(
     trackId: string,
     clipId: string
@@ -211,6 +216,34 @@ export const createDocStore = (initialProject?: IProject) => {
             );
             if (clip) {
               Object.assign(clip, updates);
+            }
+          }
+        });
+        set({ tracks: newTracks });
+      },
+
+      moveClipToTrack: (
+        sourceTrackId: string,
+        targetTrackId: string,
+        clipId: string
+      ) => {
+        if (sourceTrackId === targetTrackId) return;
+
+        const currentTracks = get().tracks;
+        const newTracks = produce(currentTracks, (draft) => {
+          const sourceTrack = draft.find((t) => t.id === sourceTrackId);
+          const targetTrack = draft.find((t) => t.id === targetTrackId);
+
+          if (sourceTrack && targetTrack) {
+            const sourceTrackWithClips = sourceTrack as any;
+            const targetTrackWithClips = targetTrack as any;
+            const clipIndex = sourceTrackWithClips.clips.findIndex(
+              (c: IClip) => c.id === clipId
+            );
+
+            if (clipIndex !== -1) {
+              const [clip] = sourceTrackWithClips.clips.splice(clipIndex, 1);
+              targetTrackWithClips.clips.push(clip);
             }
           }
         });

@@ -2,12 +2,16 @@ import { createStore } from 'zustand/vanilla';
 
 export interface InteractionState {
   selectedClipIds: string[];
+  draggingClipId: string | null;
+  hoverTrackId: string | null;
 }
 
 export interface InteractionActions {
   setSelectedClipId: (clipId: string | null) => void;
   addSelectedClipId: (clipId: string) => void;
   removeSelectedClipId: (clipId: string) => void;
+  setDraggingClipId: (clipId: string | null) => void;
+  setHoverTrackId: (trackId: string | null) => void;
 }
 
 export type InteractionStore = InteractionState & InteractionActions;
@@ -19,6 +23,8 @@ export const createInteractionStore = () => {
   console.log('[InteractionStore] Interaction 스토어 생성됨.');
   return createStore<InteractionStore>()((set, get) => ({
     selectedClipIds: [],
+    draggingClipId: null,
+    hoverTrackId: null,
 
     setSelectedClipId: (clipId) => {
       set({ selectedClipIds: clipId ? [clipId] : [] });
@@ -33,6 +39,14 @@ export const createInteractionStore = () => {
     removeSelectedClipId: (clipId) => {
       const selectedClipIds = get().selectedClipIds;
       set({ selectedClipIds: selectedClipIds.filter((id) => id !== clipId) });
+    },
+
+    setDraggingClipId: (clipId) => {
+      set({ draggingClipId: clipId });
+    },
+
+    setHoverTrackId: (trackId) => {
+      set({ hoverTrackId: trackId });
     },
   }));
 };
