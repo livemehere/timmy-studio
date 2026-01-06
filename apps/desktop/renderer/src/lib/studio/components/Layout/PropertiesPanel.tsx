@@ -10,6 +10,7 @@ import { Section, InputField, NumberField, ToggleField } from '../inputs';
 import { TransformsSection } from '../Properties/TransformsSection';
 import { TextPropertiesSection } from '../Properties/TextPropertiesSection';
 import { ShapePropertiesSection } from '../Properties/ShapePropertiesSection';
+import { EffectsSection } from '../Properties/EffectsSection';
 import { findClipInTracks } from '../../utils/clipHelpers';
 import {
   updateTransformAtPath,
@@ -199,6 +200,12 @@ export function PropertiesPanel() {
           }}
         />
       )}
+
+      {/* Effects Section (for all clips) */}
+      <EffectsSection
+        effects={clip.effects}
+        onChange={(effects) => updateClip({ effects })}
+      />
     </div>
   );
 }
