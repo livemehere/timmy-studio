@@ -1,8 +1,8 @@
 import { css } from '@emotion/react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { Suspense } from 'react';
-import { Spinner } from '../ui/Spinner';
-import { Docks } from '../ui/Docks';
+import { Spinner } from './Spinner';
+import { Docks } from './Docks';
 import { createDockItems } from '@renderer/configs/dock';
 
 export default function Layout() {
