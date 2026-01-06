@@ -1,4 +1,4 @@
-import { Container, Sprite, BlurFilter } from 'pixi.js';
+import { Container, Sprite, BlurFilter, Graphics } from 'pixi.js';
 import { PixelateFilter } from 'pixi-filters/pixelate';
 import type { GraphicRenderer } from '@renderer/lib/studio/engine/GraphicRenderer';
 import { Clip } from './Clip';
@@ -9,10 +9,15 @@ import type {
   PlacementResult,
   Size,
 } from './types';
+import type { IEffectMask } from '@renderer/lib/studio/types/effect';
 
 export abstract class GraphicClip extends Clip {
   public sprite: Sprite;
   declare public data: IClip;
+
+  // For masked effects
+  private effectContainers: Map<string, Container> = new Map();
+  private maskGraphics: Map<string, Graphics> = new Map();
 
   static readonly ASSET_PLACEMENT_PRESETS = {
     containCenter: { fit: 'contain', alignX: 'center', alignY: 'center' },
@@ -53,40 +58,137 @@ export abstract class GraphicClip extends Clip {
 
   /**
    * Effects 적용 (blur, pixelate 등)
+   * mask가 있으면 특정 영역만 적용
    */
   protected applyEffects(): void {
     const effects = this.data.effects || [];
-    const filters: any[] = [];
 
-    effects.forEach((effect) => {
-      if (!effect.enabled) return;
+    // Clean up old effect containers and masks
+    this.cleanupEffectContainers();
 
-      switch (effect.type) {
-        case 'blur': {
-          const strength = (effect.parameters.strength as number) ?? 8;
-          const quality = (effect.parameters.quality as number) ?? 4;
+    // Separate effects into full and masked
+    const fullEffects = effects.filter((e) => e.enabled && !e.mask?.enabled);
+    const maskedEffects = effects.filter((e) => e.enabled && e.mask?.enabled);
 
-          const blurFilter = new BlurFilter({
-            strength,
-            quality,
-          });
+    // Apply full-screen effects to sprite
+    const fullFilters: any[] = [];
+    fullEffects.forEach((effect) => {
+      const filter = this.createFilter(effect);
+      if (filter) fullFilters.push(filter);
+    });
+    this.sprite.filters = fullFilters.length > 0 ? fullFilters : null;
 
-          filters.push(blurFilter);
-          break;
-        }
-        case 'pixelate': {
-          const size = (effect.parameters.size as number) ?? 10;
-
-          const pixelateFilter = new PixelateFilter(size);
-
-          filters.push(pixelateFilter);
-          break;
-        }
-        // 다른 effect 타입들은 추후 추가
+    // Apply masked effects
+    maskedEffects.forEach((effect) => {
+      if (effect.mask) {
+        this.applyMaskedEffect(effect, effect.mask);
       }
     });
+  }
 
-    this.sprite.filters = filters.length > 0 ? filters : null;
+  /**
+   * Create filter from effect
+   */
+  private createFilter(effect: any): any {
+    switch (effect.type) {
+      case 'blur': {
+        const strength = (effect.parameters.strength as number) ?? 8;
+        const quality = (effect.parameters.quality as number) ?? 4;
+        return new BlurFilter({ strength, quality });
+      }
+      case 'pixelate': {
+        const size = (effect.parameters.size as number) ?? 10;
+        return new PixelateFilter(size);
+      }
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Apply effect to masked area only
+   */
+  private applyMaskedEffect(effect: any, mask: IEffectMask): void {
+    // Create container for this masked effect
+    const container = new Container();
+    container.label = `MaskedEffect-${effect.id}`;
+
+    // Container should be at the same position as sprite
+    container.x = this.sprite.x;
+    container.y = this.sprite.y;
+    container.rotation = this.sprite.rotation;
+
+    // Get texture dimensions (before scaling)
+    const texture = this.sprite.texture;
+    const texWidth = texture?.orig?.width || texture?.width || 0;
+    const texHeight = texture?.orig?.height || texture?.height || 0;
+
+    // Calculate actual sprite dimensions (after scaling)
+    const spriteWidth = texWidth * this.sprite.scale.x;
+    const spriteHeight = texHeight * this.sprite.scale.y;
+
+    // Convert normalized coordinates to actual pixel coordinates
+    // Account for anchor point
+    const anchorOffsetX = -this.sprite.anchor.x * spriteWidth;
+    const anchorOffsetY = -this.sprite.anchor.y * spriteHeight;
+
+    const x = anchorOffsetX + mask.x * spriteWidth;
+    const y = anchorOffsetY + mask.y * spriteHeight;
+    const width = mask.width * spriteWidth;
+    const height = mask.height * spriteHeight;
+
+    // Create mask graphics
+    const maskGraphics = new Graphics();
+
+    // Draw mask shape
+    if (mask.shape === 'rectangle') {
+      maskGraphics.rect(x, y, width, height);
+    } else if (mask.shape === 'ellipse') {
+      const centerX = x + width / 2;
+      const centerY = y + height / 2;
+      const radiusX = width / 2;
+      const radiusY = height / 2;
+      maskGraphics.ellipse(centerX, centerY, radiusX, radiusY);
+    }
+    maskGraphics.fill({ color: 0xffffff, alpha: 1 });
+
+    // Create a sprite copy for the masked area
+    const maskedSprite = new Sprite(this.sprite.texture);
+    maskedSprite.anchor.copyFrom(this.sprite.anchor);
+    maskedSprite.scale.copyFrom(this.sprite.scale);
+    maskedSprite.alpha = this.sprite.alpha;
+    // Don't copy position/rotation - it's handled by container
+
+    // Apply filter to masked sprite
+    const filter = this.createFilter(effect);
+    if (filter) {
+      maskedSprite.filters = [filter];
+    }
+
+    // Set mask
+    container.addChild(maskGraphics);
+    container.addChild(maskedSprite);
+    maskedSprite.mask = maskGraphics;
+
+    // Add to parent container (same as sprite)
+    if (this.sprite.parent) {
+      this.sprite.parent.addChild(container);
+    }
+
+    // Store for cleanup
+    this.effectContainers.set(effect.id, container);
+    this.maskGraphics.set(effect.id, maskGraphics);
+  }
+
+  /**
+   * Clean up effect containers and masks
+   */
+  private cleanupEffectContainers(): void {
+    this.effectContainers.forEach((container) => {
+      container.destroy({ children: true });
+    });
+    this.effectContainers.clear();
+    this.maskGraphics.clear();
   }
 
   protected applyTransform(transforms: ITransform): void {
