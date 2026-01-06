@@ -7,6 +7,7 @@ import {
 import { msToSec } from '../../utils/time';
 import type { IGraphicClip } from '@renderer/lib/studio/domains/Clip/types';
 import { cn } from '@renderer/utils/cn';
+import { Track } from '@renderer/lib/studio/domains/Track/Track';
 
 export function TimelineClip({
   clipId,
@@ -22,6 +23,7 @@ export function TimelineClip({
   const getClipById = useDocStore((state) => state.getClipById);
   const updateClip = useDocStore((state) => state.updateClip);
   const moveClipToTrack = useDocStore((state) => state.moveClipToTrack);
+  const addTrack = useDocStore((state) => state.addTrack);
   const tracks = useDocStore((state) => state.tracks);
   const clip = getClipById<IGraphicClip>(trackId, clipId)!;
 
@@ -80,7 +82,7 @@ export function TimelineClip({
         }
       }}
       className={cn(
-        'absolute h-full bg-cyan-700 px-2 py-1 rounded overflow-hidden z-1',
+        'absolute h-full bg-cyan-700 px-2 py-1 rounded overflow-hidden z-5',
         { 'border-1 border-white': isSelected }
       )}
       onClick={(e) => {
@@ -107,12 +109,71 @@ export function TimelineClip({
           const currentTrackIndex = tracks.findIndex((t) => t.id === trackId);
           const targetTrackIndex = currentTrackIndex + trackIndexDelta;
 
-          // 타겟 트랙이 존재하는 경우에만 이동
+          // 타겟 트랙이 존재하는 경우 이동
           if (targetTrackIndex >= 0 && targetTrackIndex < tracks.length) {
             const targetTrack = tracks[targetTrackIndex];
             moveClipToTrack(trackId, targetTrack.id, clip.id);
             // 타겟 트랙에서 시간 업데이트
             updateClip(targetTrack.id, clip.id, {
+              startTime: newStartTime,
+              endTime: newEndTime,
+            });
+            return;
+          }
+
+          // 타겟 트랙이 없으면 새로 생성 (중간 빈 트랙 포함)
+          if (targetTrackIndex >= tracks.length || targetTrackIndex < 0) {
+            // 현재 트랙의 타입을 확인
+            const currentTrack = tracks[currentTrackIndex];
+            const trackType = currentTrack?.type || 'graphic';
+
+            const newTracks = [];
+            let targetTrackId = '';
+
+            if (targetTrackIndex >= tracks.length) {
+              // 아래로 이동 - 필요한 만큼 트랙 생성
+              const tracksToCreate = targetTrackIndex - tracks.length + 1;
+              // 가장 낮은 zIndex 찾기
+              const minZIndex = Math.min(...tracks.map((t) => t.zIndex));
+
+              for (let i = 0; i < tracksToCreate; i++) {
+                const newTrack = Track.create(trackType);
+                // 아래로 갈수록 zIndex 감소: minZIndex-1, minZIndex-2, ...
+                newTrack.zIndex = minZIndex - (i + 1);
+                newTracks.push(newTrack);
+
+                // 마지막 트랙이 타겟 트랙
+                if (i === tracksToCreate - 1) {
+                  targetTrackId = newTrack.id;
+                }
+              }
+            } else if (targetTrackIndex < 0) {
+              // 위로 이동 - 필요한 만큼 트랙 생성
+              const tracksToCreate = Math.abs(targetTrackIndex);
+              // 가장 높은 zIndex 찾기
+              const maxZIndex = Math.max(...tracks.map((t) => t.zIndex));
+
+              for (let i = 0; i < tracksToCreate; i++) {
+                const newTrack = Track.create(trackType);
+                // 위로 갈수록 zIndex 증가: maxZIndex+1, maxZIndex+2, ...
+                newTrack.zIndex = maxZIndex + (i + 1);
+                newTracks.push(newTrack);
+
+                // 마지막 트랙이 타겟 트랙 (가장 위)
+                if (i === tracksToCreate - 1) {
+                  targetTrackId = newTrack.id;
+                }
+              }
+            }
+
+            // 트랙 추가
+            addTrack(newTracks);
+
+            // 클립을 타겟 트랙으로 이동
+            moveClipToTrack(trackId, targetTrackId, clip.id);
+
+            // 시간 업데이트
+            updateClip(targetTrackId, clip.id, {
               startTime: newStartTime,
               endTime: newEndTime,
             });
