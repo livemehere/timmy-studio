@@ -1,4 +1,4 @@
-import { Clapperboard, House, Settings, Video } from 'lucide-react';
+import { Clapperboard, House, Settings, Video, Shapes } from 'lucide-react';
 import type { TDockItem } from '../components/Docks';
 
 export function createDockItems({
@@ -24,6 +24,12 @@ export function createDockItems({
       label: 'video-editor',
       icon: <Clapperboard size={18} />,
       onClick: () => navigate('/video-editor'),
+    },
+    {
+      id: 'pixi-playground',
+      label: 'Pixi Playground',
+      icon: <Shapes size={18} />,
+      onClick: () => navigate('/pixi-playground'),
     },
     {
       id: 'settings',
