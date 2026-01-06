@@ -1,7 +1,8 @@
 import { Section, NumberField, ToggleField } from '../inputs';
-import type { IEffect } from '../../types/effect';
+import type { IEffect, EffectType } from '../../types/effect';
 import { Button } from '@renderer/components/Button';
 import { Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 
 interface EffectsSectionProps {
   effects: IEffect[];
@@ -9,16 +10,38 @@ interface EffectsSectionProps {
 }
 
 export function EffectsSection({ effects, onChange }: EffectsSectionProps) {
-  const handleAddEffect = () => {
-    const newEffect: IEffect = {
-      id: `effect-${Date.now()}`,
-      type: 'blur',
-      enabled: true,
-      parameters: {
-        strength: 8,
-        quality: 4,
-      },
-    };
+  const [selectedEffectType, setSelectedEffectType] =
+    useState<EffectType>('blur');
+
+  const handleAddEffect = (type: EffectType) => {
+    let newEffect: IEffect;
+
+    switch (type) {
+      case 'blur':
+        newEffect = {
+          id: `effect-${Date.now()}`,
+          type: 'blur',
+          enabled: true,
+          parameters: {
+            strength: 8,
+            quality: 4,
+          },
+        };
+        break;
+      case 'pixelate':
+        newEffect = {
+          id: `effect-${Date.now()}`,
+          type: 'pixelate',
+          enabled: true,
+          parameters: {
+            size: 10,
+          },
+        };
+        break;
+      default:
+        return;
+    }
+
     onChange([...effects, newEffect]);
   };
 
@@ -40,18 +63,42 @@ export function EffectsSection({ effects, onChange }: EffectsSectionProps) {
     );
   };
 
+  const getEffectDisplayName = (type: EffectType) => {
+    switch (type) {
+      case 'blur':
+        return 'Blur';
+      case 'pixelate':
+        return 'Pixelate (Mosaic)';
+      default:
+        return type;
+    }
+  };
+
   return (
     <Section title="Effects">
       <div className="flex flex-col gap-3">
-        {/* Add Effect Button */}
-        <Button
-          variant="secondary"
-          className="w-full flex items-center justify-center gap-2"
-          onClick={handleAddEffect}
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Blur Effect</span>
-        </Button>
+        {/* Add Effect Buttons */}
+        <div className="flex flex-col gap-2">
+          <div className="text-xs text-neutral-400 mb-1">Add Effect</div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant="secondary"
+              className="flex items-center justify-center gap-2"
+              onClick={() => handleAddEffect('blur')}
+            >
+              <Plus className="w-4 h-4" />
+              <span>Blur</span>
+            </Button>
+            <Button
+              variant="secondary"
+              className="flex items-center justify-center gap-2"
+              onClick={() => handleAddEffect('pixelate')}
+            >
+              <Plus className="w-4 h-4" />
+              <span>Mosaic</span>
+            </Button>
+          </div>
+        </div>
 
         {/* Effects List */}
         {effects.map((effect) => (
@@ -70,7 +117,7 @@ export function EffectsSection({ effects, onChange }: EffectsSectionProps) {
                   }
                 />
                 <span className="text-sm text-neutral-300 font-medium">
-                  Blur Effect
+                  {getEffectDisplayName(effect.type)}
                 </span>
               </div>
               <button
@@ -81,7 +128,7 @@ export function EffectsSection({ effects, onChange }: EffectsSectionProps) {
               </button>
             </div>
 
-            {/* Effect Parameters */}
+            {/* Effect Parameters - Blur */}
             {effect.enabled && effect.type === 'blur' && (
               <div className="space-y-2 pt-2 border-t border-neutral-700">
                 <NumberField
@@ -112,6 +159,26 @@ export function EffectsSection({ effects, onChange }: EffectsSectionProps) {
                 />
                 <div className="text-xs text-neutral-500 mt-1">
                   Quality: 높을수록 부드러운 블러 (성능 영향)
+                </div>
+              </div>
+            )}
+
+            {/* Effect Parameters - Pixelate */}
+            {effect.enabled && effect.type === 'pixelate' && (
+              <div className="space-y-2 pt-2 border-t border-neutral-700">
+                <NumberField
+                  label="Pixel Size"
+                  value={(effect.parameters.size as number) ?? 10}
+                  onChange={(value) =>
+                    handleUpdateParameter(effect.id, 'size', value)
+                  }
+                  min={1}
+                  max={50}
+                  step={1}
+                  showRange
+                />
+                <div className="text-xs text-neutral-500 mt-1">
+                  Pixel Size: 클수록 큰 모자이크 효과
                 </div>
               </div>
             )}

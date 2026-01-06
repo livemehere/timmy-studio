@@ -2,7 +2,7 @@ import type { IGraphicClip, IShapeClip, ITransform } from './types';
 import { GraphicClip } from './GraphicClip';
 import type { GraphicRenderer } from '@renderer/lib/studio/engine/GraphicRenderer';
 import type { TickContext } from '@renderer/lib/studio/engine/types';
-import { Graphics, FillGradient, BlurFilter } from 'pixi.js';
+import { Graphics, FillGradient } from 'pixi.js';
 
 export class ShapeClip extends GraphicClip {
   readonly type = 'shape';
@@ -62,36 +62,6 @@ export class ShapeClip extends GraphicClip {
       this.applyTransform((this.data as IShapeClip).transforms);
       this.applyEffects();
     }
-  }
-
-  /**
-   * Effects 적용 (blur 등)
-   */
-  private applyEffects(): void {
-    const effects = this.data.effects || [];
-    const filters: any[] = [];
-
-    effects.forEach((effect) => {
-      if (!effect.enabled) return;
-
-      switch (effect.type) {
-        case 'blur': {
-          const strength = (effect.parameters.strength as number) ?? 8;
-          const quality = (effect.parameters.quality as number) ?? 4;
-
-          const blurFilter = new BlurFilter({
-            strength,
-            quality,
-          });
-
-          filters.push(blurFilter);
-          break;
-        }
-        // 다른 effect 타입들은 추후 추가
-      }
-    });
-
-    this.sprite.filters = filters.length > 0 ? filters : null;
   }
 
   /**

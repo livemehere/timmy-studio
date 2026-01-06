@@ -7,6 +7,7 @@ export interface IEffect {
 
 export type EffectType =
   | 'blur'
+  | 'pixelate'
   | 'brightness'
   | 'contrast'
   | 'saturation'

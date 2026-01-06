@@ -1,4 +1,5 @@
-import { Container, Sprite } from 'pixi.js';
+import { Container, Sprite, BlurFilter } from 'pixi.js';
+import { PixelateFilter } from 'pixi-filters/pixelate';
 import type { GraphicRenderer } from '@renderer/lib/studio/engine/GraphicRenderer';
 import { Clip } from './Clip';
 import type {
@@ -48,6 +49,44 @@ export abstract class GraphicClip extends Clip {
 
   unmount() {
     this.sprite.parent?.removeChild(this.sprite);
+  }
+
+  /**
+   * Effects 적용 (blur, pixelate 등)
+   */
+  protected applyEffects(): void {
+    const effects = this.data.effects || [];
+    const filters: any[] = [];
+
+    effects.forEach((effect) => {
+      if (!effect.enabled) return;
+
+      switch (effect.type) {
+        case 'blur': {
+          const strength = (effect.parameters.strength as number) ?? 8;
+          const quality = (effect.parameters.quality as number) ?? 4;
+
+          const blurFilter = new BlurFilter({
+            strength,
+            quality,
+          });
+
+          filters.push(blurFilter);
+          break;
+        }
+        case 'pixelate': {
+          const size = (effect.parameters.size as number) ?? 10;
+
+          const pixelateFilter = new PixelateFilter(size);
+
+          filters.push(pixelateFilter);
+          break;
+        }
+        // 다른 effect 타입들은 추후 추가
+      }
+    });
+
+    this.sprite.filters = filters.length > 0 ? filters : null;
   }
 
   protected applyTransform(transforms: ITransform): void {

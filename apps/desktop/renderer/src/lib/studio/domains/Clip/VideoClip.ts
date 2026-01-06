@@ -87,6 +87,7 @@ export class VideoClip extends GraphicClip {
     }
 
     this.applyTransform(data.transforms);
+    this.applyEffects();
 
     // Sync time
     const origin = this.element;
@@ -134,6 +135,7 @@ export class VideoClip extends GraphicClip {
     const clipBecameVisible = !this.wasVisible;
 
     this.applyTransform(this.data.transforms);
+    this.applyEffects();
 
     this.handleVideoClip(
       this.data,

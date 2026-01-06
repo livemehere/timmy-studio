@@ -43,6 +43,7 @@ export class ImageClip extends GraphicClip {
     this.sprite.visible = isVisible;
     if (isVisible) {
       this.applyTransform(data.transforms);
+      this.applyEffects();
     }
   }
 
@@ -63,6 +64,7 @@ export class ImageClip extends GraphicClip {
 
     if (isVisible) {
       this.applyTransform(this.data.transforms);
+      this.applyEffects();
     }
   }
 
