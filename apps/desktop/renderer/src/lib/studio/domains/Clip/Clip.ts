@@ -154,7 +154,7 @@ export abstract class Clip {
       zIndex: 0,
       transforms: {
         position: { x: 0, y: 0 },
-        size: { ...Clip.DEFAULT_TRANSFORM_SIZE },
+        size: { width: shapeData.width, height: shapeData.height },
         scaleX: 1,
         scaleY: 1,
         rotation: 0,

@@ -3,29 +3,68 @@ import type { IShapeData } from '../../types/shape';
 
 interface ShapePropertiesSectionProps {
   shapeData: IShapeData;
-  onChange: (updates: Partial<IShapeData>) => void;
+  onChange: (updates: IShapeData) => void;
 }
 
 export function ShapePropertiesSection({
   shapeData,
   onChange,
 }: ShapePropertiesSectionProps) {
+  const handleUpdate = (updates: Partial<IShapeData>) => {
+    onChange({ ...shapeData, ...updates } as IShapeData);
+  };
+
   return (
     <Section title="Shape Properties">
       <div className="flex flex-col gap-2">
         <div className="text-xs text-neutral-400 mb-1">Shape Type</div>
-        <div className="flex gap-2">
-          {(['rectangle', 'circle', 'polygon'] as const).map((type) => (
+        <div className="grid grid-cols-3 gap-2">
+          {(
+            [
+              'rectangle',
+              'rounded-rectangle',
+              'circle',
+              'ellipse',
+              'polygon',
+            ] as const
+          ).map((type) => (
             <button
               key={type}
-              onClick={() => onChange({ shapeType: type })}
-              className={`flex-1 px-3 py-1.5 rounded text-xs transition-colors ${
+              onClick={() => {
+                const base = {
+                  width: shapeData.width,
+                  height: shapeData.height,
+                  fill: shapeData.fill,
+                  stroke: shapeData.stroke,
+                };
+                if (type === 'rounded-rectangle') {
+                  onChange({
+                    ...base,
+                    shapeType: type,
+                    cornerRadius: 20,
+                  });
+                } else if (type === 'polygon') {
+                  onChange({
+                    ...base,
+                    shapeType: type,
+                    sides: 6,
+                  });
+                } else {
+                  onChange({
+                    ...base,
+                    shapeType: type,
+                  } as IShapeData);
+                }
+              }}
+              className={`px-2 py-1.5 rounded text-xs transition-colors ${
                 shapeData.shapeType === type
                   ? 'bg-blue-600 text-white'
                   : 'bg-neutral-700 text-neutral-300 hover:bg-neutral-600'
               }`}
             >
-              {type.charAt(0).toUpperCase() + type.slice(1)}
+              {type === 'rounded-rectangle'
+                ? 'Rounded'
+                : type.charAt(0).toUpperCase() + type.slice(1)}
             </button>
           ))}
         </div>
@@ -34,7 +73,7 @@ export function ShapePropertiesSection({
       <NumberField
         label="Width"
         value={shapeData.width}
-        onChange={(value) => onChange({ width: value })}
+        onChange={(value) => handleUpdate({ width: value })}
         min={1}
         max={4000}
         showRange
@@ -43,71 +82,121 @@ export function ShapePropertiesSection({
       <NumberField
         label="Height"
         value={shapeData.height}
-        onChange={(value) => onChange({ height: value })}
+        onChange={(value) => handleUpdate({ height: value })}
         min={1}
         max={4000}
         showRange
       />
 
-      <InputField
-        label="Color"
-        value={String(shapeData.color)}
-        onChange={(value) => onChange({ color: value })}
-        type="color"
-      />
-
-      {(shapeData.shapeType === 'rectangle' ||
-        shapeData.shapeType === 'polygon') && (
+      {/* Fill */}
+      <div className="flex flex-col gap-2 mt-2">
+        <div className="text-xs text-neutral-400 mb-1">Fill</div>
+        <InputField
+          label="Color"
+          value={String(shapeData.fill.color)}
+          onChange={(value) =>
+            handleUpdate({
+              fill: { ...shapeData.fill, color: value },
+            })
+          }
+          type="color"
+        />
         <NumberField
-          label="Radius"
-          value={shapeData.radius ?? 0}
-          onChange={(value) => onChange({ radius: value })}
+          label="Opacity"
+          value={shapeData.fill.opacity ?? 1}
+          onChange={(value) =>
+            handleUpdate({
+              fill: { ...shapeData.fill, opacity: value },
+            })
+          }
+          min={0}
+          max={1}
+          step={0.01}
+          showRange
+        />
+      </div>
+
+      {/* Rounded Rectangle Corner Radius */}
+      {shapeData.shapeType === 'rounded-rectangle' && (
+        <NumberField
+          label="Corner Radius"
+          value={shapeData.cornerRadius}
+          onChange={(value) =>
+            handleUpdate({ cornerRadius: value } as Partial<IShapeData>)
+          }
           min={0}
           max={100}
         />
       )}
 
-      {/* Border */}
+      {/* Polygon Sides */}
+      {shapeData.shapeType === 'polygon' && (
+        <NumberField
+          label="Sides"
+          value={shapeData.sides}
+          onChange={(value) =>
+            handleUpdate({ sides: Math.max(3, Math.floor(value)) })
+          }
+          min={3}
+          max={20}
+        />
+      )}
+
+      {/* Stroke */}
       <div className="flex flex-col gap-2 mt-4">
-        <div className="text-xs text-neutral-400 mb-1">Border</div>
+        <div className="text-xs text-neutral-400 mb-1">Stroke</div>
         <ToggleField
           label="Enable"
-          checked={!!shapeData.border}
+          checked={!!shapeData.stroke}
           onChange={(checked) => {
             if (checked) {
-              onChange({
-                border: {
+              handleUpdate({
+                stroke: {
                   color: '#ffffff',
                   width: 2,
+                  opacity: 1,
                 },
               });
             } else {
-              onChange({ border: undefined });
+              handleUpdate({ stroke: undefined });
             }
           }}
         />
-        {shapeData.border && (
+        {shapeData.stroke && (
           <>
             <InputField
               label="Color"
-              value={String(shapeData.border.color)}
+              value={String(shapeData.stroke.color)}
               onChange={(value) =>
-                onChange({
-                  border: { ...shapeData.border!, color: value },
+                handleUpdate({
+                  stroke: { ...shapeData.stroke!, color: value },
                 })
               }
               type="color"
             />
             <NumberField
               label="Width"
-              value={shapeData.border.width}
+              value={shapeData.stroke.width}
               onChange={(value) =>
-                onChange({
-                  border: { ...shapeData.border!, width: value },
+                handleUpdate({
+                  stroke: { ...shapeData.stroke!, width: value },
                 })
               }
               min={0}
               max={20}
+            />
+            <NumberField
+              label="Opacity"
+              value={shapeData.stroke.opacity ?? 1}
+              onChange={(value) =>
+                handleUpdate({
+                  stroke: { ...shapeData.stroke!, opacity: value },
+                })
+              }
+              min={0}
+              max={1}
+              step={0.01}
+              showRange
             />
           </>
         )}

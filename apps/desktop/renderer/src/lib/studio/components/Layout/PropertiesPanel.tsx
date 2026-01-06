@@ -173,11 +173,25 @@ export function PropertiesPanel() {
       {shapeClip && (
         <ShapePropertiesSection
           shapeData={shapeClip.shapeData}
-          onChange={(updates) =>
+          onChange={(updatedShapeData) => {
+            // shapeData의 width/height가 변경되면 transform.size도 함께 업데이트
+            const sizeChanged =
+              updatedShapeData.width !== shapeClip.shapeData.width ||
+              updatedShapeData.height !== shapeClip.shapeData.height;
+
             updateClip({
-              shapeData: { ...shapeClip.shapeData, ...updates },
-            })
-          }
+              shapeData: updatedShapeData,
+              ...(sizeChanged && {
+                transforms: {
+                  ...shapeClip.transforms,
+                  size: {
+                    width: updatedShapeData.width,
+                    height: updatedShapeData.height,
+                  },
+                },
+              }),
+            });
+          }}
         />
       )}
     </div>
