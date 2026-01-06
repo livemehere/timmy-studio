@@ -151,6 +151,11 @@ export function PropertiesPanel() {
               transforms: newTransforms as typeof graphicClip.transforms,
             });
           }}
+          onBatchChange={(updates) => {
+            updateClip({
+              transforms: { ...graphicClip.transforms, ...updates },
+            });
+          }}
           isTextClip={clip.type === 'text'}
           canvasWidth={canvasWidth}
           canvasHeight={canvasHeight}

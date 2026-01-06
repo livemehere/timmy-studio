@@ -69,20 +69,27 @@ export class ShapeClip extends GraphicClip {
    */
   protected applyTransform(transforms: ITransform): void {
     const sprite = this.sprite;
+    const graphics = this.graphics;
     const shape = this.shapeData;
 
-    // 1) anchor
-    if (transforms.anchorX !== undefined || transforms.anchorY !== undefined) {
-      sprite.anchor.set(
-        transforms.anchorX ?? sprite.anchor.x,
-        transforms.anchorY ?? sprite.anchor.y
-      );
+    // 1) anchor - Graphics는 pivot 사용
+    const anchorX = transforms.anchorX ?? 0;
+    const anchorY = transforms.anchorY ?? 0;
+
+    if (graphics) {
+      // Graphics의 pivot을 설정하여 회전 중심점 조정
+      graphics.pivot.set(shape.width * anchorX, shape.height * anchorY);
     }
 
     // 2) position
     if (transforms.position) {
       sprite.x = transforms.position.x;
       sprite.y = transforms.position.y;
+    }
+
+    // Update zIndex for sorting in container
+    if ((this.data as IShapeClip).zIndex !== undefined) {
+      sprite.zIndex = (this.data as IShapeClip).zIndex;
     }
 
     // 3) base scale (size -> scale)

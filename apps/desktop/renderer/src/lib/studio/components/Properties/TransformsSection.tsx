@@ -5,6 +5,7 @@ import type { JsonPath, JsonPrimitive } from '../../utils/transformHelpers';
 interface TransformsSectionProps {
   transforms: ITransform;
   onChange: (path: JsonPath, value: JsonPrimitive) => void;
+  onBatchChange?: (updates: Partial<ITransform>) => void;
   isTextClip?: boolean;
   canvasWidth?: number;
   canvasHeight?: number;
@@ -13,6 +14,7 @@ interface TransformsSectionProps {
 export function TransformsSection({
   transforms,
   onChange,
+  onBatchChange,
   isTextClip = false,
   canvasWidth = 1920,
   canvasHeight = 1080,
@@ -29,6 +31,67 @@ export function TransformsSection({
     x: transforms?.anchorX ?? 0,
     y: transforms?.anchorY ?? 0,
   });
+
+  // Anchor와 Position을 함께 조정하는 정렬 핸들러
+  const handleAlignX = (alignX: 'left' | 'center' | 'right') => {
+    if (onBatchChange) {
+      const updates: Partial<ITransform> = {
+        position: { ...transforms.position } as { x: number; y: number },
+      };
+
+      if (alignX === 'left') {
+        updates.position!.x = 0;
+        updates.anchorX = 0;
+      } else if (alignX === 'center') {
+        updates.position!.x = canvasWidth / 2;
+        updates.anchorX = 0.5;
+      } else {
+        updates.position!.x = canvasWidth;
+        updates.anchorX = 1;
+      }
+
+      onBatchChange(updates);
+    } else {
+      // Fallback: position만 변경
+      if (alignX === 'left') {
+        onChange(['position', 'x'], 0);
+      } else if (alignX === 'center') {
+        onChange(['position', 'x'], canvasWidth / 2);
+      } else {
+        onChange(['position', 'x'], canvasWidth);
+      }
+    }
+  };
+
+  const handleAlignY = (alignY: 'top' | 'center' | 'bottom') => {
+    if (onBatchChange) {
+      const updates: Partial<ITransform> = {
+        position: { ...transforms.position } as { x: number; y: number },
+      };
+
+      if (alignY === 'top') {
+        updates.position!.y = 0;
+        updates.anchorY = 0;
+      } else if (alignY === 'center') {
+        updates.position!.y = canvasHeight / 2;
+        updates.anchorY = 0.5;
+      } else {
+        updates.position!.y = canvasHeight;
+        updates.anchorY = 1;
+      }
+
+      onBatchChange(updates);
+    } else {
+      // Fallback: position만 변경
+      if (alignY === 'top') {
+        onChange(['position', 'y'], 0);
+      } else if (alignY === 'center') {
+        onChange(['position', 'y'], canvasHeight / 2);
+      } else {
+        onChange(['position', 'y'], canvasHeight);
+      }
+    }
+  };
 
   return (
     <Section title="Transform">
@@ -129,24 +192,8 @@ export function TransformsSection({
       <AlignPresetButtons
         currentAlignX="center"
         currentAlignY="center"
-        onAlignX={(alignX) => {
-          if (alignX === 'left') {
-            onChange(['position', 'x'], 0);
-          } else if (alignX === 'center') {
-            onChange(['position', 'x'], canvasWidth / 2);
-          } else {
-            onChange(['position', 'x'], canvasWidth);
-          }
-        }}
-        onAlignY={(alignY) => {
-          if (alignY === 'top') {
-            onChange(['position', 'y'], 0);
-          } else if (alignY === 'center') {
-            onChange(['position', 'y'], canvasHeight / 2);
-          } else {
-            onChange(['position', 'y'], canvasHeight);
-          }
-        }}
+        onAlignX={handleAlignX}
+        onAlignY={handleAlignY}
       />
     </Section>
   );
