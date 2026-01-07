@@ -54,7 +54,6 @@ export function TimelineTrack({
   const draggingClipId = useInteractionStore((state) => state.draggingClipId);
   const hoverTrackId = useInteractionStore((state) => state.hoverTrackId);
   const clipboard = useInteractionStore((state) => state.clipboard);
-  const setClipboard = useInteractionStore((state) => state.setClipboard);
   const setLastClickedTime = useInteractionStore(
     (state) => state.setLastClickedTime
   );
@@ -176,10 +175,7 @@ export function TimelineTrack({
 
     console.log('[TimelineTrack] Pasted clip at time:', newStartTime);
 
-    // Cut이었으면 clipboard 클리어
-    if (clipboard.operation === 'cut') {
-      setClipboard(null);
-    }
+    // Cut이든 Copy든 clipboard는 유지 (여러 번 붙여넣기 가능)
   };
 
   const contextMenuSections = [

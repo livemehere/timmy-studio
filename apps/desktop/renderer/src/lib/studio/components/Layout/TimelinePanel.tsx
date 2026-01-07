@@ -200,10 +200,7 @@ export function TimelinePanel() {
     addClipToTrack(activeTrackId, newClipData);
     console.log('[TimelinePanel] Pasted clip at time 0');
 
-    // Cut이었으면 clipboard 클리어
-    if (clipboard.operation === 'cut') {
-      setClipboard(null);
-    }
+    // Cut이든 Copy든 clipboard는 유지 (여러 번 붙여넣기 가능)
   });
 
   // Cmd/Ctrl + D로 선택된 클립을 endTime 위치에 복제
