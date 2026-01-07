@@ -173,6 +173,16 @@ export class MediaUtils {
     const durationNum = Number(data.format.duration ?? 0);
     const hasRealDuration = Number.isFinite(durationNum) && durationNum > 0.1;
 
+    console.log(`[MediaUtils] detectAssetType for ${data.format.filename}:`, {
+      formatName,
+      duration: durationNum,
+      hasRealDuration,
+      hasPrimaryVideo: !!primaryVideo,
+      hasAudio: !!audioStream,
+      videoCodec: primaryVideo?.codec_name,
+      nbFrames: primaryVideo?.nb_frames,
+    });
+
     // 1) 비디오 스트림이 없고 오디오만 있으면 audio
     if (!primaryVideo && audioStream) return 'audio';
 
@@ -191,8 +201,16 @@ export class MediaUtils {
     const isSingleFrame =
       nbFrames === undefined || !Number.isFinite(nbFrames) || nbFrames <= 1;
 
+    console.log(`[MediaUtils] Video stream analysis:`, {
+      codec,
+      isImageCodec,
+      nbFrames,
+      isSingleFrame,
+    });
+
     // 3-1) 이미지 코덱 + duration 없음/짧음 + 프레임 1장 => 정지 이미지
     if (isImageCodec && !hasRealDuration && isSingleFrame) {
+      console.log(`[MediaUtils] → Detected as IMAGE`);
       return 'image';
     }
 
@@ -202,10 +220,12 @@ export class MediaUtils {
     );
 
     if (looksAnimatedContainer && !isSingleFrame) {
+      console.log(`[MediaUtils] → Detected as ANIMATED-IMAGE`);
       return 'animated-image';
     }
 
     // 3-3) 나머지는 비디오
+    console.log(`[MediaUtils] → Detected as VIDEO`);
     return 'video';
   }
 
@@ -241,10 +261,18 @@ export class MediaUtils {
     const audioStream = MediaUtils.extractAudioStream(data);
 
     const durationSec = Number(data.format.duration);
-    const durationMs =
+    let durationMs: number | undefined =
       Number.isFinite(durationSec) && durationSec > 0
         ? Math.round(durationSec * 1000)
         : undefined;
+
+    // 정지 이미지는 duration이 없어야 함
+    if (assetType === 'image') {
+      console.log(
+        `[MediaUtils] Image detected, clearing duration (was: ${durationMs}ms from ffprobe)`
+      );
+      durationMs = undefined;
+    }
 
     const metadata: IAssetMetadata = {
       size: data.format.size ?? 0,
@@ -267,6 +295,14 @@ export class MediaUtils {
     if (assetType === 'audio' && audioStream) {
       metadata.codec = audioStream.codec_name;
     }
+
+    console.log(`[MediaUtils] Asset metadata created:`, {
+      type: assetType,
+      durationMs: metadata.durationMs,
+      width: metadata.width,
+      height: metadata.height,
+      codec: metadata.codec,
+    });
 
     return metadata;
   }

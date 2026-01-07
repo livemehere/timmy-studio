@@ -1,5 +1,5 @@
 import { useDocStore, useEngineStore } from '../hooks/useStudioStores';
-import { PauseIcon, PlayIcon, HardDriveUploadIcon, Music } from 'lucide-react';
+import { PauseIcon, PlayIcon, HardDriveUploadIcon } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { formatTime } from '../utils/time';
 
@@ -460,14 +460,6 @@ export function TimerActionBar() {
           </button>
         </div>
         <div className="flex justify-end gap-2">
-          <button
-            className="flex items-center gap-2 bg-purple-700 rounded px-2 py-0.5 hover:bg-purple-600 cursor-pointer"
-            onClick={handleExportAudio}
-            disabled={audioExportState.isExporting}
-          >
-            <Music size={16} />
-            <span>오디오</span>
-          </button>
           <button
             className="flex items-center gap-2 bg-neutral-700 rounded px-2 py-0.5 hover:bg-neutral-600 cursor-pointer"
             onClick={() => setShowExportSettings((prev) => !prev)}
