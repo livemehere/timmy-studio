@@ -77,7 +77,7 @@ export interface DocActions {
     clipId: string,
     newStartTime: number,
     newEndTime: number
-  ) => void;
+  ) => string | null;
   getClipById: <T extends IClip = IClip>(
     trackId: string,
     clipId: string
@@ -298,6 +298,7 @@ export const createDocStore = (initialProject?: IProject) => {
         newStartTime: number,
         newEndTime: number
       ) => {
+        let newClipId: string | null = null;
         const currentTracks = get().tracks;
         const newTracks = produce(currentTracks, (draft) => {
           const sourceTrack = draft.find((t) => t.id === sourceTrackId);
@@ -315,6 +316,7 @@ export const createDocStore = (initialProject?: IProject) => {
               const clonedClip = JSON.parse(JSON.stringify(originalClip));
               // 새 ID 생성
               clonedClip.id = uid();
+              newClipId = clonedClip.id;
               // 새 시간 설정
               clonedClip.startTime = newStartTime;
               clonedClip.endTime = newEndTime;
@@ -332,6 +334,7 @@ export const createDocStore = (initialProject?: IProject) => {
           }
         });
         set({ tracks: newTracks });
+        return newClipId;
       },
 
       addAsset: (asset) => {

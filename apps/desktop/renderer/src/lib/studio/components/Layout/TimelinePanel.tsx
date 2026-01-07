@@ -22,12 +22,19 @@ export function TimelinePanel() {
 
   const [pxPerSec, setPixPerSec] = useState(10);
 
+  const timelinePanelRef = useRef<HTMLDivElement>(null);
+
   // Store actions for deleting clips
   const tracks = useDocStore((state) => state.tracks);
   const removeClip = useDocStore((state) => state.removeClip);
+  const cloneClipToTrack = useDocStore((state) => state.cloneClipToTrack);
+  const setActiveTrackId = useDocStore((state) => state.setActiveTrackId);
   const selectedClipIds = useInteractionStore((state) => state.selectedClipIds);
   const setSelectedClipId = useInteractionStore(
     (state) => state.setSelectedClipId
+  );
+  const setSelectedClipIds = useInteractionStore(
+    (state) => state.setSelectedClipIds
   );
 
   // Backspace 또는 Delete 키로 선택된 클립 삭제
@@ -54,6 +61,113 @@ export function TimelinePanel() {
 
     // 선택 해제
     setSelectedClipId(null);
+  });
+
+  // Cmd/Ctrl + A로 모든 클립 선택 (TimelinePanel이 포커스되었을 때만)
+  useHotkeys(
+    'mod+a',
+    (e) => {
+      // TimelinePanel이 포커스되지 않았으면 무시
+      if (
+        !timelinePanelRef.current ||
+        !timelinePanelRef.current.contains(document.activeElement)
+      ) {
+        return;
+      }
+
+      e.preventDefault();
+      const allClipIds: string[] = [];
+      tracks.forEach((track) => {
+        track.clips.forEach((clip) => {
+          allClipIds.push(clip.id);
+        });
+      });
+      setSelectedClipIds(allClipIds);
+      console.log('[TimelinePanel] Selected all clips:', allClipIds.length);
+    },
+    { enableOnFormTags: true }
+  );
+
+  // ESC로 모든 선택 해제
+  useHotkeys('escape', () => {
+    setSelectedClipIds([]);
+    setActiveTrackId(null);
+    console.log('[TimelinePanel] Cleared all selections');
+  });
+
+  // Cmd/Ctrl + D로 선택된 클립을 endTime 위치에 복제
+  useHotkeys('mod+d', (e) => {
+    e.preventDefault();
+    if (selectedClipIds.length === 0) return;
+
+    const newClipIds: string[] = [];
+
+    selectedClipIds.forEach((clipId) => {
+      try {
+        // 클립이 속한 트랙 찾기
+        const trackWithClip = tracks.find((track) =>
+          track.clips.some((clip) => clip.id === clipId)
+        );
+
+        if (!trackWithClip) {
+          console.error('[TimelinePanel] Track not found for clip:', clipId);
+          return;
+        }
+
+        const originalClip = trackWithClip.clips.find(
+          (clip) => clip.id === clipId
+        );
+
+        if (!originalClip) return;
+
+        const newStartTime = originalClip.endTime;
+        const newEndTime =
+          newStartTime + (originalClip.endTime - originalClip.startTime);
+
+        // 같은 트랙에서 겹치는 클립이 있는지 확인
+        const hasOverlap = trackWithClip.clips.some((clip) => {
+          if (clip.id === clipId) return false; // 자기 자신 제외
+          // 겹침 체크: 새 클립의 범위가 기존 클립과 겹치는지
+          return !(
+            newEndTime <= clip.startTime || newStartTime >= clip.endTime
+          );
+        });
+
+        if (hasOverlap) {
+          throw new Error(
+            `Cannot duplicate clip: overlaps with existing clip on track ${trackWithClip.id}`
+          );
+        }
+
+        // 복제 실행 (sourceTrackId, targetTrackId, clipId, newStartTime, newEndTime)
+        const newClipId = cloneClipToTrack(
+          trackWithClip.id,
+          trackWithClip.id,
+          clipId,
+          newStartTime,
+          newEndTime
+        );
+
+        if (newClipId) {
+          newClipIds.push(newClipId);
+          console.log('[TimelinePanel] Duplicated clip at endTime:', {
+            originalClipId: clipId,
+            newClipId,
+            trackId: trackWithClip.id,
+            startTime: newStartTime,
+            endTime: newEndTime,
+          });
+        }
+      } catch (error) {
+        console.error('[TimelinePanel] Duplicate failed:', error);
+      }
+    });
+
+    // 복제된 클립들만 선택
+    if (newClipIds.length > 0) {
+      setSelectedClipIds(newClipIds);
+      console.log('[TimelinePanel] Selected new clipped clips:', newClipIds);
+    }
   });
 
   // duration(ms)과 pxPerSec에 따라 totalTrackWidth 계산
@@ -113,8 +227,12 @@ export function TimelinePanel() {
   }, []);
   return (
     <div
-      ref={vScrollContainerRef}
+      ref={(el) => {
+        vScrollContainerRef.current = el;
+        timelinePanelRef.current = el;
+      }}
       className={'relative h-full overflow-y-scroll'}
+      tabIndex={0}
     >
       {/* 현재시간 */}
       <motion.div
