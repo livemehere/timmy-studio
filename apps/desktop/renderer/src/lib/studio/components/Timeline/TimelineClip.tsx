@@ -10,6 +10,7 @@ import type { IGraphicClip } from '@renderer/lib/studio/domains/Clip/types';
 import { cn } from '@renderer/utils/cn';
 import { Track } from '@renderer/lib/studio/domains/Track/Track';
 import { ContextMenu } from '@renderer/components/ContextMenu';
+import { useToast } from '@renderer/components/Toast';
 import {
   Copy,
   Scissors,
@@ -70,6 +71,8 @@ export function TimelineClip({
   const setHoverTrackId = useInteractionStore((state) => state.setHoverTrackId);
   const setClipboard = useInteractionStore((state) => state.setClipboard);
 
+  const toast = useToast();
+
   const wheelDeltaRef = useRef({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
   const isAltPressedRef = useRef(false);
@@ -85,6 +88,7 @@ export function TimelineClip({
       operation: 'copy',
     });
     console.log('[TimelineClip] Copied clip data:', clip.id);
+    toast.success('Clip copied', 'Press ⌘V to paste');
   };
 
   const handleCut = () => {
@@ -97,6 +101,7 @@ export function TimelineClip({
     // Cut은 즉시 원본 삭제
     removeClip(trackId, clip.id);
     console.log('[TimelineClip] Cut (removed) and saved data:', clip.id);
+    toast.info('Clip cut', 'Press ⌘V to paste');
   };
 
   const handleDuplicate = () => {

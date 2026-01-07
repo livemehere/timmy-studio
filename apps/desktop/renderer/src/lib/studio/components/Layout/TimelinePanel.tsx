@@ -9,6 +9,7 @@ import {
 } from '../../hooks/useStudioStores';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
+import { useToast } from '@renderer/components/Toast';
 
 const MIN_PIXELS_PER_SECOND = 2;
 const MAX_PIXELS_PER_SECOND = 100;
@@ -41,6 +42,8 @@ export function TimelinePanel() {
   const setClipboard = useInteractionStore((state) => state.setClipboard);
   const lastClickedTime = useInteractionStore((state) => state.lastClickedTime);
   const activeTrackId = useDocStore((state) => state.activeTrackId);
+
+  const toast = useToast();
 
   // Backspace 또는 Delete 키로 선택된 클립 삭제
   useHotkeys('backspace, delete', () => {
@@ -120,6 +123,7 @@ export function TimelinePanel() {
           operation: 'copy',
         });
         console.log('[TimelinePanel] Copied clip data:', clipId);
+        toast.success('Clip copied', 'Press ⌘V to paste');
       }
     }
   });
@@ -146,6 +150,7 @@ export function TimelinePanel() {
         // Cut은 즉시 원본 삭제
         removeClip(trackWithClip.id, clipId);
         console.log('[TimelinePanel] Cut clip (removed):', clipId);
+        toast.info('Clip cut', 'Press ⌘V to paste');
       }
     }
   });
@@ -185,7 +190,7 @@ export function TimelinePanel() {
 
     if (hasOverlap) {
       console.error('[TimelinePanel] Cannot paste: clip would overlap');
-      alert('Cannot paste: clip would overlap with existing clip');
+      toast.error('Cannot paste', 'Clip would overlap with existing clip');
       return;
     }
 
@@ -199,6 +204,7 @@ export function TimelinePanel() {
     // 트랙에 클립 추가
     addClipToTrack(activeTrackId, newClipData);
     console.log('[TimelinePanel] Pasted clip at time 0');
+    toast.success('Clip pasted');
 
     // Cut이든 Copy든 clipboard는 유지 (여러 번 붙여넣기 가능)
   });

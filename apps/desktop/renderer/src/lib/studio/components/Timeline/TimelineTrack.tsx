@@ -11,6 +11,7 @@ import { cn } from '@renderer/utils/cn';
 import { TimelineClip } from '@renderer/lib/studio/components/Timeline/TimelineClip';
 import { useDocStore, useInteractionStore } from '../../hooks/useStudioStores';
 import { ContextMenu } from '@renderer/components/ContextMenu';
+import { useToast } from '@renderer/components/Toast';
 
 function TrackButton({
   icon: IconComp,
@@ -57,6 +58,8 @@ export function TimelineTrack({
   const setLastClickedTime = useInteractionStore(
     (state) => state.setLastClickedTime
   );
+
+  const toast = useToast();
 
   const [contextMenuPosition, setContextMenuPosition] = react.useState<
     number | null
@@ -159,7 +162,7 @@ export function TimelineTrack({
       console.error(
         '[TimelineTrack] Cannot paste: clip would overlap with existing clip'
       );
-      alert('Cannot paste: clip would overlap with existing clip');
+      toast.error('Cannot paste', 'Clip would overlap with existing clip');
       return;
     }
 
@@ -174,6 +177,7 @@ export function TimelineTrack({
     addClipToTrack(trackId, newClipData);
 
     console.log('[TimelineTrack] Pasted clip at time:', newStartTime);
+    toast.success('Clip pasted');
 
     // Cut이든 Copy든 clipboard는 유지 (여러 번 붙여넣기 가능)
   };
