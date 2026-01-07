@@ -1,8 +1,14 @@
 import { createStore } from 'zustand/vanilla';
 import type { IClip } from '../domains/Clip/types';
 
-export interface ClipboardData {
+export interface ClipboardItem {
   clip: IClip; // 클립 전체 데이터 (JSON 복사본)
+  trackId: string; // 원본 트랙 ID
+  relativeStartTime: number; // 첫 번째 클립 대비 상대 시간
+}
+
+export interface ClipboardData {
+  clips: ClipboardItem[]; // 여러 클립 지원
   operation: 'copy' | 'cut';
 }
 

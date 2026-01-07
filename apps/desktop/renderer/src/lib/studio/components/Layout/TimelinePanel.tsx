@@ -106,105 +106,238 @@ export function TimelinePanel() {
   // Cmd/Ctrl + C로 클립 복사
   useHotkeys('mod+c', (e) => {
     e.preventDefault();
-    if (selectedClipIds.length !== 1) return; // 하나의 클립만 선택되었을 때
+    if (selectedClipIds.length === 0) return;
 
-    const clipId = selectedClipIds[0];
-    const trackWithClip = tracks.find((track) =>
-      track.clips.some((clip) => clip.id === clipId)
-    );
+    // 선택된 모든 클립의 데이터 수집
+    const clipDataArray: Array<{
+      clip: any;
+      trackId: string;
+      startTime: number;
+    }> = [];
 
-    if (trackWithClip) {
-      const clip = trackWithClip.clips.find((c) => c.id === clipId);
-      if (clip) {
-        // 클립 전체 데이터를 복사 (deep clone)
-        const clipData = JSON.parse(JSON.stringify(clip));
-        setClipboard({
-          clip: clipData,
-          operation: 'copy',
-        });
-        console.log('[TimelinePanel] Copied clip data:', clipId);
-        toast.success('Clip copied', 'Press ⌘V to paste');
+    selectedClipIds.forEach((clipId) => {
+      const trackWithClip = tracks.find((track) =>
+        track.clips.some((clip) => clip.id === clipId)
+      );
+
+      if (trackWithClip) {
+        const clip = trackWithClip.clips.find((c) => c.id === clipId);
+        if (clip) {
+          clipDataArray.push({
+            clip: JSON.parse(JSON.stringify(clip)),
+            trackId: trackWithClip.id,
+            startTime: clip.startTime,
+          });
+        }
       }
-    }
+    });
+
+    if (clipDataArray.length === 0) return;
+
+    // 가장 이른 startTime 찾기
+    const minStartTime = Math.min(...clipDataArray.map((d) => d.startTime));
+
+    // 상대 시간으로 변환
+    const clipsWithRelativeTime = clipDataArray.map((d) => ({
+      clip: d.clip,
+      trackId: d.trackId,
+      relativeStartTime: d.startTime - minStartTime,
+    }));
+
+    setClipboard({
+      clips: clipsWithRelativeTime,
+      operation: 'copy',
+    });
+
+    console.log('[TimelinePanel] Copied clips:', clipDataArray.length);
+    toast.success(
+      clipDataArray.length === 1
+        ? 'Clip copied'
+        : `${clipDataArray.length} clips copied`,
+      'Press ⌘V to paste'
+    );
   });
 
   // Cmd/Ctrl + X로 클립 잘라내기
   useHotkeys('mod+x', (e) => {
     e.preventDefault();
-    if (selectedClipIds.length !== 1) return; // 하나의 클립만 선택되었을 때
+    if (selectedClipIds.length === 0) return;
 
-    const clipId = selectedClipIds[0];
-    const trackWithClip = tracks.find((track) =>
-      track.clips.some((clip) => clip.id === clipId)
-    );
+    // 선택된 모든 클립의 데이터 수집
+    const clipDataArray: Array<{
+      clip: any;
+      trackId: string;
+      startTime: number;
+    }> = [];
 
-    if (trackWithClip) {
-      const clip = trackWithClip.clips.find((c) => c.id === clipId);
-      if (clip) {
-        // 클립 전체 데이터를 복사 (deep clone)
-        const clipData = JSON.parse(JSON.stringify(clip));
-        setClipboard({
-          clip: clipData,
-          operation: 'cut',
-        });
-        // Cut은 즉시 원본 삭제
-        removeClip(trackWithClip.id, clipId);
-        console.log('[TimelinePanel] Cut clip (removed):', clipId);
-        toast.info('Clip cut', 'Press ⌘V to paste');
+    selectedClipIds.forEach((clipId) => {
+      const trackWithClip = tracks.find((track) =>
+        track.clips.some((clip) => clip.id === clipId)
+      );
+
+      if (trackWithClip) {
+        const clip = trackWithClip.clips.find((c) => c.id === clipId);
+        if (clip) {
+          clipDataArray.push({
+            clip: JSON.parse(JSON.stringify(clip)),
+            trackId: trackWithClip.id,
+            startTime: clip.startTime,
+          });
+        }
       }
-    }
+    });
+
+    if (clipDataArray.length === 0) return;
+
+    // 가장 이른 startTime 찾기
+    const minStartTime = Math.min(...clipDataArray.map((d) => d.startTime));
+
+    // 상대 시간으로 변환
+    const clipsWithRelativeTime = clipDataArray.map((d) => ({
+      clip: d.clip,
+      trackId: d.trackId,
+      relativeStartTime: d.startTime - minStartTime,
+    }));
+
+    setClipboard({
+      clips: clipsWithRelativeTime,
+      operation: 'cut',
+    });
+
+    // Cut은 즉시 원본 삭제
+    clipDataArray.forEach((d) => {
+      removeClip(d.trackId, d.clip.id);
+    });
+
+    console.log('[TimelinePanel] Cut clips:', clipDataArray.length);
+    toast.info(
+      clipDataArray.length === 1
+        ? 'Clip cut'
+        : `${clipDataArray.length} clips cut`,
+      'Press ⌘V to paste'
+    );
   });
 
-  // Cmd/Ctrl + V로 클립 붙여넣기 (activeTrackId가 있을 때만, 트랙의 시작점에)
+  // Cmd/Ctrl + V로 클립 붙여넣기
   useHotkeys('mod+v', (e) => {
     e.preventDefault();
 
-    if (!clipboard || !activeTrackId) {
+    if (!clipboard) {
+      console.log('[TimelinePanel] Cannot paste: no clipboard');
+      return;
+    }
+
+    // 붙여넣을 시작 위치
+    const pasteStartTime = lastClickedTime !== null ? lastClickedTime : 0;
+
+    // 단일 클립: activeTrack에 붙여넣기
+    if (clipboard.clips.length === 1) {
+      if (!activeTrackId) {
+        console.log('[TimelinePanel] Cannot paste: no active track');
+        return;
+      }
+
+      const targetTrack = tracks.find((t) => t.id === activeTrackId);
+      if (!targetTrack) {
+        console.error('[TimelinePanel] Target track not found');
+        return;
+      }
+
+      const clipItem = clipboard.clips[0];
+      const duration = clipItem.clip.endTime - clipItem.clip.startTime;
+      const newStartTime = pasteStartTime;
+      const newEndTime = newStartTime + duration;
+
+      // 겹침 체크
+      const hasOverlap = targetTrack.clips.some((existingClip) => {
+        return !(
+          newEndTime <= existingClip.startTime ||
+          newStartTime >= existingClip.endTime
+        );
+      });
+
+      if (hasOverlap) {
+        console.error('[TimelinePanel] Cannot paste: clip would overlap');
+        toast.error('Cannot paste', 'Clip would overlap with existing clip');
+        return;
+      }
+
+      // 클립 붙여넣기
+      addClipToTrack(activeTrackId, {
+        ...clipItem.clip,
+        startTime: newStartTime,
+        endTime: newEndTime,
+      });
+
+      console.log('[TimelinePanel] Pasted clip at:', pasteStartTime);
+      toast.success('Clip pasted');
+    }
+    // 다중 클립: 각 원본 트랙에 붙여넣기
+    else {
+      const newClipsData: Array<{
+        trackId: string;
+        clipData: any;
+        newStartTime: number;
+        newEndTime: number;
+      }> = [];
+
+      // 각 클립의 새 위치 계산
+      clipboard.clips.forEach((clipItem) => {
+        const duration = clipItem.clip.endTime - clipItem.clip.startTime;
+        const newStartTime = pasteStartTime + clipItem.relativeStartTime;
+        const newEndTime = newStartTime + duration;
+
+        newClipsData.push({
+          trackId: clipItem.trackId,
+          clipData: {
+            ...clipItem.clip,
+            startTime: newStartTime,
+            endTime: newEndTime,
+          },
+          newStartTime,
+          newEndTime,
+        });
+      });
+
+      // 겹침 체크 (각 트랙에 대해)
+      for (const newClip of newClipsData) {
+        const targetTrack = tracks.find((t) => t.id === newClip.trackId);
+        if (!targetTrack) {
+          console.error('[TimelinePanel] Track not found:', newClip.trackId);
+          toast.error('Cannot paste', 'Original track not found');
+          return;
+        }
+
+        const hasOverlap = targetTrack.clips.some((existingClip) => {
+          return !(
+            newClip.newEndTime <= existingClip.startTime ||
+            newClip.newStartTime >= existingClip.endTime
+          );
+        });
+
+        if (hasOverlap) {
+          console.error('[TimelinePanel] Cannot paste: clips would overlap');
+          toast.error(
+            'Cannot paste',
+            'Clips would overlap with existing clips'
+          );
+          return;
+        }
+      }
+
+      // 모든 클립 붙여넣기 (각자의 트랙에)
+      newClipsData.forEach((newClip) => {
+        addClipToTrack(newClip.trackId, newClip.clipData);
+      });
+
       console.log(
-        '[TimelinePanel] Cannot paste: no clipboard or no active track'
+        '[TimelinePanel] Pasted clips:',
+        clipboard.clips.length,
+        'at',
+        pasteStartTime
       );
-      return;
+      toast.success(`${clipboard.clips.length} clips pasted`);
     }
-
-    const sourceClip = clipboard.clip;
-    const targetTrack = tracks.find((t) => t.id === activeTrackId);
-    if (!targetTrack) {
-      console.error('[TimelinePanel] Target track not found');
-      return;
-    }
-
-    const duration = sourceClip.endTime - sourceClip.startTime;
-    // lastClickedTime이 있으면 그 위치에, 없으면 0에 붙여넣기
-    const newStartTime = lastClickedTime !== null ? lastClickedTime : 0;
-    const newEndTime = newStartTime + duration;
-
-    console.log('[TimelinePanel] Pasting at:', {
-      lastClickedTime,
-      newStartTime,
-    });
-
-    // 겹침 체크
-    const hasOverlap = targetTrack.clips.some((clip) => {
-      return !(newEndTime <= clip.startTime || newStartTime >= clip.endTime);
-    });
-
-    if (hasOverlap) {
-      console.error('[TimelinePanel] Cannot paste: clip would overlap');
-      toast.error('Cannot paste', 'Clip would overlap with existing clip');
-      return;
-    }
-
-    // 클립 데이터 복사 및 시간 수정
-    const newClipData = {
-      ...sourceClip,
-      startTime: newStartTime,
-      endTime: newEndTime,
-    };
-
-    // 트랙에 클립 추가
-    addClipToTrack(activeTrackId, newClipData);
-    console.log('[TimelinePanel] Pasted clip at time 0');
-    toast.success('Clip pasted');
 
     // Cut이든 Copy든 clipboard는 유지 (여러 번 붙여넣기 가능)
   });
