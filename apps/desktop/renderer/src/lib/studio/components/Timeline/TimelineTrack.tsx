@@ -61,7 +61,7 @@ export function TimelineTrack({
     updateTrack(trackId, { locked });
   };
 
-  const handleTrackClick = () => {
+  const handlePointerDown = () => {
     setActiveTrackId(trackId);
   };
 
@@ -73,7 +73,7 @@ export function TimelineTrack({
         height: trackHeight,
       }}
       className={'bg-neutral-850 flex'}
-      onClick={handleTrackClick}
+      onPointerDown={handlePointerDown}
     >
       <div
         className={cn(
