@@ -123,6 +123,7 @@ export function TimelinePanel() {
           left: currentTimeLeft,
           marginLeft: trackTitleWidth,
           height: totalTrackHeight,
+          pointerEvents: 'none',
         }}
       />
 
