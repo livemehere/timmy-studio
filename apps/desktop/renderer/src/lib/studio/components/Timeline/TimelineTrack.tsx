@@ -45,6 +45,8 @@ export function TimelineTrack({
   const getTrackById = useDocStore((state) => state.getTrackById);
   const updateTrack = useDocStore((state) => state.updateTrack);
   const track = getTrackById(trackId);
+  const activeTrackId = useDocStore((state) => state.activeTrackId);
+  const setActiveTrackId = useDocStore((state) => state.setActiveTrackId);
 
   const draggingClipId = useInteractionStore((state) => state.draggingClipId);
   const hoverTrackId = useInteractionStore((state) => state.hoverTrackId);
@@ -59,17 +61,27 @@ export function TimelineTrack({
     updateTrack(trackId, { locked });
   };
 
+  const handleTrackClick = () => {
+    setActiveTrackId(trackId);
+  };
+
+  const isActive = activeTrackId === trackId;
+
   return (
     <div
       style={{
         height: trackHeight,
       }}
       className={'bg-neutral-850 flex'}
+      onClick={handleTrackClick}
     >
       <div
-        className={
-          'sticky left-0 z-50 bg-neutral-800 shrink-0 flex items-center justify-between gap-1.5 px-2'
-        }
+        className={cn(
+          'sticky left-0 z-50 bg-neutral-800 shrink-0 flex items-center justify-between gap-1.5 px-2',
+          {
+            'ring-2 ring-inset ring-blue-500/50': isActive,
+          }
+        )}
         style={{ width: trackTitleWidth }}
       >
         <div className="flex items-center gap-1.5">
@@ -90,6 +102,7 @@ export function TimelineTrack({
       <div
         className={cn('bg-neutral-800 flex-1 relative transition-colors', {
           'bg-cyan-900/30': isHovering,
+          'ring-2 ring-inset ring-blue-500/50': isActive,
         })}
       >
         {track.clips.map((clip) => (

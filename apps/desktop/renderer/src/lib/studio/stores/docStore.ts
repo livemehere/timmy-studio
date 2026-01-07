@@ -39,6 +39,9 @@ export interface DocState {
   metadata: IProject['metadata'];
   tracks: ITrack[];
   assets: IAsset[];
+
+  // UI state (저장되지 않음)
+  activeTrackId: string | null; // 현재 활성화된 트랙 ID
 }
 
 export interface DocActions {
@@ -78,6 +81,9 @@ export interface DocActions {
   updateAsset: (assetId: string, updates: Partial<IAsset>) => void;
   getAssetById: AssetGetter;
 
+  // UI actions
+  setActiveTrackId: (trackId: string | null) => void;
+
   // Reset
   reset: () => void;
 }
@@ -102,6 +108,7 @@ export const createDocStore = (initialProject?: IProject) => {
       metadata: project.metadata,
       tracks: project.tracks,
       assets: project.assets,
+      activeTrackId: null,
 
       getProject: () => {
         const state = get();
@@ -315,6 +322,10 @@ export const createDocStore = (initialProject?: IProject) => {
         return clip as T | undefined;
       },
 
+      setActiveTrackId: (trackId: string | null) => {
+        set({ activeTrackId: trackId });
+      },
+
       reset: () => {
         console.log(`[DocStore] 초기값으로 리셋`);
         set({
@@ -324,6 +335,7 @@ export const createDocStore = (initialProject?: IProject) => {
           metadata: project.metadata,
           tracks: project.tracks,
           assets: project.assets,
+          activeTrackId: null,
         });
       },
     };

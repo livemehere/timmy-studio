@@ -26,6 +26,7 @@ export function TimelineClip({
   const moveClipToTrack = useDocStore((state) => state.moveClipToTrack);
   const addTrack = useDocStore((state) => state.addTrack);
   const tracks = useDocStore((state) => state.tracks);
+  const setActiveTrackId = useDocStore((state) => state.setActiveTrackId);
   const clip = getClipById<IGraphicClip>(trackId, clipId)!;
 
   const syncedClipIds = useEngineStore(
@@ -99,6 +100,9 @@ export function TimelineClip({
         { 'border-1 border-white': isSelected }
       )}
       onClick={(e) => {
+        // Set the parent track as active when clicking a clip
+        setActiveTrackId(trackId);
+
         if (e.shiftKey) {
           addSelectedClipId(clip.id);
         } else {

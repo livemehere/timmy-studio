@@ -2,6 +2,7 @@ import type { IAsset } from '@renderer/lib/studio/domains/Asset/types';
 import {
   useDocStore,
   useStudioStores,
+  useEngineStore,
 } from '@renderer/lib/studio/hooks/useStudioStores';
 import { useMemo } from 'react';
 
@@ -12,10 +13,21 @@ import { GraphicTrack } from '@renderer/lib/studio/domains/Track/GraphicTrack';
 import type { ITrack } from '../../Track/types';
 import { Track } from '@renderer/lib/studio/domains/Track/Track';
 
-// 클립 배치 모드 설정
-// - 'APPEND': 마지막 클립 끝에 붙이기 (기존 방식)
-// - 'CURSOR': 현재 타이머 시간에 배치 (겹치면 새 트랙 생성)
-const CLIP_PLACEMENT_MODE: 'APPEND' | 'CURSOR' = 'CURSOR';
+/**
+ * 트랙의 클립들과 시간 범위가 겹치는지 확인
+ */
+function hasTimeOverlap(
+  track: ITrack,
+  startTime: number,
+  endTime: number
+): boolean {
+  return track.clips.some((clip) => {
+    const clipStart = clip.startTime;
+    const clipEnd = clip.endTime;
+    // 겹침 조건: !(새클립이 기존클립 완전히 앞 OR 완전히 뒤)
+    return !(endTime <= clipStart || startTime >= clipEnd);
+  });
+}
 
 export function useAsset(asset: IAsset) {
   const { docStore } = useStudioStores();
@@ -23,6 +35,8 @@ export function useAsset(asset: IAsset) {
   const addClipToDoc = useDocStore((state) => state.addClip);
   const tracks = useDocStore((state) => state.tracks);
   const settings = useDocStore((state) => state.settings);
+  const timer = useEngineStore((state) => state.timer);
+  const activeTrackId = useDocStore((state) => state.activeTrackId);
 
   const status = useMemo(() => {
     return Asset.getStatus(asset);
@@ -36,7 +50,8 @@ export function useAsset(asset: IAsset) {
 
   const addClip = async (
     options: {
-      // 있으면, 해당 트랙 마지막 클립 뒤, 없으면, 새로운 트랙 생성 후 추가
+      // trackId가 있으면: 활성 트랙의 현재 타이머 위치에 배치 (Plus 버튼)
+      // trackId가 없으면: 새 트랙 생성 후 startTime 0에 배치 (Layers 버튼)
       trackId?: string;
 
       /** 비디오/이미지 에셋에 기본 placement preset 적용 */
@@ -45,19 +60,6 @@ export function useAsset(asset: IAsset) {
   ) => {
     if (!status.isReady) {
       throw new Error('에셋이 준비되지 않았습니다.');
-    }
-
-    let targetTrack: ITrack;
-    if (options.trackId) {
-      targetTrack = docStore.getState().getTrackById(options.trackId)!;
-    } else {
-      targetTrack = Track.create(Track.AssetTypeToTrackType(asset.type));
-      // 가장 낮은 zIndex에서 -1한 값으로 설정 (아래에 추가)
-      if (tracks.length > 0) {
-        const minZIndex = Math.min(...tracks.map((t) => t.zIndex));
-        targetTrack.zIndex = minZIndex - 1;
-      }
-      addTrackToDoc(targetTrack);
     }
 
     const clip = Clip.createFromAsset(asset);
@@ -78,29 +80,124 @@ export function useAsset(asset: IAsset) {
       clip.transforms.size = computed.size;
     }
 
-    // 시작 시간을 트랙의 마지막 클립 끝나는 시간으로 조정
-    // NOTE: targetTrack을 다시 가져와서 최신 clips 상태를 반영
-    const latestTargetTrack = docStore.getState().getTrackById(targetTrack.id)!;
-    const newStartTime = GraphicTrack.getLastestClipEndTime(latestTargetTrack);
-
-    // duration 계산 (startTime 변경 전에 계산해야 함)
+    // duration 계산 (startTime 변경 전에 계산)
     const duration = clip.endTime - clip.startTime;
 
-    console.log('[useAsset] Adding clip to track:', {
-      assetName: asset.name,
-      trackId: targetTrack.id,
-      originalTiming: { start: clip.startTime, end: clip.endTime, duration },
-      newStartTime,
-      finalTiming: {
-        start: newStartTime,
-        end: newStartTime + duration,
-        duration,
-      },
-    });
+    let targetTrack: ITrack;
+    let newStartTime: number;
+
+    if (options.trackId) {
+      // ========== Plus 버튼: 활성 트랙의 현재 타이머 위치에 배치 ==========
+      const currentTime = timer?.currentMs ?? 0;
+      newStartTime = currentTime;
+      const newEndTime = newStartTime + duration;
+
+      console.log(
+        '[useAsset] Plus button mode - Place at active track cursor:',
+        {
+          assetName: asset.name,
+          currentTime,
+          duration,
+          proposedTiming: { start: newStartTime, end: newEndTime },
+          activeTrackId,
+        }
+      );
+
+      const trackType = GraphicTrack.AssetTypeToTrackType(asset.type);
+      const sameTypeTracks = tracks.filter((t) => t.type === trackType);
+
+      // 활성 트랙이 있고 같은 타입이면 우선 시도
+      let searchOrder: ITrack[] = [];
+      if (activeTrackId) {
+        const activeTrack = sameTypeTracks.find((t) => t.id === activeTrackId);
+        if (activeTrack) {
+          // 활성 트랙을 첫 번째로, 나머지는 순서대로
+          searchOrder = [
+            activeTrack,
+            ...sameTypeTracks.filter((t) => t.id !== activeTrackId),
+          ];
+          console.log('[useAsset] Active track found, searching in order:', {
+            activeTrackId,
+            searchOrder: searchOrder.map((t) => t.id),
+          });
+        } else {
+          // 활성 트랙이 다른 타입이면 모든 같은 타입 트랙 검색
+          searchOrder = sameTypeTracks;
+          console.log(
+            '[useAsset] Active track is different type, searching all same-type tracks'
+          );
+        }
+      } else {
+        // 활성 트랙 없으면 모든 같은 타입 트랙 검색
+        searchOrder = sameTypeTracks;
+        console.log(
+          '[useAsset] No active track, searching all same-type tracks'
+        );
+      }
+
+      // 겹치지 않는 트랙 찾기
+      let foundTrack: ITrack | undefined;
+      for (const track of searchOrder) {
+        const latestTrack = docStore.getState().getTrackById(track.id)!;
+        const hasOverlap = hasTimeOverlap(
+          latestTrack,
+          newStartTime,
+          newEndTime
+        );
+
+        if (!hasOverlap) {
+          foundTrack = latestTrack;
+          console.log('[useAsset] Found available track without overlap:', {
+            trackId: track.id,
+          });
+          break;
+        }
+      }
+
+      if (foundTrack) {
+        // 겹치지 않는 트랙 발견
+        targetTrack = foundTrack;
+      } else {
+        // 모든 트랙이 겹침 → 새 트랙 생성
+        console.log(
+          '[useAsset] All existing tracks have overlap, creating new track'
+        );
+        targetTrack = Track.create(trackType);
+        if (tracks.length > 0) {
+          const minZIndex = Math.min(...tracks.map((t) => t.zIndex));
+          targetTrack.zIndex = minZIndex - 1;
+        }
+        addTrackToDoc(targetTrack);
+      }
+    } else {
+      // ========== Layers 버튼: 새 트랙 생성 후 startTime 0에 배치 ==========
+      newStartTime = 0;
+
+      console.log(
+        '[useAsset] Layers button mode - Create new track at time 0:',
+        {
+          assetName: asset.name,
+          startTime: 0,
+          duration,
+        }
+      );
+
+      targetTrack = Track.create(Track.AssetTypeToTrackType(asset.type));
+      if (tracks.length > 0) {
+        const minZIndex = Math.min(...tracks.map((t) => t.zIndex));
+        targetTrack.zIndex = minZIndex - 1;
+      }
+      addTrackToDoc(targetTrack);
+    }
 
     // 새로운 시작/종료 시간 설정
     clip.startTime = newStartTime;
     clip.endTime = newStartTime + duration;
+
+    console.log('[useAsset] Final clip placement:', {
+      trackId: targetTrack.id,
+      clipTiming: { start: clip.startTime, end: clip.endTime, duration },
+    });
 
     addClipToDoc(targetTrack.id, clip as any);
   };
