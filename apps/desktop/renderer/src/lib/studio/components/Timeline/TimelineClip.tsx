@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import {
   useDocStore,
   useEngineStore,
@@ -24,6 +24,7 @@ export function TimelineClip({
   const getClipById = useDocStore((state) => state.getClipById);
   const updateClip = useDocStore((state) => state.updateClip);
   const moveClipToTrack = useDocStore((state) => state.moveClipToTrack);
+  const cloneClipToTrack = useDocStore((state) => state.cloneClipToTrack);
   const addTrack = useDocStore((state) => state.addTrack);
   const tracks = useDocStore((state) => state.tracks);
   const setActiveTrackId = useDocStore((state) => state.setActiveTrackId);
@@ -54,6 +55,8 @@ export function TimelineClip({
 
   const wheelDeltaRef = useRef({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
+  const isAltPressedRef = useRef(false);
+  const [isCloneMode, setIsCloneMode] = useState(false);
 
   return (
     <motion.div
@@ -65,12 +68,21 @@ export function TimelineClip({
       dragMomentum={false}
       dragSnapToOrigin
       dragElastic={0}
-      onDragStart={() => {
+      onDragStart={(e) => {
         setDraggingClipId(clip.id);
         isDraggingRef.current = true;
         wheelDeltaRef.current = { x: 0, y: 0 };
+        // @ts-ignore - e.altKey exists in drag events
+        const altPressed = e.altKey || false;
+        isAltPressedRef.current = altPressed;
+        setIsCloneMode(altPressed);
       }}
-      onDrag={(_, info) => {
+      onDrag={(e, info) => {
+        // @ts-ignore - e.altKey exists in drag events
+        const altPressed = e.altKey || false;
+        isAltPressedRef.current = altPressed;
+        setIsCloneMode(altPressed);
+
         const offsetY = info.offset.y + wheelDeltaRef.current.y;
         const trackIndexDelta = Math.round(offsetY / trackHeight);
 
@@ -97,7 +109,10 @@ export function TimelineClip({
       }}
       className={cn(
         'absolute h-full bg-cyan-700 px-2 py-1 rounded overflow-hidden z-5',
-        { 'border-1 border-white': isSelected }
+        {
+          'border-1 border-white': isSelected,
+          'ring-2 ring-yellow-400': isCloneMode,
+        }
       )}
       onClick={(e) => {
         // Set the parent track as active when clicking a clip
@@ -110,9 +125,11 @@ export function TimelineClip({
         }
       }}
       onDragEnd={(_, info) => {
+        const isCloning = isAltPressedRef.current;
         isDraggingRef.current = false;
         setDraggingClipId(null);
         setHoverTrackId(null);
+        setIsCloneMode(false);
 
         const totalOffsetX = info.offset.x + wheelDeltaRef.current.x;
         const totalOffsetY = info.offset.y + wheelDeltaRef.current.y;
@@ -121,7 +138,14 @@ export function TimelineClip({
         const newStartTime = Math.max(0, clip.startTime + deltaStartTime);
         const newEndTime = newStartTime + (clip.endTime - clip.startTime);
 
-        // 트랙 간 이동 로직
+        console.log('[TimelineClip] Drag end:', {
+          isCloning,
+          clipId: clip.id,
+          originalTime: { start: clip.startTime, end: clip.endTime },
+          newTime: { start: newStartTime, end: newEndTime },
+        });
+
+        // 트랙 간 이동/복제 로직
         const trackIndexDelta = Math.round(totalOffsetY / trackHeight);
 
         if (trackIndexDelta !== 0) {
@@ -129,15 +153,28 @@ export function TimelineClip({
           const currentTrackIndex = tracks.findIndex((t) => t.id === trackId);
           const targetTrackIndex = currentTrackIndex + trackIndexDelta;
 
-          // 타겟 트랙이 존재하는 경우 이동
+          // 타겟 트랙이 존재하는 경우 이동/복제
           if (targetTrackIndex >= 0 && targetTrackIndex < tracks.length) {
             const targetTrack = tracks[targetTrackIndex];
-            moveClipToTrack(trackId, targetTrack.id, clip.id);
-            // 타겟 트랙에서 시간 업데이트
-            updateClip(targetTrack.id, clip.id, {
-              startTime: newStartTime,
-              endTime: newEndTime,
-            });
+
+            if (isCloning) {
+              // Alt 키가 눌려있으면 복제
+              cloneClipToTrack(
+                trackId,
+                targetTrack.id,
+                clip.id,
+                newStartTime,
+                newEndTime
+              );
+            } else {
+              // Alt 키가 안 눌려있으면 이동
+              moveClipToTrack(trackId, targetTrack.id, clip.id);
+              // 타겟 트랙에서 시간 업데이트
+              updateClip(targetTrack.id, clip.id, {
+                startTime: newStartTime,
+                endTime: newEndTime,
+              });
+            }
             return;
           }
 
@@ -189,23 +226,39 @@ export function TimelineClip({
             // 트랙 추가
             addTrack(newTracks);
 
-            // 클립을 타겟 트랙으로 이동
-            moveClipToTrack(trackId, targetTrackId, clip.id);
-
-            // 시간 업데이트
-            updateClip(targetTrackId, clip.id, {
-              startTime: newStartTime,
-              endTime: newEndTime,
-            });
+            if (isCloning) {
+              // Alt 키가 눌려있으면 복제
+              cloneClipToTrack(
+                trackId,
+                targetTrackId,
+                clip.id,
+                newStartTime,
+                newEndTime
+              );
+            } else {
+              // Alt 키가 안 눌려있으면 이동
+              moveClipToTrack(trackId, targetTrackId, clip.id);
+              // 시간 업데이트
+              updateClip(targetTrackId, clip.id, {
+                startTime: newStartTime,
+                endTime: newEndTime,
+              });
+            }
             return;
           }
         }
 
-        // 같은 트랙 내에서 시간만 변경
-        updateClip(trackId, clip.id, {
-          startTime: newStartTime,
-          endTime: newEndTime,
-        });
+        // 같은 트랙 내에서 시간만 변경 (복제 모드면 복제)
+        if (isCloning) {
+          // 같은 트랙에 복제
+          cloneClipToTrack(trackId, trackId, clip.id, newStartTime, newEndTime);
+        } else {
+          // 같은 트랙 내에서 시간만 이동
+          updateClip(trackId, clip.id, {
+            startTime: newStartTime,
+            endTime: newEndTime,
+          });
+        }
       }}
     >
       {clip.name}

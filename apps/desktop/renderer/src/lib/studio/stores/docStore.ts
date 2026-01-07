@@ -5,6 +5,7 @@ import { computeNextProjectDurationMs } from '@renderer/lib/studio/utils/project
 import type { IProject } from '../types/project';
 import type { ITrack } from '../domains/Track/types';
 import type { IClip } from '../domains/Clip/types';
+import { uid } from 'uid';
 
 type AssetGetter = <T extends IAsset = IAsset>(
   assetId: string
@@ -69,6 +70,13 @@ export interface DocActions {
     sourceTrackId: string,
     targetTrackId: string,
     clipId: string
+  ) => void;
+  cloneClipToTrack: (
+    sourceTrackId: string,
+    targetTrackId: string,
+    clipId: string,
+    newStartTime: number,
+    newEndTime: number
   ) => void;
   getClipById: <T extends IClip = IClip>(
     trackId: string,
@@ -277,6 +285,49 @@ export const createDocStore = (initialProject?: IProject) => {
             if (clipIndex !== -1) {
               const [clip] = sourceTrackWithClips.clips.splice(clipIndex, 1);
               targetTrackWithClips.clips.push(clip);
+            }
+          }
+        });
+        set({ tracks: newTracks });
+      },
+
+      cloneClipToTrack: (
+        sourceTrackId: string,
+        targetTrackId: string,
+        clipId: string,
+        newStartTime: number,
+        newEndTime: number
+      ) => {
+        const currentTracks = get().tracks;
+        const newTracks = produce(currentTracks, (draft) => {
+          const sourceTrack = draft.find((t) => t.id === sourceTrackId);
+          const targetTrack = draft.find((t) => t.id === targetTrackId);
+
+          if (sourceTrack && targetTrack) {
+            const sourceTrackWithClips = sourceTrack as any;
+            const targetTrackWithClips = targetTrack as any;
+            const originalClip = sourceTrackWithClips.clips.find(
+              (c: IClip) => c.id === clipId
+            );
+
+            if (originalClip) {
+              // 클립 복제 (deep copy)
+              const clonedClip = JSON.parse(JSON.stringify(originalClip));
+              // 새 ID 생성
+              clonedClip.id = uid();
+              // 새 시간 설정
+              clonedClip.startTime = newStartTime;
+              clonedClip.endTime = newEndTime;
+              // 타겟 트랙에 추가
+              targetTrackWithClips.clips.push(clonedClip);
+
+              console.log('[docStore] Cloned clip:', {
+                originalId: clipId,
+                clonedId: clonedClip.id,
+                sourceTrackId,
+                targetTrackId,
+                timing: { start: newStartTime, end: newEndTime },
+              });
             }
           }
         });
