@@ -8,6 +8,7 @@ export interface InteractionState {
 
 export interface InteractionActions {
   setSelectedClipId: (clipId: string | null) => void;
+  setSelectedClipIds: (clipIds: string[]) => void;
   addSelectedClipId: (clipId: string) => void;
   removeSelectedClipId: (clipId: string) => void;
   setDraggingClipId: (clipId: string | null) => void;
@@ -28,6 +29,10 @@ export const createInteractionStore = () => {
 
     setSelectedClipId: (clipId) => {
       set({ selectedClipIds: clipId ? [clipId] : [] });
+    },
+
+    setSelectedClipIds: (clipIds) => {
+      set({ selectedClipIds: clipIds });
     },
 
     addSelectedClipId: (clipId) => {

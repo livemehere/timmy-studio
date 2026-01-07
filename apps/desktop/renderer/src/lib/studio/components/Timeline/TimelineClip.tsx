@@ -75,6 +75,7 @@ export function TimelineClip({
       )}
 
       <motion.div
+        data-clip-id={clip.id}
         style={{
           width,
           left,
