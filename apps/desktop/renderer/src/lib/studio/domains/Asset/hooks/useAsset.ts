@@ -12,6 +12,11 @@ import { GraphicTrack } from '@renderer/lib/studio/domains/Track/GraphicTrack';
 import type { ITrack } from '../../Track/types';
 import { Track } from '@renderer/lib/studio/domains/Track/Track';
 
+// 클립 배치 모드 설정
+// - 'APPEND': 마지막 클립 끝에 붙이기 (기존 방식)
+// - 'CURSOR': 현재 타이머 시간에 배치 (겹치면 새 트랙 생성)
+const CLIP_PLACEMENT_MODE: 'APPEND' | 'CURSOR' = 'CURSOR';
+
 export function useAsset(asset: IAsset) {
   const { docStore } = useStudioStores();
   const addTrackToDoc = useDocStore((state) => state.addTrack);
@@ -76,9 +81,26 @@ export function useAsset(asset: IAsset) {
     // 시작 시간을 트랙의 마지막 클립 끝나는 시간으로 조정
     // NOTE: targetTrack을 다시 가져와서 최신 clips 상태를 반영
     const latestTargetTrack = docStore.getState().getTrackById(targetTrack.id)!;
-    const startTime = GraphicTrack.getLastestClipEndTime(latestTargetTrack);
-    clip.startTime = startTime;
-    clip.endTime = startTime + (clip.endTime - clip.startTime);
+    const newStartTime = GraphicTrack.getLastestClipEndTime(latestTargetTrack);
+
+    // duration 계산 (startTime 변경 전에 계산해야 함)
+    const duration = clip.endTime - clip.startTime;
+
+    console.log('[useAsset] Adding clip to track:', {
+      assetName: asset.name,
+      trackId: targetTrack.id,
+      originalTiming: { start: clip.startTime, end: clip.endTime, duration },
+      newStartTime,
+      finalTiming: {
+        start: newStartTime,
+        end: newStartTime + duration,
+        duration,
+      },
+    });
+
+    // 새로운 시작/종료 시간 설정
+    clip.startTime = newStartTime;
+    clip.endTime = newStartTime + duration;
 
     addClipToDoc(targetTrack.id, clip as any);
   };
