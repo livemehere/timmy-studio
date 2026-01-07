@@ -18,18 +18,20 @@ export interface ContextMenuSection {
 interface ContextMenuProps {
   children: ReactNode;
   sections: ContextMenuSection[];
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function ContextMenu({ children, sections }: ContextMenuProps) {
+export function ContextMenu({
+  children,
+  sections,
+  onOpenChange,
+}: ContextMenuProps) {
   return (
-    <RadixContextMenu.Root>
+    <RadixContextMenu.Root onOpenChange={onOpenChange}>
       <RadixContextMenu.Trigger asChild>{children}</RadixContextMenu.Trigger>
 
       <RadixContextMenu.Portal>
-        <RadixContextMenu.Content
-          className="min-w-[200px] bg-neutral-800 rounded-md overflow-hidden p-1 shadow-lg border border-neutral-700"
-          sideOffset={5}
-        >
+        <RadixContextMenu.Content className="min-w-[200px] bg-neutral-800 rounded-md overflow-hidden p-1 shadow-lg border border-neutral-700">
           {sections.map((section, sectionIndex) => (
             <div key={sectionIndex}>
               {sectionIndex > 0 && (

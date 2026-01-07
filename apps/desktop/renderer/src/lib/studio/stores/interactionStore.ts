@@ -1,9 +1,17 @@
 import { createStore } from 'zustand/vanilla';
+import type { IClip } from '../domains/Clip/types';
+
+export interface ClipboardData {
+  clip: IClip; // 클립 전체 데이터 (JSON 복사본)
+  operation: 'copy' | 'cut';
+}
 
 export interface InteractionState {
   selectedClipIds: string[];
   draggingClipId: string | null;
   hoverTrackId: string | null;
+  clipboard: ClipboardData | null;
+  lastClickedTime: number | null; // 트랙 클릭 시 시간 위치 (ms)
 }
 
 export interface InteractionActions {
@@ -13,6 +21,8 @@ export interface InteractionActions {
   removeSelectedClipId: (clipId: string) => void;
   setDraggingClipId: (clipId: string | null) => void;
   setHoverTrackId: (trackId: string | null) => void;
+  setClipboard: (data: ClipboardData | null) => void;
+  setLastClickedTime: (time: number | null) => void;
 }
 
 export type InteractionStore = InteractionState & InteractionActions;
@@ -26,6 +36,8 @@ export const createInteractionStore = () => {
     selectedClipIds: [],
     draggingClipId: null,
     hoverTrackId: null,
+    clipboard: null,
+    lastClickedTime: null,
 
     setSelectedClipId: (clipId) => {
       set({ selectedClipIds: clipId ? [clipId] : [] });
@@ -52,6 +64,14 @@ export const createInteractionStore = () => {
 
     setHoverTrackId: (trackId) => {
       set({ hoverTrackId: trackId });
+    },
+
+    setClipboard: (data) => {
+      set({ clipboard: data });
+    },
+
+    setLastClickedTime: (time) => {
+      set({ lastClickedTime: time });
     },
   }));
 };

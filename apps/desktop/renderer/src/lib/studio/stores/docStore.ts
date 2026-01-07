@@ -78,6 +78,7 @@ export interface DocActions {
     newStartTime: number,
     newEndTime: number
   ) => string | null;
+  addClipToTrack: (targetTrackId: string, clipData: IClip) => void;
   getClipById: <T extends IClip = IClip>(
     trackId: string,
     clipId: string
@@ -335,6 +336,27 @@ export const createDocStore = (initialProject?: IProject) => {
         });
         set({ tracks: newTracks });
         return newClipId;
+      },
+
+      addClipToTrack: (targetTrackId: string, clipData: IClip) => {
+        const currentTracks = get().tracks;
+        const newTracks = produce(currentTracks, (draft) => {
+          const targetTrack = draft.find((t) => t.id === targetTrackId);
+
+          if (targetTrack) {
+            const targetTrackWithClips = targetTrack as any;
+            // 새 ID 생성하여 클립 추가
+            const newClip = { ...clipData, id: uid() };
+            targetTrackWithClips.clips.push(newClip);
+
+            console.log('[docStore] Added clip to track:', {
+              trackId: targetTrackId,
+              clipId: newClip.id,
+              timing: { start: newClip.startTime, end: newClip.endTime },
+            });
+          }
+        });
+        set({ tracks: newTracks });
       },
 
       addAsset: (asset) => {

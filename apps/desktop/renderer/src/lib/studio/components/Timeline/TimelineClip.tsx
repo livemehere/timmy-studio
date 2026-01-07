@@ -10,7 +10,16 @@ import type { IGraphicClip } from '@renderer/lib/studio/domains/Clip/types';
 import { cn } from '@renderer/utils/cn';
 import { Track } from '@renderer/lib/studio/domains/Track/Track';
 import { ContextMenu } from '@renderer/components/ContextMenu';
-import { Copy, Scissors, Trash2, Files, Lock, EyeOff } from 'lucide-react';
+import {
+  Copy,
+  Scissors,
+  Trash2,
+  Files,
+  Lock,
+  Unlock,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
 
 export function TimelineClip({
   clipId,
@@ -44,6 +53,7 @@ export function TimelineClip({
   const isSelected = useInteractionStore((state) =>
     state.selectedClipIds.includes(clip.id)
   );
+  const selectedClipIds = useInteractionStore((state) => state.selectedClipIds);
   const setSelectedClipId = useInteractionStore(
     (state) => state.setSelectedClipId
   );
@@ -58,6 +68,7 @@ export function TimelineClip({
     (state) => state.setDraggingClipId
   );
   const setHoverTrackId = useInteractionStore((state) => state.setHoverTrackId);
+  const setClipboard = useInteractionStore((state) => state.setClipboard);
 
   const wheelDeltaRef = useRef({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
@@ -67,13 +78,25 @@ export function TimelineClip({
 
   // Context menu actions
   const handleCopy = () => {
-    // TODO: Implement copy to clipboard
-    console.log('[TimelineClip] Copy:', clip.id);
+    // 클립 전체 데이터를 복사 (deep clone)
+    const clipData = JSON.parse(JSON.stringify(clip));
+    setClipboard({
+      clip: clipData,
+      operation: 'copy',
+    });
+    console.log('[TimelineClip] Copied clip data:', clip.id);
   };
 
   const handleCut = () => {
-    // TODO: Implement cut (copy + delete)
-    console.log('[TimelineClip] Cut:', clip.id);
+    // 클립 전체 데이터를 복사 (deep clone)
+    const clipData = JSON.parse(JSON.stringify(clip));
+    setClipboard({
+      clip: clipData,
+      operation: 'cut',
+    });
+    // Cut은 즉시 원본 삭제
+    removeClip(trackId, clip.id);
+    console.log('[TimelineClip] Cut (removed) and saved data:', clip.id);
   };
 
   const handleDuplicate = () => {
@@ -104,13 +127,17 @@ export function TimelineClip({
   };
 
   const handleToggleLock = () => {
-    // TODO: Implement lock/unlock
-    console.log('[TimelineClip] Toggle lock:', clip.id);
+    updateClip(trackId, clip.id, {
+      locked: !clip.locked,
+    });
+    console.log('[TimelineClip] Toggled lock:', clip.id, !clip.locked);
   };
 
   const handleToggleVisibility = () => {
-    // TODO: Implement show/hide
-    console.log('[TimelineClip] Toggle visibility:', clip.id);
+    updateClip(trackId, clip.id, {
+      enabled: !clip.enabled,
+    });
+    console.log('[TimelineClip] Toggled visibility:', clip.id, !clip.enabled);
   };
 
   const contextMenuSections = [
@@ -139,13 +166,13 @@ export function TimelineClip({
     {
       items: [
         {
-          label: 'Lock',
-          icon: Lock,
+          label: clip.locked ? 'Unlock' : 'Lock',
+          icon: clip.locked ? Unlock : Lock,
           onSelect: handleToggleLock,
         },
         {
-          label: 'Hide',
-          icon: EyeOff,
+          label: clip.enabled ? 'Hide' : 'Show',
+          icon: clip.enabled ? EyeOff : Eye,
           onSelect: handleToggleVisibility,
         },
       ],
@@ -163,6 +190,15 @@ export function TimelineClip({
     },
   ];
 
+  const handleContextMenuOpen = (open: boolean) => {
+    if (open) {
+      // 우클릭 시 이 클립을 선택
+      if (!selectedClipIds.includes(clip.id)) {
+        setSelectedClipIds([clip.id]);
+      }
+    }
+  };
+
   return (
     <>
       {/* Ghost Element: Alt 키로 복제 중일 때 원본 위치에 표시 */}
@@ -178,7 +214,10 @@ export function TimelineClip({
         </div>
       )}
 
-      <ContextMenu sections={contextMenuSections}>
+      <ContextMenu
+        sections={contextMenuSections}
+        onOpenChange={handleContextMenuOpen}
+      >
         <motion.div
           data-clip-id={clip.id}
           style={{

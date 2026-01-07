@@ -5,10 +5,12 @@ import {
   LockKeyhole,
   type LucideProps,
   VolumeOff,
+  Clipboard,
 } from 'lucide-react';
 import { cn } from '@renderer/utils/cn';
 import { TimelineClip } from '@renderer/lib/studio/components/Timeline/TimelineClip';
 import { useDocStore, useInteractionStore } from '../../hooks/useStudioStores';
+import { ContextMenu } from '@renderer/components/ContextMenu';
 
 function TrackButton({
   icon: IconComp,
@@ -44,12 +46,23 @@ export function TimelineTrack({
 }) {
   const getTrackById = useDocStore((state) => state.getTrackById);
   const updateTrack = useDocStore((state) => state.updateTrack);
+  const addClipToTrack = useDocStore((state) => state.addClipToTrack);
   const track = getTrackById(trackId);
   const activeTrackId = useDocStore((state) => state.activeTrackId);
   const setActiveTrackId = useDocStore((state) => state.setActiveTrackId);
 
   const draggingClipId = useInteractionStore((state) => state.draggingClipId);
   const hoverTrackId = useInteractionStore((state) => state.hoverTrackId);
+  const clipboard = useInteractionStore((state) => state.clipboard);
+  const setClipboard = useInteractionStore((state) => state.setClipboard);
+  const setLastClickedTime = useInteractionStore(
+    (state) => state.setLastClickedTime
+  );
+
+  const [contextMenuPosition, setContextMenuPosition] = react.useState<
+    number | null
+  >(null);
+  const trackContentRef = react.useRef<HTMLDivElement>(null);
 
   const isHovering = draggingClipId && hoverTrackId === trackId;
 
@@ -64,6 +77,124 @@ export function TimelineTrack({
   const handlePointerDown = () => {
     setActiveTrackId(trackId);
   };
+
+  const handleClick = (e: react.MouseEvent) => {
+    if (!trackContentRef.current) return;
+
+    const rect = trackContentRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const timeAtMouseSec = mouseX / pxPerSec;
+    const timeAtMouseMs = timeAtMouseSec * 1000; // Convert to milliseconds
+
+    console.log('[TimelineTrack] Clicked at time:', timeAtMouseMs);
+    setLastClickedTime(timeAtMouseMs);
+  };
+
+  const handleContextMenu = (e: react.MouseEvent) => {
+    if (!trackContentRef.current) return;
+
+    const rect = trackContentRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const timeAtMouseSec = mouseX / pxPerSec;
+    const timeAtMouseMs = timeAtMouseSec * 1000; // Convert to milliseconds
+
+    console.log('[TimelineTrack] Context menu opened at time:', {
+      timeAtMouseSec,
+      timeAtMouseMs,
+    });
+    setContextMenuPosition(timeAtMouseMs);
+  };
+
+  const handlePaste = () => {
+    console.log(
+      '[TimelineTrack] handlePaste called, contextMenuPosition:',
+      contextMenuPosition
+    );
+
+    if (!clipboard) {
+      console.log('[TimelineTrack] No clipboard data');
+      return;
+    }
+
+    const sourceClip = clipboard.clip;
+    const duration = sourceClip.endTime - sourceClip.startTime;
+    const newStartTime = contextMenuPosition === null ? 0 : contextMenuPosition;
+    const newEndTime = newStartTime + duration;
+
+    console.log('[TimelineTrack] Pasting at position:', {
+      contextMenuPosition,
+      newStartTime,
+      newEndTime,
+      duration,
+    });
+
+    console.log(
+      '[TimelineTrack] Current track clips:',
+      track.clips.map((c) => ({
+        id: c.id,
+        startTime: c.startTime,
+        endTime: c.endTime,
+      }))
+    );
+
+    // Check for overlaps with existing clips on this track
+    const hasOverlap = track.clips.some((clip) => {
+      const overlaps = !(
+        newEndTime <= clip.startTime || newStartTime >= clip.endTime
+      );
+
+      if (overlaps) {
+        console.log('[TimelineTrack] Found overlap with clip:', {
+          clipId: clip.id,
+          clipStart: clip.startTime,
+          clipEnd: clip.endTime,
+          newStart: newStartTime,
+          newEnd: newEndTime,
+        });
+      }
+
+      return overlaps;
+    });
+
+    if (hasOverlap) {
+      console.error(
+        '[TimelineTrack] Cannot paste: clip would overlap with existing clip'
+      );
+      alert('Cannot paste: clip would overlap with existing clip');
+      return;
+    }
+
+    // 클립 데이터 복사 및 시간 수정
+    const newClipData = {
+      ...sourceClip,
+      startTime: newStartTime,
+      endTime: newEndTime,
+    };
+
+    // 트랙에 클립 추가 (새 ID 자동 생성됨)
+    addClipToTrack(trackId, newClipData);
+
+    console.log('[TimelineTrack] Pasted clip at time:', newStartTime);
+
+    // Cut이었으면 clipboard 클리어
+    if (clipboard.operation === 'cut') {
+      setClipboard(null);
+    }
+  };
+
+  const contextMenuSections = [
+    {
+      items: [
+        {
+          label: 'Paste',
+          icon: Clipboard,
+          shortcut: '⌘V',
+          onSelect: handlePaste,
+          disabled: !clipboard,
+        },
+      ],
+    },
+  ];
 
   const isActive = activeTrackId === trackId;
 
@@ -99,22 +230,27 @@ export function TimelineTrack({
         </span>
       </div>
 
-      <div
-        className={cn('bg-neutral-800 flex-1 relative transition-colors', {
-          'bg-cyan-900/30': isHovering,
-          'ring-2 ring-inset ring-blue-500/50': isActive,
-        })}
-      >
-        {track.clips.map((clip) => (
-          <TimelineClip
-            key={clip.id}
-            trackId={track.id}
-            clipId={clip.id}
-            pxPerSec={pxPerSec}
-            trackHeight={trackHeight}
-          />
-        ))}
-      </div>
+      <ContextMenu sections={contextMenuSections}>
+        <div
+          ref={trackContentRef}
+          className={cn('bg-neutral-800 flex-1 relative transition-colors', {
+            'bg-cyan-900/30': isHovering,
+            'ring-2 ring-inset ring-blue-500/50': isActive,
+          })}
+          onContextMenu={handleContextMenu}
+          onClick={handleClick}
+        >
+          {track.clips.map((clip) => (
+            <TimelineClip
+              key={clip.id}
+              trackId={track.id}
+              clipId={clip.id}
+              pxPerSec={pxPerSec}
+              trackHeight={trackHeight}
+            />
+          ))}
+        </div>
+      </ContextMenu>
     </div>
   );
 }

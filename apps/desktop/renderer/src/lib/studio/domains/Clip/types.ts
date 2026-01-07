@@ -28,6 +28,7 @@ export interface IBaseClip {
   effects: IEffect[];
   animations: IAnimation[];
   enabled: boolean;
+  locked?: boolean;
 }
 
 // Video Track Clips

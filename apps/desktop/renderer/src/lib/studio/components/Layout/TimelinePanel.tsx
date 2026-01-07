@@ -28,6 +28,7 @@ export function TimelinePanel() {
   const tracks = useDocStore((state) => state.tracks);
   const removeClip = useDocStore((state) => state.removeClip);
   const cloneClipToTrack = useDocStore((state) => state.cloneClipToTrack);
+  const addClipToTrack = useDocStore((state) => state.addClipToTrack);
   const setActiveTrackId = useDocStore((state) => state.setActiveTrackId);
   const selectedClipIds = useInteractionStore((state) => state.selectedClipIds);
   const setSelectedClipId = useInteractionStore(
@@ -36,6 +37,10 @@ export function TimelinePanel() {
   const setSelectedClipIds = useInteractionStore(
     (state) => state.setSelectedClipIds
   );
+  const clipboard = useInteractionStore((state) => state.clipboard);
+  const setClipboard = useInteractionStore((state) => state.setClipboard);
+  const lastClickedTime = useInteractionStore((state) => state.lastClickedTime);
+  const activeTrackId = useDocStore((state) => state.activeTrackId);
 
   // Backspace 또는 Delete 키로 선택된 클립 삭제
   useHotkeys('backspace, delete', () => {
@@ -93,6 +98,112 @@ export function TimelinePanel() {
     setSelectedClipIds([]);
     setActiveTrackId(null);
     console.log('[TimelinePanel] Cleared all selections');
+  });
+
+  // Cmd/Ctrl + C로 클립 복사
+  useHotkeys('mod+c', (e) => {
+    e.preventDefault();
+    if (selectedClipIds.length !== 1) return; // 하나의 클립만 선택되었을 때
+
+    const clipId = selectedClipIds[0];
+    const trackWithClip = tracks.find((track) =>
+      track.clips.some((clip) => clip.id === clipId)
+    );
+
+    if (trackWithClip) {
+      const clip = trackWithClip.clips.find((c) => c.id === clipId);
+      if (clip) {
+        // 클립 전체 데이터를 복사 (deep clone)
+        const clipData = JSON.parse(JSON.stringify(clip));
+        setClipboard({
+          clip: clipData,
+          operation: 'copy',
+        });
+        console.log('[TimelinePanel] Copied clip data:', clipId);
+      }
+    }
+  });
+
+  // Cmd/Ctrl + X로 클립 잘라내기
+  useHotkeys('mod+x', (e) => {
+    e.preventDefault();
+    if (selectedClipIds.length !== 1) return; // 하나의 클립만 선택되었을 때
+
+    const clipId = selectedClipIds[0];
+    const trackWithClip = tracks.find((track) =>
+      track.clips.some((clip) => clip.id === clipId)
+    );
+
+    if (trackWithClip) {
+      const clip = trackWithClip.clips.find((c) => c.id === clipId);
+      if (clip) {
+        // 클립 전체 데이터를 복사 (deep clone)
+        const clipData = JSON.parse(JSON.stringify(clip));
+        setClipboard({
+          clip: clipData,
+          operation: 'cut',
+        });
+        // Cut은 즉시 원본 삭제
+        removeClip(trackWithClip.id, clipId);
+        console.log('[TimelinePanel] Cut clip (removed):', clipId);
+      }
+    }
+  });
+
+  // Cmd/Ctrl + V로 클립 붙여넣기 (activeTrackId가 있을 때만, 트랙의 시작점에)
+  useHotkeys('mod+v', (e) => {
+    e.preventDefault();
+
+    if (!clipboard || !activeTrackId) {
+      console.log(
+        '[TimelinePanel] Cannot paste: no clipboard or no active track'
+      );
+      return;
+    }
+
+    const sourceClip = clipboard.clip;
+    const targetTrack = tracks.find((t) => t.id === activeTrackId);
+    if (!targetTrack) {
+      console.error('[TimelinePanel] Target track not found');
+      return;
+    }
+
+    const duration = sourceClip.endTime - sourceClip.startTime;
+    // lastClickedTime이 있으면 그 위치에, 없으면 0에 붙여넣기
+    const newStartTime = lastClickedTime !== null ? lastClickedTime : 0;
+    const newEndTime = newStartTime + duration;
+
+    console.log('[TimelinePanel] Pasting at:', {
+      lastClickedTime,
+      newStartTime,
+    });
+
+    // 겹침 체크
+    const hasOverlap = targetTrack.clips.some((clip) => {
+      return !(newEndTime <= clip.startTime || newStartTime >= clip.endTime);
+    });
+
+    if (hasOverlap) {
+      console.error('[TimelinePanel] Cannot paste: clip would overlap');
+      alert('Cannot paste: clip would overlap with existing clip');
+      return;
+    }
+
+    // 클립 데이터 복사 및 시간 수정
+    const newClipData = {
+      ...sourceClip,
+      startTime: newStartTime,
+      endTime: newEndTime,
+    };
+
+    // 트랙에 클립 추가
+    addClipToTrack(activeTrackId, newClipData);
+    console.log('[TimelinePanel] Pasted clip at time 0');
+
+    // Cut이었으면 clipboard 클리어
+    if (clipboard.operation === 'cut') {
+      setClipboard(null);
+    }
   });
 
   // Cmd/Ctrl + D로 선택된 클립을 endTime 위치에 복제
