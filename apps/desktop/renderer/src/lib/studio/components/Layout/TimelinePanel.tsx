@@ -2,8 +2,13 @@ import { motion, useMotionValue, useScroll, useTransform } from 'motion/react';
 import { ActionBar } from '@renderer/lib/studio/components/ActionBar';
 import { TimelineRulerCanvas } from '@renderer/lib/studio/components/TimelineRulerCanvas';
 import { TimelineTracks } from '@renderer/lib/studio/components/Timeline/TimelineTracks';
-import { useDocStore, useEngineStore } from '../../hooks/useStudioStores';
+import {
+  useDocStore,
+  useEngineStore,
+  useInteractionStore,
+} from '../../hooks/useStudioStores';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useHotkeys } from 'react-hotkeys-hook';
 
 const MIN_PIXELS_PER_SECOND = 2;
 const MAX_PIXELS_PER_SECOND = 100;
@@ -16,6 +21,40 @@ export function TimelinePanel() {
   const trackHeight = 60;
 
   const [pxPerSec, setPixPerSec] = useState(10);
+
+  // Store actions for deleting clips
+  const tracks = useDocStore((state) => state.tracks);
+  const removeClip = useDocStore((state) => state.removeClip);
+  const selectedClipIds = useInteractionStore((state) => state.selectedClipIds);
+  const setSelectedClipId = useInteractionStore(
+    (state) => state.setSelectedClipId
+  );
+
+  // Backspace 또는 Delete 키로 선택된 클립 삭제
+  useHotkeys('backspace, delete', () => {
+    if (selectedClipIds.length === 0) return;
+
+    console.log('[TimelinePanel] Deleting selected clips:', selectedClipIds);
+
+    // 각 선택된 클립을 찾아서 삭제
+    selectedClipIds.forEach((clipId) => {
+      // 클립이 속한 트랙 찾기
+      const trackWithClip = tracks.find((track) =>
+        track.clips.some((clip) => clip.id === clipId)
+      );
+
+      if (trackWithClip) {
+        removeClip(trackWithClip.id, clipId);
+        console.log('[TimelinePanel] Deleted clip:', {
+          clipId,
+          trackId: trackWithClip.id,
+        });
+      }
+    });
+
+    // 선택 해제
+    setSelectedClipId(null);
+  });
 
   // duration(ms)과 pxPerSec에 따라 totalTrackWidth 계산
   const totalTrackWidth = useMemo(() => {

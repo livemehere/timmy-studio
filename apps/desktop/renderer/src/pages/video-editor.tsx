@@ -18,7 +18,23 @@ const mock: IProject = {
     updatedAt: '2026-01-03T04:25:52.647Z',
   },
   tracks: [],
-  assets: [],
+  assets: [
+    {
+      id: '6d8b3b13',
+      name: '신분증.png',
+      filePath: '/path/to/sample-media.png',
+      metadata: {
+        size: 5995745,
+        createdAt: '2025-01-25T07:03:05.310Z',
+        width: 2653,
+        height: 1669,
+        codec: 'png',
+        frameRate: 25,
+      },
+      type: 'image',
+      thumbnailPath: '/path/to/sample-media.png',
+    },
+  ],
 };
 
 export default function VideoEditorPage() {
