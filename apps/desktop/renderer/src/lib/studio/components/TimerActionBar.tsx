@@ -288,7 +288,7 @@ export function TimerActionBar() {
 
       const finishInvoke0 = performance.now();
       worker.postMessage({ type: 'ffmpeg-close' });
-      const doneOutput = await waitForWorker((d) =>
+      const videoOutputPath = await waitForWorker((d) =>
         d?.type === 'done' ? String(d.output || outputPath) : null
       );
       const finishInvokeDt = performance.now() - finishInvoke0;
@@ -312,14 +312,64 @@ export function TimerActionBar() {
         ).toFixed(2)} max=${invokeMsMax.toFixed(1)})`
       );
 
+      worker.terminate();
+
+      console.log(
+        `[export][renderer] Video export completed: ${videoOutputPath}`
+      );
+
+      // Check if we need to merge with audio
+      let finalOutputPath = videoOutputPath;
+
+      if (audioRenderer) {
+        const audioTracks = audioRenderer.getExportAudioTracks();
+
+        if (audioTracks.length > 0) {
+          console.log(
+            `[export][renderer] Merging ${audioTracks.length} audio tracks with video...`
+          );
+
+          try {
+            const mergeResult = await window.app.invoke(
+              'export:mergeWithAudio',
+              {
+                videoPath: videoOutputPath,
+                audioTracks,
+                totalDurationSec: settings.duration / 1000,
+                sampleRate: settings.sampleRate || 48000,
+              }
+            );
+
+            finalOutputPath = mergeResult.outputPath;
+            console.log(`[export][renderer] Final output: ${finalOutputPath}`);
+          } catch (mergeErr) {
+            console.error('[export][renderer] Merge failed:', mergeErr);
+            setExportState((prev) => ({
+              ...prev,
+              isExporting: false,
+              error:
+                'Video exported but audio merge failed: ' +
+                (mergeErr instanceof Error
+                  ? mergeErr.message
+                  : String(mergeErr)),
+            }));
+            return;
+          }
+        } else {
+          console.log('[export][renderer] No audio tracks, video-only export');
+        }
+      } else {
+        console.log(
+          '[export][renderer] AudioRenderer not available, video-only export'
+        );
+      }
+
       setExportState((prev) => ({
         ...prev,
         isExporting: false,
-        outputPath: doneOutput,
+        outputPath: finalOutputPath,
         percent: 100,
       }));
-
-      worker.terminate();
     } catch (err) {
       setExportState((prev) => ({
         ...prev,

@@ -1,13 +1,18 @@
 import { app, dialog, type BrowserWindow } from 'electron';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import path from 'node:path';
+import fs from 'node:fs/promises';
 import { ipc } from '@timmy-studio/electron-utils/ipc/main';
 import { isDev } from '@timmy-studio/electron-utils/utils/main';
 import { MediaUtils } from '@main/utils/MediaUtils';
 import {
   spawnMixAudiosWithProgress,
+  mergeVideoAndAudio,
   type AudioTrackSpec,
 } from '@main/utils/AudioMixerUtils';
+
+// 개발 중 토글: export 후 임시 파일(output.video.mp4, output.audio.m4a) 삭제 여부
+const CLEANUP_TEMP_FILES = true;
 
 type ExportSession = {
   proc: ChildProcessWithoutNullStreams;
@@ -105,7 +110,10 @@ export function registerIpcHandlers(win: BrowserWindow) {
       if (!Number.isFinite(totalFrames) || totalFrames < 0)
         throw new Error('Invalid totalFrames');
 
-      const outputPath = path.join(app.getPath('downloads'), 'output.mp4');
+      const outputPath = path.join(
+        app.getPath('downloads'),
+        'output.video.mp4'
+      );
       const frameSizeBytes = width * height * 4;
 
       const isMac = process.platform === 'darwin';
@@ -261,27 +269,120 @@ export function registerIpcHandlers(win: BrowserWindow) {
     return { writtenFrames: session.writtenFrames };
   });
 
-  ipc.handle('export:finish', async () => {
-    if (!exportSession) throw new Error('No export in progress');
+  ipc.handle(
+    'export:finish',
+    async (
+      _,
+      options?: {
+        audioTracks?: Array<{
+          src: string;
+          trimStart: number;
+          trimEnd: number;
+          startMs: number;
+          volume: number;
+        }>;
+        totalDurationSec?: number;
+        sampleRate?: number;
+      }
+    ) => {
+      if (!exportSession) throw new Error('No export in progress');
 
-    const session = exportSession;
-    session.proc.stdin.end();
+      const session = exportSession;
+      session.proc.stdin.end();
 
-    if (session.proc.exitCode == null) {
+      // Wait for video export to complete
+      if (session.proc.exitCode == null) {
+        await new Promise<void>((resolve, reject) => {
+          const onClose = (code: number | null) => {
+            if (code === 0) resolve();
+            else reject(new Error(`ffmpeg exited with code ${code}`));
+          };
+          session.proc.once('close', onClose);
+          session.proc.once('error', reject);
+        });
+      } else if (session.proc.exitCode !== 0) {
+        throw new Error(`ffmpeg exited with code ${session.proc.exitCode}`);
+      }
+
+      const videoPath = session.outputPath; // output.video.mp4
+      console.log(`[Export] Video export completed: ${videoPath}`);
+
+      // Check if we have audio tracks to export
+      const hasAudio = options?.audioTracks && options.audioTracks.length > 0;
+
+      if (!hasAudio) {
+        console.log('[Export] No audio tracks, returning video only');
+        return { outputPath: videoPath };
+      }
+
+      // Export audio
+      console.log(
+        `[Export] Exporting audio with ${options!.audioTracks!.length} tracks`
+      );
+
+      const audioPath = path.join(app.getPath('downloads'), 'output.audio.m4a');
+
+      const audioTracks: AudioTrackSpec[] = options!.audioTracks!.map((t) => ({
+        src: t.src,
+        trimStart: t.trimStart,
+        trimEnd: t.trimEnd,
+        startMs: t.startMs,
+        volume: t.volume,
+      }));
+
       await new Promise<void>((resolve, reject) => {
-        const onClose = (code: number | null) => {
-          if (code === 0) resolve();
-          else reject(new Error(`ffmpeg exited with code ${code}`));
-        };
-        session.proc.once('close', onClose);
-        session.proc.once('error', reject);
+        spawnMixAudiosWithProgress(
+          audioTracks,
+          {
+            outFile: audioPath,
+            totalDurationSec: options!.totalDurationSec!,
+            sampleRate: options?.sampleRate || 48000,
+            channelLayout: 'stereo',
+            bitrateKbps: 192,
+          },
+          (progress) => {
+            if (progress.progress && progress.progress % 10 < 1) {
+              console.log(
+                `[Export] Audio progress: ${progress.progress.toFixed(1)}%`
+              );
+            }
+          },
+          () => resolve(),
+          (err) => reject(err)
+        );
       });
-    } else if (session.proc.exitCode !== 0) {
-      throw new Error(`ffmpeg exited with code ${session.proc.exitCode}`);
-    }
 
-    return { outputPath: session.outputPath };
-  });
+      console.log(`[Export] Audio export completed: ${audioPath}`);
+
+      // Merge video and audio
+      const finalPath = path.join(app.getPath('downloads'), 'output.mp4');
+      console.log(
+        `[Export] Merging video and audio into final output: ${finalPath}`
+      );
+
+      await mergeVideoAndAudio(videoPath, audioPath, finalPath);
+
+      console.log(`[Export] Merge completed: ${finalPath}`);
+
+      // Cleanup temp files if enabled
+      if (CLEANUP_TEMP_FILES) {
+        console.log('[Export] Cleaning up temporary files...');
+        try {
+          await fs.unlink(videoPath);
+          await fs.unlink(audioPath);
+          console.log(
+            `[Export] Removed temporary files: ${videoPath}, ${audioPath}`
+          );
+        } catch (err) {
+          console.warn('[Export] Failed to cleanup temp files:', err);
+        }
+      } else {
+        console.log('[Export] Skipping cleanup (CLEANUP_TEMP_FILES = false)');
+      }
+
+      return { outputPath: finalPath };
+    }
+  );
 
   ipc.handle(
     'export:audio',
@@ -381,6 +482,123 @@ export function registerIpcHandlers(win: BrowserWindow) {
           reject(err);
         }
       });
+    }
+  );
+
+  ipc.handle(
+    'export:mergeWithAudio',
+    async (
+      _,
+      options: {
+        videoPath: string; // 기존 비디오 파일 경로 (예: ~/Downloads/output.mp4)
+        audioTracks: Array<{
+          src: string;
+          trimStart: number;
+          trimEnd: number;
+          startMs: number;
+          volume: number;
+        }>;
+        totalDurationSec: number;
+        sampleRate?: number;
+      }
+    ) => {
+      const {
+        videoPath,
+        audioTracks,
+        totalDurationSec,
+        sampleRate = 48000,
+      } = options;
+
+      console.log('[Export Merge] Starting merge process...');
+      console.log(`[Export Merge] Video: ${videoPath}`);
+      console.log(`[Export Merge] Audio tracks: ${audioTracks.length}`);
+
+      const downloadsDir = app.getPath('downloads');
+      const videoTempPath = path.join(downloadsDir, 'output.video.mp4');
+      const audioPath = path.join(downloadsDir, 'output.audio.m4a');
+      const finalPath = path.join(downloadsDir, 'output.mp4');
+
+      try {
+        // Step 1: Rename video to temp name
+        console.log(`[Export Merge] Renaming ${videoPath} → ${videoTempPath}`);
+        await fs.rename(videoPath, videoTempPath);
+
+        // Step 2: Export audio
+        console.log('[Export Merge] Exporting audio...');
+        const audioTrackSpecs: AudioTrackSpec[] = audioTracks.map((t) => ({
+          src: t.src,
+          trimStart: t.trimStart,
+          trimEnd: t.trimEnd,
+          startMs: t.startMs,
+          volume: t.volume,
+        }));
+
+        await new Promise<void>((resolve, reject) => {
+          spawnMixAudiosWithProgress(
+            audioTrackSpecs,
+            {
+              outFile: audioPath,
+              totalDurationSec,
+              sampleRate,
+              channelLayout: 'stereo',
+              bitrateKbps: 192,
+            },
+            (progress) => {
+              if (progress.progress && progress.progress % 20 < 1) {
+                console.log(
+                  `[Export Merge] Audio: ${progress.progress.toFixed(1)}%`
+                );
+              }
+            },
+            () => resolve(),
+            (err) => reject(err)
+          );
+        });
+
+        console.log('[Export Merge] Audio export completed');
+
+        // Step 3: Merge video + audio
+        console.log('[Export Merge] Merging video and audio...');
+        await mergeVideoAndAudio(videoTempPath, audioPath, finalPath);
+
+        console.log(`[Export Merge] Merge completed: ${finalPath}`);
+
+        // Step 4: Cleanup temp files
+        if (CLEANUP_TEMP_FILES) {
+          console.log('[Export Merge] Cleaning up temporary files...');
+          try {
+            await fs.unlink(videoTempPath);
+            await fs.unlink(audioPath);
+            console.log('[Export Merge] Cleanup completed');
+          } catch (cleanupErr) {
+            console.warn('[Export Merge] Cleanup failed:', cleanupErr);
+          }
+        } else {
+          console.log(
+            '[Export Merge] Skipping cleanup (CLEANUP_TEMP_FILES = false)'
+          );
+        }
+
+        return { outputPath: finalPath };
+      } catch (err) {
+        console.error('[Export Merge] Error:', err);
+
+        // Try to restore original video file if rename happened
+        try {
+          const videoTempExists = await fs
+            .access(videoTempPath)
+            .then(() => true)
+            .catch(() => false);
+          if (videoTempExists) {
+            await fs.rename(videoTempPath, videoPath);
+            console.log('[Export Merge] Restored original video file');
+          }
+        } catch (restoreErr) {
+          console.error('[Export Merge] Failed to restore video:', restoreErr);
+        }
+
+        throw err;
+      }
     }
   );
 }

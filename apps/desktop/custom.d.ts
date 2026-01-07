@@ -53,6 +53,19 @@ declare module '@timmy-studio/electron-utils/ipc' {
     };
 
     'export:finish': {
+      payload: [
+        options?: {
+          audioTracks?: Array<{
+            src: string;
+            trimStart: number;
+            trimEnd: number;
+            startMs: number;
+            volume: number;
+          }>;
+          totalDurationSec?: number;
+          sampleRate?: number;
+        },
+      ];
       response: {
         outputPath: string;
       };
@@ -62,6 +75,26 @@ declare module '@timmy-studio/electron-utils/ipc' {
       payload: [
         options: {
           tracks: Array<{
+            src: string;
+            trimStart: number;
+            trimEnd: number;
+            startMs: number;
+            volume: number;
+          }>;
+          totalDurationSec: number;
+          sampleRate?: number;
+        },
+      ];
+      response: {
+        outputPath: string;
+      };
+    };
+
+    'export:mergeWithAudio': {
+      payload: [
+        options: {
+          videoPath: string;
+          audioTracks: Array<{
             src: string;
             trimStart: number;
             trimEnd: number;
