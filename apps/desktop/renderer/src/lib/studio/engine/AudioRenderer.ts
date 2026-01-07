@@ -177,17 +177,39 @@ export class AudioRenderer {
       volume: number;
     }> = [];
 
+    console.log(
+      `[AudioRenderer] Collecting export tracks from ${this.tracks.size} tracks`
+    );
+
     for (const track of this.tracks.values()) {
-      if (!track.data.enabled) continue;
+      if (!track.data.enabled) {
+        console.log(
+          `[AudioRenderer] Skipping disabled track: ${track.data.id}`
+        );
+        continue;
+      }
 
       const trackVolume = track.data.volume ?? 1;
+      console.log(
+        `[AudioRenderer] Processing track: ${track.data.id}, volume: ${trackVolume}, clips: ${track.clips.size}`
+      );
 
       for (const clip of track.clips.values()) {
-        if (!clip.data.enabled) continue;
+        if (!clip.data.enabled) {
+          console.log(
+            `[AudioRenderer] Skipping disabled clip: ${clip.data.id}`
+          );
+          continue;
+        }
 
         // Asset 찾기
         const asset = doc.assets.find((a) => a.id === clip.data.assetId);
-        if (!asset || asset.type !== 'audio') continue;
+        if (!asset || asset.type !== 'audio') {
+          console.warn(
+            `[AudioRenderer] Asset not found or invalid type for clip: ${clip.data.assetId}`
+          );
+          continue;
+        }
 
         const trimStart = (clip.data.trimStart ?? 0) / 1000; // ms -> s
         const duration =
@@ -195,16 +217,30 @@ export class AudioRenderer {
           1000; // ms -> s
         const trimEnd = trimStart + duration;
 
-        clips.push({
+        const clipInfo = {
           src: asset.filePath,
           trimStart,
           trimEnd,
           startMs: clip.data.startTime,
           volume: (clip.data.volume ?? 1) * trackVolume,
+        };
+
+        console.log(`[AudioRenderer] Added clip: ${clip.data.id}`, {
+          src: asset.filePath.substring(0, 50) + '...',
+          trimStart: trimStart.toFixed(2) + 's',
+          trimEnd: trimEnd.toFixed(2) + 's',
+          duration: duration.toFixed(2) + 's',
+          startMs: clip.data.startTime + 'ms',
+          volume: clipInfo.volume.toFixed(2),
         });
+
+        clips.push(clipInfo);
       }
     }
 
+    console.log(
+      `[AudioRenderer] Total clips collected for export: ${clips.length}`
+    );
     return clips;
   }
 }

@@ -57,6 +57,25 @@ declare module '@timmy-studio/electron-utils/ipc' {
         outputPath: string;
       };
     };
+
+    'export:audio': {
+      payload: [
+        options: {
+          tracks: Array<{
+            src: string;
+            trimStart: number;
+            trimEnd: number;
+            startMs: number;
+            volume: number;
+          }>;
+          totalDurationSec: number;
+          sampleRate?: number;
+        },
+      ];
+      response: {
+        outputPath: string;
+      };
+    };
   }
 
   interface IpcSendChannels {

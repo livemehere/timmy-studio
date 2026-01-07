@@ -4,6 +4,10 @@ import path from 'node:path';
 import { ipc } from '@timmy-studio/electron-utils/ipc/main';
 import { isDev } from '@timmy-studio/electron-utils/utils/main';
 import { MediaUtils } from '@main/utils/MediaUtils';
+import {
+  spawnMixAudiosWithProgress,
+  type AudioTrackSpec,
+} from '@main/utils/AudioMixerUtils';
 
 type ExportSession = {
   proc: ChildProcessWithoutNullStreams;
@@ -278,4 +282,105 @@ export function registerIpcHandlers(win: BrowserWindow) {
 
     return { outputPath: session.outputPath };
   });
+
+  ipc.handle(
+    'export:audio',
+    async (
+      _,
+      options: {
+        tracks: Array<{
+          src: string;
+          trimStart: number;
+          trimEnd: number;
+          startMs: number;
+          volume: number;
+        }>;
+        totalDurationSec: number;
+        sampleRate?: number;
+      }
+    ) => {
+      const { tracks, totalDurationSec, sampleRate = 48000 } = options;
+
+      if (!tracks || tracks.length === 0) {
+        throw new Error('No audio tracks provided');
+      }
+
+      const outputPath = path.join(
+        app.getPath('downloads'),
+        'output.audio.m4a'
+      );
+
+      console.log(
+        `[Audio Export] Starting audio export with ${tracks.length} tracks`
+      );
+      console.log(`[Audio Export] Output: ${outputPath}`);
+      console.log(`[Audio Export] Duration: ${totalDurationSec}s`);
+      console.log(`[Audio Export] Sample Rate: ${sampleRate}Hz`);
+
+      // Log track details for debugging
+      tracks.forEach((t, idx) => {
+        console.log(`[Audio Export] Track ${idx + 1}:`, {
+          src: t.src.substring(0, 60) + '...',
+          trim: `${t.trimStart.toFixed(2)}s - ${t.trimEnd.toFixed(2)}s`,
+          startMs: `${t.startMs}ms`,
+          volume: t.volume.toFixed(2),
+        });
+      });
+
+      // AudioTrackSpec으로 변환
+      const audioTracks: AudioTrackSpec[] = tracks.map((t) => ({
+        src: t.src,
+        trimStart: t.trimStart,
+        trimEnd: t.trimEnd,
+        startMs: t.startMs,
+        volume: t.volume,
+      }));
+
+      return new Promise<{ outputPath: string }>((resolve, reject) => {
+        const startTime = Date.now();
+        try {
+          spawnMixAudiosWithProgress(
+            audioTracks,
+            {
+              outFile: outputPath,
+              totalDurationSec,
+              sampleRate,
+              channelLayout: 'stereo',
+              bitrateKbps: 192,
+            },
+            (progress) => {
+              // 진행률 로그 (throttle to avoid spam)
+              if (progress.progress && progress.progress % 10 < 1) {
+                console.log(
+                  `[Audio Export] Progress: ${progress.progress.toFixed(1)}%`
+                );
+              }
+              // 진행률을 renderer로 전송 (선택사항)
+              // win.webContents.send('audio:export:progress', progress);
+            },
+            () => {
+              // 완료
+              const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+              console.log(
+                `[Audio Export] Success: ${outputPath} (took ${elapsed}s)`
+              );
+              resolve({ outputPath });
+            },
+            (err) => {
+              // 에러
+              const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+              console.error(
+                `[Audio Export] Error after ${elapsed}s:`,
+                err instanceof Error ? err.message : err
+              );
+              reject(err);
+            }
+          );
+        } catch (err) {
+          console.error('[Audio Export] Spawn error:', err);
+          reject(err);
+        }
+      });
+    }
+  );
 }

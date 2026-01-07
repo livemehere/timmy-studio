@@ -1,5 +1,5 @@
 import { useDocStore, useEngineStore } from '../hooks/useStudioStores';
-import { PauseIcon, PlayIcon, HardDriveUploadIcon } from 'lucide-react';
+import { PauseIcon, PlayIcon, HardDriveUploadIcon, Music } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { formatTime } from '../utils/time';
 
@@ -7,6 +7,7 @@ export function TimerActionBar() {
   const timer = useEngineStore((state) => state.timer);
   const settings = useDocStore((state) => state.settings);
   const renderer = useEngineStore((state) => state.renderer);
+  const audioRenderer = useEngineStore((state) => state.audioRenderer);
   const exportGridRef = useRef<HTMLDivElement | null>(null);
   const [exportState, setExportState] = useState<{
     isExporting: boolean;
@@ -19,6 +20,18 @@ export function TimerActionBar() {
     isExporting: false,
     writtenFrames: 0,
     totalFrames: 0,
+    percent: 0,
+    outputPath: '',
+    error: null,
+  });
+
+  const [audioExportState, setAudioExportState] = useState<{
+    isExporting: boolean;
+    percent: number;
+    outputPath: string;
+    error: string | null;
+  }>({
+    isExporting: false,
     percent: 0,
     outputPath: '',
     error: null,
@@ -320,6 +333,66 @@ export function TimerActionBar() {
     }
   };
 
+  const handleExportAudio = async () => {
+    if (!audioRenderer) {
+      setAudioExportState({
+        isExporting: false,
+        percent: 0,
+        outputPath: '',
+        error: 'AudioRenderer is not initialized',
+      });
+      return;
+    }
+
+    try {
+      setAudioExportState({
+        isExporting: true,
+        percent: 0,
+        outputPath: '',
+        error: null,
+      });
+
+      // AudioRenderer에서 오디오 트랙 정보 수집
+      const audioTracks = audioRenderer.getExportAudioTracks();
+
+      if (audioTracks.length === 0) {
+        setAudioExportState({
+          isExporting: false,
+          percent: 0,
+          outputPath: '',
+          error: 'No audio clips found',
+        });
+        return;
+      }
+
+      console.log('[Audio Export] Collected audio tracks:', audioTracks);
+
+      // Main 프로세스로 오디오 내보내기 요청
+      const result = await window.app.invoke('export:audio', {
+        tracks: audioTracks,
+        totalDurationSec: settings.duration / 1000,
+        sampleRate: settings.sampleRate || 48000,
+      });
+
+      setAudioExportState({
+        isExporting: false,
+        percent: 100,
+        outputPath: result.outputPath,
+        error: null,
+      });
+
+      console.log('[Audio Export] Success:', result.outputPath);
+    } catch (err) {
+      setAudioExportState({
+        isExporting: false,
+        percent: 0,
+        outputPath: '',
+        error: err instanceof Error ? err.message : String(err),
+      });
+      console.error('[Audio Export] Error:', err);
+    }
+  };
+
   return (
     <>
       <div className={'grid grid-cols-3 items-center p-2'}>
@@ -336,7 +409,15 @@ export function TimerActionBar() {
             )}
           </button>
         </div>
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          <button
+            className="flex items-center gap-2 bg-purple-700 rounded px-2 py-0.5 hover:bg-purple-600 cursor-pointer"
+            onClick={handleExportAudio}
+            disabled={audioExportState.isExporting}
+          >
+            <Music size={16} />
+            <span>오디오</span>
+          </button>
           <button
             className="flex items-center gap-2 bg-neutral-700 rounded px-2 py-0.5 hover:bg-neutral-600 cursor-pointer"
             onClick={() => setShowExportSettings((prev) => !prev)}
@@ -423,13 +504,24 @@ export function TimerActionBar() {
                 >
                   Export MP4 ({formatTime(exportRange.end - exportRange.start)})
                 </button>
+
+                <button
+                  className="w-full bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium py-2 rounded transition-colors"
+                  onClick={handleExportAudio}
+                  disabled={audioExportState.isExporting}
+                >
+                  {audioExportState.isExporting
+                    ? 'Exporting Audio...'
+                    : 'Export Audio (전체)'}
+                </button>
               </div>
             )}
 
-            <div className="text-[10px] text-neutral-200 tabular-nums">
+            <div className="text-[10px] text-neutral-200 tabular-nums space-y-2">
+              {/* 비디오 내보내기 상태 */}
               {exportState.error ? (
                 <div className="p-2 bg-red-900/50 rounded border border-red-800 text-red-200">
-                  {exportState.error}
+                  [Video] {exportState.error}
                 </div>
               ) : exportState.isExporting ? (
                 <div className="space-y-2">
@@ -440,7 +532,7 @@ export function TimerActionBar() {
                     />
                   </div>
                   <div className="flex justify-between text-neutral-400">
-                    <span>Exporting...</span>
+                    <span>Exporting Video...</span>
                     <span>
                       {exportState.percent.toFixed(1)}% (
                       {exportState.writtenFrames}/{exportState.totalFrames})
@@ -449,7 +541,31 @@ export function TimerActionBar() {
                 </div>
               ) : exportState.outputPath ? (
                 <div className="p-2 bg-green-900/30 rounded border border-green-800 text-green-300">
-                  Done: {exportState.outputPath}
+                  Video Done: {exportState.outputPath}
+                </div>
+              ) : null}
+
+              {/* 오디오 내보내기 상태 */}
+              {audioExportState.error ? (
+                <div className="p-2 bg-red-900/50 rounded border border-red-800 text-red-200">
+                  [Audio] {audioExportState.error}
+                </div>
+              ) : audioExportState.isExporting ? (
+                <div className="space-y-2">
+                  <div className="w-full bg-neutral-700 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="bg-purple-500 h-full transition-all duration-300 animate-pulse"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-neutral-400">
+                    <span>Exporting Audio...</span>
+                    <span>Processing...</span>
+                  </div>
+                </div>
+              ) : audioExportState.outputPath ? (
+                <div className="p-2 bg-green-900/30 rounded border border-green-800 text-green-300">
+                  Audio Done: {audioExportState.outputPath}
                 </div>
               ) : null}
             </div>
