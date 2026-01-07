@@ -14,10 +14,10 @@ export interface EngineState {
   syncedGraphicTrackIds: string[];
   syncedGraphicClipIds: string[];
 
-  // AudioManager sync state (Audio 객체 접근용)
-  // TODO: AudioRenderer 구현 완료 후 사용
+  // AudioRenderer sync state (Audio 객체 접근용)
   syncedAudioTrackIds: string[];
   syncedAudioClipIds: string[];
+  isAudioReady: boolean;
 }
 
 export interface EngineActions {
@@ -31,6 +31,7 @@ export interface EngineActions {
     trackIds: string[];
     clipIds: string[];
   }) => void;
+  setAudioReady: (ready: boolean) => void;
 }
 
 export type EngineStore = EngineState & EngineActions;
@@ -62,9 +63,10 @@ export const createEngineStore = (docGetter: DocGetter) => {
     syncedGraphicTrackIds: [],
     syncedGraphicClipIds: [],
 
-    // AudioManager sync state
+    // AudioRenderer sync state
     syncedAudioTrackIds: [],
     syncedAudioClipIds: [],
+    isAudioReady: false,
 
     // ...existing code...
 
@@ -96,6 +98,7 @@ export const createEngineStore = (docGetter: DocGetter) => {
         syncedGraphicClipIds: [],
         syncedAudioTrackIds: [],
         syncedAudioClipIds: [],
+        isAudioReady: false,
       });
     },
     applyRendererSyncResult: ({ trackIds, clipIds }) => {
@@ -110,6 +113,10 @@ export const createEngineStore = (docGetter: DocGetter) => {
         syncedAudioTrackIds: trackIds,
         syncedAudioClipIds: clipIds,
       });
+    },
+
+    setAudioReady: (ready) => {
+      set({ isAudioReady: ready });
     },
   }));
 };

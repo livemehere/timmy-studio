@@ -87,7 +87,10 @@ export class AudioRenderer {
   }
 
   // 데이터 동기화
-  async syncTracks(tracksData: IAudioTrack[]) {
+  async syncTracks(tracksData: IAudioTrack[]): Promise<{
+    syncedTrackIds: string[];
+    syncedClipIds: string[];
+  }> {
     const trackIds = new Set(tracksData.map((t) => t.id));
 
     // 제거
@@ -152,5 +155,56 @@ export class AudioRenderer {
     this.tracks.clear();
     this.audioContext.close();
     this.isInitialized = false;
+  }
+
+  /**
+   * Export용 오디오 트랙 정보 수집
+   * 각 AudioClip의 정보를 수집하여 ffmpeg로 믹싱할 수 있는 형태로 반환
+   */
+  getExportAudioTracks(): Array<{
+    src: string;
+    trimStart: number; // 초
+    trimEnd: number; // 초
+    startMs: number; // 타임라인 상 시작 시간 (밀리초)
+    volume: number;
+  }> {
+    const doc = this.getDoc();
+    const clips: Array<{
+      src: string;
+      trimStart: number;
+      trimEnd: number;
+      startMs: number;
+      volume: number;
+    }> = [];
+
+    for (const track of this.tracks.values()) {
+      if (!track.data.enabled) continue;
+
+      const trackVolume = track.data.volume ?? 1;
+
+      for (const clip of track.clips.values()) {
+        if (!clip.data.enabled) continue;
+
+        // Asset 찾기
+        const asset = doc.assets.find((a) => a.id === clip.data.assetId);
+        if (!asset || asset.type !== 'audio') continue;
+
+        const trimStart = (clip.data.trimStart ?? 0) / 1000; // ms -> s
+        const duration =
+          (clip.data.endTime - clip.data.startTime - (clip.data.trimEnd ?? 0)) /
+          1000; // ms -> s
+        const trimEnd = trimStart + duration;
+
+        clips.push({
+          src: asset.filePath,
+          trimStart,
+          trimEnd,
+          startMs: clip.data.startTime,
+          volume: (clip.data.volume ?? 1) * trackVolume,
+        });
+      }
+    }
+
+    return clips;
   }
 }

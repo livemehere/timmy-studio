@@ -4,14 +4,21 @@ import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
 import { Clip } from './Clip';
 import type { TickContext } from '@renderer/lib/studio/engine/types';
 
+/**
+ * AudioClip - HTMLAudioElement 기반 스트리밍 재생
+ *
+ * 대용량 오디오 파일 지원을 위해 MediaElementAudioSourceNode 사용
+ * - AudioBuffer 방식: 전체 파일을 메모리에 로드 (1시간 = ~600MB)
+ * - MediaElement 방식: 스트리밍으로 재생 (메모리 절약)
+ */
 export class AudioClip extends Clip {
   readonly type = 'audio';
   public data: IAudioClip;
 
-  // Audio Graph
-  private sourceNode: AudioBufferSourceNode | null = null;
+  // Audio Graph - MediaElement 방식 (대용량 파일 스트리밍 지원)
+  private audioElement: HTMLAudioElement | null = null;
+  private mediaSourceNode: MediaElementAudioSourceNode | null = null;
   private gainNode: GainNode | null = null;
-  private audioBuffer: AudioBuffer | null = null;
 
   public get outputNode(): GainNode | null {
     return this.gainNode;
@@ -19,14 +26,12 @@ export class AudioClip extends Clip {
 
   // State
   private isPlaying = false;
+  private filePath: string | null = null;
 
   constructor(
-    public readonly renderer: AudioRenderer, // 타입 재정의 필요할 수 있음 (Video Renderer와 다름) -> 일단 any나 공통 인터페이스 쓰거나, AudioRenderer 직접 참조
+    public readonly renderer: AudioRenderer,
     data: IAudioClip
   ) {
-    // Clip 부모 생성자는 Pixi Sprite를 만드는데, 오디오 클립은 Sprite가 필요 없지만
-    // 상속 구조상 생성됨. (나중에 Clip을 GraphicClip/AudioClip으로 분리하는게 좋음)
-    // 일단은 부모 생성자 호출하되 renderer는 any로 캐스팅하여 전달 (부모는 VideoRenderer를 기대함)
     super(renderer as any, data);
     this.data = data;
   }
@@ -42,12 +47,8 @@ export class AudioClip extends Clip {
       return;
     }
 
-    try {
-      this.audioBuffer = await this.loadAudioBuffer(asset.filePath);
-      console.log(`[AudioClip] Loaded buffer for ${this.id}`);
-    } catch (e) {
-      console.error(`[AudioClip] Failed to load audio: ${asset.filePath}`, e);
-    }
+    this.filePath = asset.filePath;
+    console.log(`[AudioClip] Initialized for ${this.id}`);
   }
 
   update(data: IAudioClip): void {
@@ -60,17 +61,31 @@ export class AudioClip extends Clip {
 
   destroy(): void {
     this.stop();
-    this.audioBuffer = null;
+
+    // Audio Element 정리
+    if (this.audioElement) {
+      this.audioElement.pause();
+      this.audioElement.src = '';
+      this.audioElement.load(); // 메모리 해제
+      this.audioElement = null;
+    }
+
+    // Audio Graph 정리
+    if (this.mediaSourceNode) {
+      this.mediaSourceNode.disconnect();
+      this.mediaSourceNode = null;
+    }
     if (this.gainNode) {
       this.gainNode.disconnect();
       this.gainNode = null;
     }
+
+    this.filePath = null;
   }
 
   // 오디오는 매 프레임 tick보다는 상태 변화(재생/정지/탐색) 시점에 반응하는 것이 중요함.
-  // 하지만 부모 구조에 맞춰 tick을 구현.
   tick(ctx: TickContext): void {
-    if (!this.audioBuffer) return;
+    if (!this.filePath) return;
 
     const { isPlaying, currentTime, playStateChanged, isSeeking } = ctx;
     const isVisible = this.shouldRender(currentTime);
@@ -100,7 +115,7 @@ export class AudioClip extends Clip {
 
   private async play(currentTime: number) {
     if (this.isPlaying) this.stop(); // 이미 재생 중이면 일단 멈춤 (Seek 등 대응)
-    if (!this.audioBuffer) return;
+    if (!this.filePath) return;
 
     const ctx = this.renderer.audioContext;
     if (ctx.state !== 'running') {
@@ -112,93 +127,77 @@ export class AudioClip extends Clip {
       }
     }
 
-    // 그래프 생성: Source -> Gain -> Track Gain(외부)
-    this.sourceNode = ctx.createBufferSource();
-    this.sourceNode.buffer = this.audioBuffer;
+    // Audio Element 생성 (처음에만)
+    if (!this.audioElement) {
+      this.audioElement = new Audio();
+      this.audioElement.preload = 'metadata'; // 메타데이터만 로드 (메모리 절약)
+      this.audioElement.crossOrigin = 'anonymous'; // CORS 지원
+      this.audioElement.src = toFilePath(this.filePath);
+      this.audioElement.loop = false;
 
-    this.gainNode = ctx.createGain();
-    this.gainNode.gain.value = this.data.volume ?? 1;
-
-    this.sourceNode.connect(this.gainNode);
-    // Track의 노드에 연결해야 함. (AudioRenderer -> Track -> Clip 구조 필요)
-    // 현재 구조상 Track 인스턴스를 통해 연결해야 함.
-
-    // [DEBUG] 직접 destination 연결 (테스트용)
-    // this.gainNode.connect(this.renderer.audioContext.destination);
-
-    // 부모 트랙 찾기 (약간 해킹, 나중에 주입받는게 좋음)
-    const track = this.data.trackId
-      ? this.renderer.getTrack(this.data.trackId)
-      : undefined;
-    if (track) {
-      this.gainNode.connect(track.inputNode);
-    } else {
-      // Fallback: Track을 못 찾으면 Master로 직결 (안전장치)
-      this.gainNode.connect(this.renderer.masterNode);
+      // 에러 핸들링
+      this.audioElement.onerror = (e) => {
+        console.error('[AudioClip] Audio element error:', e);
+      };
     }
 
-    // 오프셋 계산
+    // MediaElementSourceNode 생성 (처음에만)
+    if (!this.mediaSourceNode) {
+      this.mediaSourceNode = ctx.createMediaElementSource(this.audioElement);
+    }
+
+    // Gain Node 생성
+    if (!this.gainNode) {
+      this.gainNode = ctx.createGain();
+      // 그래프 연결: MediaSource -> Gain -> Track Input
+      this.mediaSourceNode.connect(this.gainNode);
+
+      // 부모 트랙 찾기
+      const track = this.data.trackId
+        ? this.renderer.getTrack(this.data.trackId)
+        : undefined;
+      if (track) {
+        this.gainNode.connect(track.inputNode);
+      } else {
+        // Fallback: Track을 못 찾으면 Master로 직결
+        this.gainNode.connect(this.renderer.masterNode);
+      }
+    }
+
+    // 볼륨 설정
+    this.gainNode.gain.value = this.data.volume ?? 1;
+
+    // 재생 위치 계산
     // Clip 시작 시간: this.data.startTime
     // 오디오 파일 내 시작점: this.data.trimStart (없으면 0)
     // 현재 커서 위치: currentTime
-
-    // 오디오 파일 내에서 재생할 오프셋 (초 단위)
-    const trimStart = (this.data.trimStart ?? 0) / 1000;
+    const trimStart = (this.data.trimStart ?? 0) / 1000; // ms -> s
     const offset =
       Math.max(0, (currentTime - this.data.startTime) / 1000) + trimStart;
 
-    // 재생
-    this.sourceNode.start(0, offset);
-    this.isPlaying = true;
+    // Audio Element의 currentTime 설정 및 재생
+    this.audioElement.currentTime = offset;
 
-    this.sourceNode.onended = () => {
-      this.isPlaying = false;
-      this.sourceNode = null;
-    };
+    // 재생 시작
+    const playPromise = this.audioElement.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          this.isPlaying = true;
+        })
+        .catch((e) => {
+          console.warn('[AudioClip] Play failed:', e);
+          this.isPlaying = false;
+        });
+    } else {
+      this.isPlaying = true;
+    }
   }
 
   private stop() {
-    if (this.sourceNode) {
-      try {
-        this.sourceNode.stop();
-      } catch (e) {
-        // 이미 멈춘 경우 무시
-      }
-      this.sourceNode.disconnect();
-      this.sourceNode = null;
+    if (this.audioElement) {
+      this.audioElement.pause();
+      this.isPlaying = false;
     }
-    if (this.gainNode) {
-      this.gainNode.disconnect();
-      this.gainNode = null;
-    }
-    this.isPlaying = false;
-  }
-
-  private async loadAudioBuffer(filePath: string): Promise<AudioBuffer> {
-    const response = await fetch(toFilePath(filePath));
-    const arrayBuffer = await response.arrayBuffer();
-
-    // 1시간짜리 오디오(44.1kHz, stereo, 16bit)는 약 600MB 정도의 메모리를 차지합니다.
-    // 5GB 정도의 대용량 파일이나 긴 영상에서 추출한 오디오의 경우 OOM(Out of Memory) 위험이 있습니다.
-    // Web Audio API의 decodeAudioData는 전체 오디오를 압축 해제하여 PCM 데이터로 메모리에 적재하므로
-    // 매우 긴 오디오 파일에는 적합하지 않습니다.
-
-    // 해결 방안:
-    // 1. 스트리밍 방식 사용 (MediaElementAudioSourceNode): <audio> 태그를 사용하여 스트리밍 재생
-    //    - 장점: 메모리 사용량 적음, 긴 파일 재생 가능
-    //    - 단점: Web Audio API의 정밀한 타이밍 제어나 일부 이펙트 처리에 제약이 있을 수 있음
-
-    // 2. 오디오 청크 분할: 필요한 부분만 잘라서 로딩 (현재 구조상 복잡)
-
-    // 현재는 프로토타입 단계이므로 전체 로딩 방식을 유지하되, 추후 대용량 파일 지원 시
-    // HTMLAudioElement를 활용한 스트리밍 방식(MediaElementSource)으로 전환을 고려해야 합니다.
-
-    // 긴급 회피책으로, 너무 큰 파일은 경고를 띄우거나 처리를 거부할 수 있습니다.
-    if (arrayBuffer.byteLength > 500 * 1024 * 1024) {
-      // 500MB 제한 예시
-      console.warn('[AudioClip] Audio file too large, might cause OOM');
-    }
-
-    return await this.renderer.audioContext.decodeAudioData(arrayBuffer);
   }
 }
