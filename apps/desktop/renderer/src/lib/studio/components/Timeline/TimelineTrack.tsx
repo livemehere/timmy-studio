@@ -7,11 +7,11 @@ import {
   VolumeOff,
   Clipboard,
 } from 'lucide-react';
-import { cn } from '@renderer/utils/cn';
-import { TimelineClip } from '@renderer/lib/studio/components/Timeline/TimelineClip';
+import { cn } from '@/utils/cn';
+import { TimelineClip } from '@/lib/studio/components/Timeline/TimelineClip';
 import { useDocStore, useInteractionStore } from '../../hooks/useStudioStores';
-import { ContextMenu } from '@renderer/components/ContextMenu';
-import { useToast } from '@renderer/components/Toast';
+import { ContextMenu } from '@/components/ContextMenu';
+import { useToast } from '@/components/Toast';
 
 function TrackButton({
   icon: IconComp,

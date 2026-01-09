@@ -1,9 +1,9 @@
 import { uid } from 'uid';
-import type { GraphicRenderer } from '@renderer/lib/studio/engine/GraphicRenderer';
-import type { TickContext } from '@renderer/lib/studio/engine/types';
+import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
+import type { TickContext } from '@/lib/studio/engine/types';
 import type { IAsset } from '../Asset/types';
-import type { IShapeData } from '@renderer/lib/studio/types/shape';
-import type { ITextData } from '@renderer/lib/studio/types/text';
+import type { IShapeData } from '@/lib/studio/types/shape';
+import type { ITextData } from '@/lib/studio/types/text';
 import type {
   ClipType,
   IAnimatedImageClip,
@@ -16,8 +16,8 @@ import type {
   ITransform,
   IVideoClip,
 } from './types';
-import type { AudioRenderer } from '@renderer/lib/studio/engine/AudioRenderer';
-import type { TrackType } from '@renderer/lib/studio/domains/Track/types';
+import type { AudioRenderer } from '@/lib/studio/engine/AudioRenderer';
+import type { TrackType } from '@/lib/studio/domains/Track/types';
 
 export abstract class Clip {
   static readonly DEFAULT_CLIP_DURATION_MS = 3000; //ms

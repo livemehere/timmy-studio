@@ -1,9 +1,9 @@
 import type { IAudioTrack, IGraphicTrack, ITrack, TrackType } from './types';
 import type { IClip } from '../Clip/types';
-import type { TickContext } from '@renderer/lib/studio/engine/types';
-import type { GraphicRenderer } from '@renderer/lib/studio/engine/GraphicRenderer';
-import type { AudioRenderer } from '@renderer/lib/studio/engine/AudioRenderer';
-import type { AssetType } from '@renderer/lib/studio/domains/Asset/types';
+import type { TickContext } from '@/lib/studio/engine/types';
+import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
+import type { AudioRenderer } from '@/lib/studio/engine/AudioRenderer';
+import type { AssetType } from '@/lib/studio/domains/Asset/types';
 import { uid } from 'uid';
 
 // 기본 트랙의 zIndex (위/아래로 최대 50개씩 트랙 추가 가능)

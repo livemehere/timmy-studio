@@ -1,5 +1,5 @@
 import { Section, InputField, NumberField, ToggleField } from '../inputs';
-import { TextAreaField } from '@renderer/lib/studio/components/inputs/TextAreaField';
+import { TextAreaField } from '@/lib/studio/components/inputs/TextAreaField';
 import type { ITextData } from '../../types/text';
 
 interface TextPropertiesSectionProps {

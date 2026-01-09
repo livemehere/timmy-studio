@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Timer } from '@renderer/lib/studio/engine/Timer';
+import { Timer } from '@/lib/studio/engine/Timer';
 import { advanceFrames } from '../__tests__/setup';
 
 describe('Timer', () => {

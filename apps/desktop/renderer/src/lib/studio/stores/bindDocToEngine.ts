@@ -5,7 +5,7 @@ import isEqual from 'fast-deep-equal';
 import type {
   IAudioTrack,
   IGraphicTrack,
-} from '@renderer/lib/studio/domains/Track/types';
+} from '@/lib/studio/domains/Track/types';
 
 /**
  * docStore의 변경사항을 engineStore에 자동으로 반영하는 바인딩 로직

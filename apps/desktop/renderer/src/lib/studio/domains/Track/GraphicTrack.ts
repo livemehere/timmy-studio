@@ -1,21 +1,21 @@
 import { Container } from 'pixi.js';
-import type { GraphicRenderer } from '@renderer/lib/studio/engine/GraphicRenderer';
+import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
 import type { IGraphicTrack } from './types';
-import type { TickContext } from '@renderer/lib/studio/engine/types';
+import type { TickContext } from '@/lib/studio/engine/types';
 import type {
   IGraphicClip,
   IVideoClip,
   IImageClip,
   ITextClip,
   IShapeClip,
-} from '@renderer/lib/studio/domains/Clip/types';
+} from '@/lib/studio/domains/Clip/types';
 import {
   VideoClip,
   ImageClip,
   TextClip,
   ShapeClip,
   GraphicClip,
-} from '@renderer/lib/studio/domains/Clip';
+} from '@/lib/studio/domains/Clip';
 import { Track } from './Track';
 
 export class GraphicTrack extends Track<

@@ -1,13 +1,13 @@
 import { Application, Container, Rectangle } from 'pixi.js';
-import type { IGraphicTrack } from '@renderer/lib/studio/domains/Track/types';
-import type { Timer } from '@renderer/lib/studio/engine/Timer';
+import type { IGraphicTrack } from '@/lib/studio/domains/Track/types';
+import type { Timer } from '@/lib/studio/engine/Timer';
 import type {
   TickContext,
   SeekingRenderMode,
   DocGetter,
   Dirtyable,
 } from './types';
-import { GraphicTrack } from '@renderer/lib/studio/domains/Track/GraphicTrack';
+import { GraphicTrack } from '@/lib/studio/domains/Track/GraphicTrack';
 
 export class GraphicRenderer {
   // --------------------------------------------------------------------------

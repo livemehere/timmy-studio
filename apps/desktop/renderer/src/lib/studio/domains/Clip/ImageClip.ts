@@ -1,9 +1,9 @@
 import { Texture } from 'pixi.js';
 import type { IImageClip } from './types';
 import { GraphicClip } from './GraphicClip';
-import type { GraphicRenderer } from '@renderer/lib/studio/engine/GraphicRenderer';
-import type { TickContext } from '@renderer/lib/studio/engine/types';
-import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
+import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
+import type { TickContext } from '@/lib/studio/engine/types';
+import { toFilePath } from '@/lib/studio/utils/toFilePath';
 import type { IImageAsset } from '../Asset/types';
 
 export class ImageClip extends GraphicClip {

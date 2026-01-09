@@ -1,17 +1,17 @@
-import type { IAsset } from '@renderer/lib/studio/domains/Asset/types';
+import type { IAsset } from '@/lib/studio/domains/Asset/types';
 import {
   useDocStore,
   useStudioStores,
   useEngineStore,
-} from '@renderer/lib/studio/hooks/useStudioStores';
+} from '@/lib/studio/hooks/useStudioStores';
 import { useMemo } from 'react';
 
-import { Asset } from '@renderer/lib/studio/domains/Asset/Asset';
-import { Clip } from '@renderer/lib/studio/domains/Clip/Clip';
-import { GraphicClip } from '@renderer/lib/studio/domains/Clip/GraphicClip';
-import { GraphicTrack } from '@renderer/lib/studio/domains/Track/GraphicTrack';
+import { Asset } from '@/lib/studio/domains/Asset/Asset';
+import { Clip } from '@/lib/studio/domains/Clip/Clip';
+import { GraphicClip } from '@/lib/studio/domains/Clip/GraphicClip';
+import { GraphicTrack } from '@/lib/studio/domains/Track/GraphicTrack';
 import type { ITrack } from '../../Track/types';
-import { Track } from '@renderer/lib/studio/domains/Track/Track';
+import { Track } from '@/lib/studio/domains/Track/Track';
 
 /**
  * 트랙의 클립들과 시간 범위가 겹치는지 확인

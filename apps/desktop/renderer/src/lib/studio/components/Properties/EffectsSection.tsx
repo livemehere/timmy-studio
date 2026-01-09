@@ -1,7 +1,7 @@
 import { Section, NumberField, ToggleField } from '../inputs';
 import type { IEffect, EffectType } from '../../types/effect';
 import type { IEffectMask } from '../../types/effect';
-import { Button } from '@renderer/components/Button';
+import { Button } from '@/components/Button';
 import { Plus, Trash2 } from 'lucide-react';
 
 interface EffectsSectionProps {

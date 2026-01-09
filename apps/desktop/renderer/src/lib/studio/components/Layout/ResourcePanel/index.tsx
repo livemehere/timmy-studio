@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { RESOURCE_TABS } from '@renderer/lib/studio/constants/resource';
-import { MainTabs } from '@renderer/lib/studio/components/Layout/ResourcePanel/MainTabs';
-import { SubTabs } from '@renderer/lib/studio/components/Layout/ResourcePanel/SubTabs';
+import { RESOURCE_TABS } from '@/lib/studio/constants/resource';
+import { MainTabs } from '@/lib/studio/components/Layout/ResourcePanel/MainTabs';
+import { SubTabs } from '@/lib/studio/components/Layout/ResourcePanel/SubTabs';
 
 export function ResourcePanel() {
   const [activeTabIndex, setActiveTabIndex] = useState(0);

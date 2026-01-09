@@ -1,5 +1,5 @@
 import { type RefObject, useEffect } from 'react';
-import { useEngineStore } from '@renderer/lib/studio/hooks/useStudioStores';
+import { useEngineStore } from '@/lib/studio/hooks/useStudioStores';
 
 export function useBindRenderer(
   canvasRef: RefObject<HTMLCanvasElement | null>

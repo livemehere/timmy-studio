@@ -7,7 +7,7 @@ import {
   Info,
   AlertTriangle,
 } from 'lucide-react';
-import { cn } from '@renderer/utils/cn';
+import { cn } from '@/utils/cn';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 

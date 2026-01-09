@@ -1,5 +1,5 @@
-import { cn } from '@renderer/utils/cn';
-import type { IResourceTab } from '@renderer/lib/studio/constants/resource';
+import { cn } from '@/utils/cn';
+import type { IResourceTab } from '@/lib/studio/constants/resource';
 
 interface MainTabsProps {
   tabs: IResourceTab[];

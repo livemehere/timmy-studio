@@ -9,7 +9,7 @@ import type {
   IAsset,
   IAssetMetadata,
   IBaseAsset,
-} from '@renderer/lib/studio/domains/Asset/types';
+} from '@/lib/studio/domains/Asset/types';
 import { uid } from 'uid';
 import fs from 'node:fs';
 

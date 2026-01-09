@@ -25,7 +25,7 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
-      "@renderer/*": ["renderer/src/*"],
+      "@/*": ["renderer/src/*"],
       "@main/*": ["main/*"],
       "@preload/*": ["preload/*"]
     }

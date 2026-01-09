@@ -1,8 +1,8 @@
 import type { IAudioClip } from './types';
-import type { AudioRenderer } from '@renderer/lib/studio/engine/AudioRenderer';
-import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
+import type { AudioRenderer } from '@/lib/studio/engine/AudioRenderer';
+import { toFilePath } from '@/lib/studio/utils/toFilePath';
 import { Clip } from './Clip';
-import type { TickContext } from '@renderer/lib/studio/engine/types';
+import type { TickContext } from '@/lib/studio/engine/types';
 
 /**
  * AudioClip - HTMLAudioElement 기반 스트리밍 재생

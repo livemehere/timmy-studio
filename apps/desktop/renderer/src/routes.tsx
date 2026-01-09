@@ -2,12 +2,12 @@ import { lazy } from 'react';
 import { createHashRouter, RouterProvider } from 'react-router';
 import ErrorPage from './pages/error';
 
-const Layout = lazy(() => import('@renderer/components/Layout'));
-const HomePage = lazy(() => import('@renderer/pages'));
-const VideoPlayerPage = lazy(() => import('@renderer/pages/video-player'));
-const VideoEditorPage = lazy(() => import('@renderer/pages/video-editor'));
-const SettingsPage = lazy(() => import('@renderer/pages/settings'));
-const PixiPlaygroundPage = lazy(() => import('@renderer/pages/PixiPlayground'));
+const Layout = lazy(() => import('@/components/Layout'));
+const HomePage = lazy(() => import('@/pages'));
+const VideoPlayerPage = lazy(() => import('@/pages/video-player'));
+const VideoEditorPage = lazy(() => import('@/pages/video-editor'));
+const SettingsPage = lazy(() => import('@/pages/settings'));
+const PixiPlaygroundPage = lazy(() => import('@/pages/pixi-playground'));
 
 const router = createHashRouter([
   {

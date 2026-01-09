@@ -1,7 +1,7 @@
-import { Button } from '@renderer/components/Button';
-import { useDocStore } from '@renderer/lib/studio/hooks/useStudioStores';
-import { Track } from '@renderer/lib/studio/domains/Track/Track';
-import { Clip } from '@renderer/lib/studio/domains/Clip/Clip';
+import { Button } from '@/components/Button';
+import { useDocStore } from '@/lib/studio/hooks/useStudioStores';
+import { Track } from '@/lib/studio/domains/Track/Track';
+import { Clip } from '@/lib/studio/domains/Clip/Clip';
 import {
   Circle,
   Hexagon,
@@ -11,7 +11,7 @@ import {
   RectangleHorizontal,
 } from 'lucide-react';
 import { useState } from 'react';
-import type { IShapeData } from '@renderer/lib/studio/types/shape';
+import type { IShapeData } from '@/lib/studio/types/shape';
 
 export function ShapeAssets() {
   const addClip = useDocStore((state) => state.addClip);

@@ -1,14 +1,11 @@
-import type {
-  IAsset,
-  IAssetMetadata,
-} from '@renderer/lib/studio/domains/Asset/types';
-import { cn } from '@renderer/utils/cn';
-import { formatTime } from '@renderer/lib/studio/utils/time';
-import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
-import { useAsset } from '@renderer/lib/studio/domains/Asset/hooks/useAsset';
+import type { IAsset, IAssetMetadata } from '@/lib/studio/domains/Asset/types';
+import { cn } from '@/utils/cn';
+import { formatTime } from '@/lib/studio/utils/time';
+import { toFilePath } from '@/lib/studio/utils/toFilePath';
+import { useAsset } from '@/lib/studio/domains/Asset/hooks/useAsset';
 import { Layers, Plus } from 'lucide-react';
-import { formatFileSize } from '@renderer/lib/studio/utils/size';
-import { Spinner } from '@renderer/components/Spinner';
+import { formatFileSize } from '@/lib/studio/utils/size';
+import { Spinner } from '@/components/Spinner';
 
 const badgeClass =
   'absolute text-[9px] bg-black/60 px-1 py-0.5 rounded leading-none select-none';

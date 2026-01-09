@@ -1,8 +1,8 @@
 import { Text, TextStyle, Graphics } from 'pixi.js';
 import type { ITextClip, ITransform } from './types';
 import { GraphicClip } from './GraphicClip';
-import type { GraphicRenderer } from '@renderer/lib/studio/engine/GraphicRenderer';
-import type { TickContext } from '@renderer/lib/studio/engine/types';
+import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
+import type { TickContext } from '@/lib/studio/engine/types';
 
 export class TextClip extends GraphicClip {
   readonly type = 'text';

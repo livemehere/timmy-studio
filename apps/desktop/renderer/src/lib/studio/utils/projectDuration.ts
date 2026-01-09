@@ -1,4 +1,4 @@
-import type { ITrack } from '@renderer/lib/studio/domains/Track/types';
+import type { ITrack } from '@/lib/studio/domains/Track/types';
 import type { IClip } from '../domains/Clip/types';
 
 export function getMaxClipEndTimeMs(tracks: ITrack[]): number {

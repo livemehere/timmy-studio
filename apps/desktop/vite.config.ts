@@ -8,7 +8,7 @@ import tailwindcss from '@tailwindcss/vite';
 
 const resolve: UserConfig['resolve'] = {
   alias: {
-    '@renderer': path.resolve(__dirname, 'renderer/src'),
+    '@': path.resolve(__dirname, 'renderer/src'),
     '@main': path.resolve(__dirname, 'main'),
     '@preload': path.resolve(__dirname, 'preload'),
   },

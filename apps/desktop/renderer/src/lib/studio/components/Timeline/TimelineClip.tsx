@@ -6,11 +6,11 @@ import {
   useInteractionStore,
 } from '../../hooks/useStudioStores';
 import { msToSec } from '../../utils/time';
-import type { IGraphicClip } from '@renderer/lib/studio/domains/Clip/types';
-import { cn } from '@renderer/utils/cn';
-import { Track } from '@renderer/lib/studio/domains/Track/Track';
-import { ContextMenu } from '@renderer/components/ContextMenu';
-import { useToast } from '@renderer/components/Toast';
+import type { IGraphicClip } from '@/lib/studio/domains/Clip/types';
+import { cn } from '@/utils/cn';
+import { Track } from '@/lib/studio/domains/Track/Track';
+import { ContextMenu } from '@/components/ContextMenu';
+import { useToast } from '@/components/Toast';
 import {
   Copy,
   Scissors,

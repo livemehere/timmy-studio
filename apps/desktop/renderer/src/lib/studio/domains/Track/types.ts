@@ -1,7 +1,4 @@
-import type {
-  IAudioClip,
-  IGraphicClip,
-} from '@renderer/lib/studio/domains/Clip/types';
+import type { IAudioClip, IGraphicClip } from '@/lib/studio/domains/Clip/types';
 
 export type TrackType = 'graphic' | 'audio';
 

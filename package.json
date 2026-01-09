@@ -7,7 +7,7 @@
   "license": "ISC",
   "packageManager": "pnpm@10.18.1",
   "scripts": {
-    "dev": "turbo run build --filter=@timmy-studio/electron-utils && turbo run dev",
+    "dev": "turbo run dev",
     "build": "turbo run build",
     "preview": "pnpm --filter ./apps/desktop preview"
   },

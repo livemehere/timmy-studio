@@ -1,7 +1,7 @@
-import type { IAudioTrack } from '@renderer/lib/studio/domains/Track/types';
+import type { IAudioTrack } from '@/lib/studio/domains/Track/types';
 import type { Timer } from './Timer';
 import type { DocGetter } from './types';
-import { AudioTrack } from '@renderer/lib/studio/domains/Track/AudioTrack';
+import { AudioTrack } from '@/lib/studio/domains/Track/AudioTrack';
 
 export class AudioRenderer {
   public sampleRate: number = 44100;

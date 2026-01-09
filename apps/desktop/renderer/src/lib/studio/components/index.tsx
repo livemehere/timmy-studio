@@ -1,10 +1,10 @@
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { PreviewPanel } from '@renderer/lib/studio/components/Layout/PreviewPanel';
-import { PropertiesPanel } from '@renderer/lib/studio/components/Layout/PropertiesPanel';
-import { TimelinePanel } from '@renderer/lib/studio/components/Layout/TimelinePanel';
-import { ResourcePanel } from '@renderer/lib/studio/components/Layout/ResourcePanel';
-import { useAssetUpdateSubscription } from '@renderer/lib/studio/domains/Asset/hooks/useAssetUpdateSubscription';
-import { useDocStore } from '@renderer/lib/studio/hooks/useStudioStores';
+import { PreviewPanel } from '@/lib/studio/components/Layout/PreviewPanel';
+import { PropertiesPanel } from '@/lib/studio/components/Layout/PropertiesPanel';
+import { TimelinePanel } from '@/lib/studio/components/Layout/TimelinePanel';
+import { ResourcePanel } from '@/lib/studio/components/Layout/ResourcePanel';
+import { useAssetUpdateSubscription } from '@/lib/studio/domains/Asset/hooks/useAssetUpdateSubscription';
+import { useDocStore } from '@/lib/studio/hooks/useStudioStores';
 import { useEffect } from 'react';
 
 export function StudioApp() {

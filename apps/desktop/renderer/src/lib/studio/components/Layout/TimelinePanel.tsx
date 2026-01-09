@@ -1,7 +1,7 @@
 import { motion, useMotionValue, useScroll, useTransform } from 'motion/react';
-import { ActionBar } from '@renderer/lib/studio/components/ActionBar';
-import { TimelineRulerCanvas } from '@renderer/lib/studio/components/TimelineRulerCanvas';
-import { TimelineTracks } from '@renderer/lib/studio/components/Timeline/TimelineTracks';
+import { ActionBar } from '@/lib/studio/components/ActionBar';
+import { TimelineRulerCanvas } from '@/lib/studio/components/TimelineRulerCanvas';
+import { TimelineTracks } from '@/lib/studio/components/Timeline/TimelineTracks';
 import {
   useDocStore,
   useEngineStore,
@@ -9,7 +9,7 @@ import {
 } from '../../hooks/useStudioStores';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { useToast } from '@renderer/components/Toast';
+import { useToast } from '@/components/Toast';
 
 const MIN_PIXELS_PER_SECOND = 2;
 const MAX_PIXELS_PER_SECOND = 100;

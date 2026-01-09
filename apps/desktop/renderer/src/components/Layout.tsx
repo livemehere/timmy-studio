@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router';
 import { Suspense } from 'react';
 import { Spinner } from './Spinner';
 import { Docks } from './Docks';
-import { createDockItems } from '@renderer/configs/dock';
+import { createDockItems } from '@/configs/dock';
 
 export default function Layout() {
   const navigate = useNavigate();

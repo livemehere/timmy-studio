@@ -1,7 +1,7 @@
 import { createStore } from 'zustand/vanilla';
-import type { IAsset } from '@renderer/lib/studio/domains/Asset/types';
+import type { IAsset } from '@/lib/studio/domains/Asset/types';
 import { produce } from 'immer';
-import { computeNextProjectDurationMs } from '@renderer/lib/studio/utils/projectDuration';
+import { computeNextProjectDurationMs } from '@/lib/studio/utils/projectDuration';
 import type { IProject } from '../types/project';
 import type { ITrack } from '../domains/Track/types';
 import type { IClip } from '../domains/Clip/types';

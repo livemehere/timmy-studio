@@ -1,7 +1,7 @@
-import { Button } from '@renderer/components/Button';
-import { useDocStore } from '@renderer/lib/studio/hooks/useStudioStores';
-import { Track } from '@renderer/lib/studio/domains/Track/Track';
-import { Clip } from '@renderer/lib/studio/domains/Clip/Clip';
+import { Button } from '@/components/Button';
+import { useDocStore } from '@/lib/studio/hooks/useStudioStores';
+import { Track } from '@/lib/studio/domains/Track/Track';
+import { Clip } from '@/lib/studio/domains/Clip/Clip';
 
 export function TextAssets() {
   const addClip = useDocStore((state) => state.addClip);

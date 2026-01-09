@@ -1,5 +1,5 @@
 import type { IAudioTrack } from './types';
-import type { AudioRenderer } from '@renderer/lib/studio/engine/AudioRenderer';
+import type { AudioRenderer } from '@/lib/studio/engine/AudioRenderer';
 import { AudioClip } from '../Clip/AudioClip';
 import type { IAudioClip } from '../Clip/types';
 import { Track } from './Track';

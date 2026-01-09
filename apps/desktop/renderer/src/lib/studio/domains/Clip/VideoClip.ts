@@ -1,12 +1,9 @@
 import { Texture, VideoSource } from 'pixi.js';
 import type { IVideoClip } from './types';
 import { GraphicClip } from './GraphicClip';
-import { GraphicRenderer } from '@renderer/lib/studio/engine/GraphicRenderer';
-import type {
-  SeekingRenderMode,
-  TickContext,
-} from '@renderer/lib/studio/engine/types';
-import { toFilePath } from '@renderer/lib/studio/utils/toFilePath';
+import { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
+import type { SeekingRenderMode, TickContext } from '@/lib/studio/engine/types';
+import { toFilePath } from '@/lib/studio/utils/toFilePath';
 import type { IVideoAsset } from '../Asset/types';
 
 export class VideoClip extends GraphicClip {

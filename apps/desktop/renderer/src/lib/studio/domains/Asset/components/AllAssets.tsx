@@ -1,5 +1,5 @@
 import { useDocStore } from '../../../hooks/useStudioStores';
-import { useSelectAssets } from '@renderer/lib/studio/domains/Asset/hooks/useSelectAssets';
+import { useSelectAssets } from '@/lib/studio/domains/Asset/hooks/useSelectAssets';
 import { AssetList } from './AssetList';
 
 export function AllAssets() {

@@ -5,7 +5,7 @@ import type {
   ITextClip,
   IShapeClip,
   IAudioClip,
-} from '@renderer/lib/studio/domains/Clip/types';
+} from '@/lib/studio/domains/Clip/types';
 import { Section, InputField, NumberField, ToggleField } from '../inputs';
 import { TransformsSection } from '../Properties/TransformsSection';
 import { TextPropertiesSection } from '../Properties/TextPropertiesSection';

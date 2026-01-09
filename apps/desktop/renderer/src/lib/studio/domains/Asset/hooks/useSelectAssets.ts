@@ -1,5 +1,5 @@
-import { useDocStore } from '@renderer/lib/studio/hooks/useStudioStores';
-import { ALL_FILE_EXTENSIONS } from '@renderer/lib/studio/utils/file-extension';
+import { useDocStore } from '@/lib/studio/hooks/useStudioStores';
+import { ALL_FILE_EXTENSIONS } from '@/lib/studio/utils/file-extension';
 import { useCallback } from 'react';
 
 /**

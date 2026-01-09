@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { useDocStore } from '../hooks/useStudioStores';
-import { cn } from '@renderer/utils/cn';
-import { useBindRenderer } from '@renderer/lib/studio/hooks/useBindRenderer';
+import { cn } from '@/utils/cn';
+import { useBindRenderer } from '@/lib/studio/hooks/useBindRenderer';
 
 export function PreviewRenderer() {
   const settings = useDocStore((state) => state.settings);

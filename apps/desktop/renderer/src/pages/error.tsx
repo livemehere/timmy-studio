@@ -1,6 +1,6 @@
 import { useRouteError } from 'react-router';
 import { useEffect } from 'react';
-import { logger } from '@renderer/utils/logger';
+import { logger } from '@/utils/logger';
 
 export default function ErrorPage() {
   const error = useRouteError();

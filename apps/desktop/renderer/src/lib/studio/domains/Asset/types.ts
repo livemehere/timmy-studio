@@ -1,4 +1,4 @@
-import type { TrackType } from '@renderer/lib/studio/domains/Track/types';
+import type { TrackType } from '@/lib/studio/domains/Track/types';
 
 export interface IAssetMetadata {
   durationMs?: number;

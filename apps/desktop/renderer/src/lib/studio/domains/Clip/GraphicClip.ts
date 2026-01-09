@@ -1,6 +1,6 @@
 import { Container, Sprite, BlurFilter, Graphics } from 'pixi.js';
 import { PixelateFilter } from 'pixi-filters/pixelate';
-import type { GraphicRenderer } from '@renderer/lib/studio/engine/GraphicRenderer';
+import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
 import { Clip } from './Clip';
 import type {
   IClip,
@@ -9,7 +9,7 @@ import type {
   PlacementResult,
   Size,
 } from './types';
-import type { IEffectMask } from '@renderer/lib/studio/types/effect';
+import type { IEffectMask } from '@/lib/studio/types/effect';
 
 export abstract class GraphicClip extends Clip {
   public sprite: Sprite;

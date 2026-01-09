@@ -1,6 +1,6 @@
-import { StudioProvider } from '@renderer/lib/studio/contexts/StudioProvider';
-import { StudioApp } from '@renderer/lib/studio/components';
-import type { IProject } from '@renderer/lib/studio/types/project';
+import { StudioProvider } from '@/lib/studio/contexts/StudioProvider';
+import { StudioApp } from '@/lib/studio/components';
+import type { IProject } from '@/lib/studio/types/project';
 
 const mock: IProject = {
   id: 'fe52',

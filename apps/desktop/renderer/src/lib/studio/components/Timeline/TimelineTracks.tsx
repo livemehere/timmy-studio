@@ -1,5 +1,5 @@
 import { useDocStore, useInteractionStore } from '../../hooks/useStudioStores';
-import { TimelineTrack } from '@renderer/lib/studio/components/Timeline/TimelineTrack';
+import { TimelineTrack } from '@/lib/studio/components/Timeline/TimelineTrack';
 import { useState, useRef, useCallback } from 'react';
 
 interface SelectionRect {

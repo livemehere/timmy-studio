@@ -1,6 +1,6 @@
-import type { IAsset } from '@renderer/lib/studio/domains/Asset/types';
+import type { IAsset } from '@/lib/studio/domains/Asset/types';
 
-import type { ITrack } from '@renderer/lib/studio/domains/Track/types';
+import type { ITrack } from '@/lib/studio/domains/Track/types';
 
 export interface IProject {
   id: string;

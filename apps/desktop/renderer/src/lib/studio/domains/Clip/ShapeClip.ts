@@ -1,7 +1,7 @@
 import type { IGraphicClip, IShapeClip, ITransform } from './types';
 import { GraphicClip } from './GraphicClip';
-import type { GraphicRenderer } from '@renderer/lib/studio/engine/GraphicRenderer';
-import type { TickContext } from '@renderer/lib/studio/engine/types';
+import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
+import type { TickContext } from '@/lib/studio/engine/types';
 import { Graphics, FillGradient } from 'pixi.js';
 
 export class ShapeClip extends GraphicClip {
