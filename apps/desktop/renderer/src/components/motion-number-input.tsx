@@ -23,7 +23,7 @@ function MotionNumberInput({
   return (
     <div
       className={cn(
-        'flex items-center gap-2 focus-within:outline-1 px-2 py-1 border border-neutral-600 rounded'
+        'flex items-center gap-2 focus-within:outline-1 px-2 py-1 border hover:border-neutral-600 rounded bg-neutral-900'
       )}
     >
       <motion.div

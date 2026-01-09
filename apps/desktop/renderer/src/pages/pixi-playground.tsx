@@ -26,8 +26,14 @@ import {
   useMotionValueEvent,
 } from 'motion/react';
 import { cn } from '@/lib/utils';
-import { Link2 } from 'lucide-react';
+import {
+  Link2,
+  AlignStartVertical,
+  AlignEndVertical,
+  AlignCenterVertical,
+} from 'lucide-react';
 import { MotionNumberInput } from '@/components/motion-number-input';
+import { Separator } from '@/components/ui/separator';
 
 export default function PixiPlaygroundPage() {
   const parentRef = useRef<HTMLDivElement>(null);
@@ -41,6 +47,10 @@ export default function PixiPlaygroundPage() {
   const width = useMotionValue(0);
   const height = useMotionValue(0);
   const [sizeChained, setSizeChained] = useState(false);
+
+  const [horizontalAlign, setHorizontalAlign] = useState<
+    'left' | 'center' | 'right' | 'none'
+  >('none');
   // ---
 
   const getApp = () => {
@@ -92,6 +102,9 @@ export default function PixiPlaygroundPage() {
 
     getApp().stage.addChild(sprite);
 
+    sprite.width = sprite.width / 2;
+    sprite.height = sprite.height / 2;
+
     x.set(sprite.x);
     y.set(sprite.y);
     width.set(sprite.width);
@@ -136,13 +149,62 @@ export default function PixiPlaygroundPage() {
           ></div>
         </div>
 
-        <Card>
+        <Card className={'gap-2'}>
           <CardHeader>
-            <CardTitle>Properties</CardTitle>
+            <CardTitle className={'text-sm'}>Properties</CardTitle>
           </CardHeader>
           <CardContent>
-            <FieldSet>
-              <FieldLegend>Position</FieldLegend>
+            <section>
+              <p className={'text-md mb-3'}>Position</p>
+              <p className={'text-xs mb-2 opacity-60'}>Alignment</p>
+              <ButtonGroup>
+                <Button
+                  size={'icon-sm'}
+                  variant={'outline'}
+                  className={cn({
+                    '[&_svg]:stroke-blue-500': horizontalAlign === 'left',
+                  })}
+                  onClick={() => {
+                    spriteRef.current!.x = 0;
+                    x.set(spriteRef.current!.x);
+                    setHorizontalAlign('left');
+                  }}
+                >
+                  <AlignStartVertical size={16} />
+                </Button>
+                <Button
+                  size={'icon-sm'}
+                  variant={'outline'}
+                  className={cn({
+                    '[&_svg]:stroke-blue-500': horizontalAlign === 'center',
+                  })}
+                  onClick={() => {
+                    spriteRef.current!.x =
+                      (getApp().renderer.width - spriteRef.current!.width) / 2;
+                    x.set(spriteRef.current!.x);
+                    setHorizontalAlign('center');
+                  }}
+                >
+                  <AlignCenterVertical size={16} />
+                </Button>
+                <Button
+                  size={'icon-sm'}
+                  variant={'outline'}
+                  className={cn({
+                    '[&_svg]:stroke-blue-500': horizontalAlign === 'right',
+                  })}
+                  onClick={() => {
+                    spriteRef.current!.x =
+                      getApp().renderer.width - spriteRef.current!.width;
+                    x.set(spriteRef.current!.x);
+                    setHorizontalAlign('right');
+                  }}
+                >
+                  <AlignEndVertical size={16} />
+                </Button>
+              </ButtonGroup>
+
+              <p className={'text-xs mb-2 opacity-60'}>Position</p>
               <div className={'flex gap-2'}>
                 <MotionNumberInput
                   value={x}
@@ -150,7 +212,7 @@ export default function PixiPlaygroundPage() {
                   onChange={(v) => {
                     spriteRef.current!.x = v;
                   }}
-                  icon={<div className={'text-sm'}>X</div>}
+                  icon={<div className={'text-sm opacity-50'}>X</div>}
                 />
                 <MotionNumberInput
                   value={y}
@@ -158,12 +220,13 @@ export default function PixiPlaygroundPage() {
                   onChange={(v) => {
                     spriteRef.current!.y = v;
                   }}
-                  icon={<div className={'text-sm'}>Y</div>}
+                  icon={<div className={'text-sm opacity-50'}>Y</div>}
                 />
               </div>
-            </FieldSet>
-            <FieldSet className={'mt-4'}>
-              <FieldLegend>Size</FieldLegend>
+            </section>
+            <Separator className={'my-4'} />
+            <section>
+              <p className={'text-md mb-2'}>Size</p>
               <div className={'flex gap-2'}>
                 <Button
                   size={'icon-sm'}
@@ -192,7 +255,7 @@ export default function PixiPlaygroundPage() {
                       height.set(newHeight);
                     }
                   }}
-                  icon={<div className={'text-sm'}>W</div>}
+                  icon={<div className={'text-sm opacity-50'}>W</div>}
                 />
                 <MotionNumberInput
                   value={height}
@@ -208,10 +271,10 @@ export default function PixiPlaygroundPage() {
                       width.set(newWidth);
                     }
                   }}
-                  icon={<div className={'text-sm'}>H</div>}
+                  icon={<div className={'text-sm opacity-50'}>H</div>}
                 />
               </div>
-            </FieldSet>
+            </section>
           </CardContent>
         </Card>
       </div>
