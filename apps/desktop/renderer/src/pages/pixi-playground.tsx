@@ -1,7 +1,34 @@
+import { useEffect, useMemo, useRef } from 'react';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Button } from '@/components/ui/button';
+import * as PIXI from 'pixi.js';
 
 export default function PixiPlaygroundPage() {
+  const parentRef = useRef<HTMLDivElement>(null);
+  const appRef = useRef<PIXI.Application | null>(null);
+
+  const create = async () => {
+    const app = new PIXI.Application();
+    appRef.current = app;
+    await app.init({
+      width: 1920,
+      height: 1080,
+      resizeTo: parentRef.current!,
+    });
+    parentRef.current!.appendChild(app.canvas);
+  };
+
+  const destroy = async () => {
+    appRef.current!.destroy(true);
+  };
+
+  useEffect(() => {
+    create();
+    return () => {
+      destroy();
+    };
+  }, []);
+
   return (
     <div
       className={
@@ -18,12 +45,16 @@ export default function PixiPlaygroundPage() {
 
       <h1 className="relative z-10">PIXI</h1>
       <ButtonGroup className="relative z-10">
-        <Button variant={'outline'}>A</Button>
-        <Button variant={'outline'}>B</Button>
-        <Button variant={'outline'}>C</Button>
+        <Button variant={'outline'} onClick={create}>
+          Create
+        </Button>
+        <Button variant={'outline'} onClick={destroy}>
+          Destroy
+        </Button>
       </ButtonGroup>
 
       <div
+        ref={parentRef}
         className={'relative z-10 border border-neutral-50 w-1/2 h-1/2'}
       ></div>
     </div>
