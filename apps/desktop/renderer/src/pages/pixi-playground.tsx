@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Button } from '@/components/ui/button';
 import * as PIXI from 'pixi.js';
@@ -7,14 +7,31 @@ export default function PixiPlaygroundPage() {
   const parentRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<PIXI.Application | null>(null);
 
-  const create = async () => {
+  const create = async (width: number, height: number) => {
     const app = new PIXI.Application();
     appRef.current = app;
     await app.init({
-      width: 1920,
-      height: 1080,
-      resizeTo: parentRef.current!,
+      width,
+      height,
+      background: '#000000',
+      antialias: true,
+      resolution: 1,
+      autoDensity: false,
     });
+    const aspectRatio = width / height;
+    if (aspectRatio > 1) {
+      app.canvas.style.maxWidth = '100%';
+      app.canvas.style.maxHeight = '100%';
+      app.canvas.style.width = 'auto';
+      app.canvas.style.height = 'auto';
+    } else {
+      app.canvas.style.maxHeight = '100%';
+      app.canvas.style.maxWidth = '100%';
+      app.canvas.style.width = 'auto';
+      app.canvas.style.height = 'auto';
+    }
+    app.canvas.style.display = 'block';
+
     parentRef.current!.appendChild(app.canvas);
   };
 
@@ -23,7 +40,7 @@ export default function PixiPlaygroundPage() {
   };
 
   useEffect(() => {
-    create();
+    create(1920, 1080);
     return () => {
       destroy();
     };
@@ -45,7 +62,7 @@ export default function PixiPlaygroundPage() {
 
       <h1 className="relative z-10">PIXI</h1>
       <ButtonGroup className="relative z-10">
-        <Button variant={'outline'} onClick={create}>
+        <Button variant={'outline'} onClick={() => create(1920, 1080)}>
           Create
         </Button>
         <Button variant={'outline'} onClick={destroy}>
@@ -55,7 +72,9 @@ export default function PixiPlaygroundPage() {
 
       <div
         ref={parentRef}
-        className={'relative z-10 border border-neutral-50 w-1/2 h-1/2'}
+        className={
+          'relative border border-neutral-50 w-1/2 h-1/2 bg-neutral-900 flex items-center justify-center'
+        }
       ></div>
     </div>
   );
