@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useDocStore } from '../hooks/useStudioStores';
-import { cn } from '@/utils/cn';
+import { cn } from '@/lib/utils';
 import { useBindRenderer } from '@/lib/studio/hooks/useBindRenderer';
 
 export function PreviewRenderer() {

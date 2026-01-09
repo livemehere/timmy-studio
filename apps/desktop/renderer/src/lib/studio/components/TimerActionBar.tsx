@@ -2,6 +2,7 @@ import { useDocStore, useEngineStore } from '../hooks/useStudioStores';
 import { PauseIcon, PlayIcon, HardDriveUploadIcon } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { formatTime } from '../utils/time';
+import { Button } from '@/components/ui/button';
 
 export function TimerActionBar() {
   const timer = useEngineStore((state) => state.timer);
@@ -451,22 +452,22 @@ export function TimerActionBar() {
           {formatTime(timerState.durationMs)}
         </div>
         <div className="flex justify-center">
-          <button onClick={handlePlay}>
+          <Button variant={'ghost'} size={'icon-sm'} onClick={handlePlay}>
             {timerState.isPlaying ? (
               <PauseIcon size={16} />
             ) : (
               <PlayIcon size={16} />
             )}
-          </button>
+          </Button>
         </div>
         <div className="flex justify-end gap-2">
-          <button
-            className="flex items-center gap-2 bg-neutral-700 rounded px-2 py-0.5 hover:bg-neutral-600 cursor-pointer"
+          <Button
+            variant={'outline'}
             onClick={() => setShowExportSettings((prev) => !prev)}
           >
             <HardDriveUploadIcon size={16} />
             <span>내보내기</span>
-          </button>
+          </Button>
         </div>
       </div>
 

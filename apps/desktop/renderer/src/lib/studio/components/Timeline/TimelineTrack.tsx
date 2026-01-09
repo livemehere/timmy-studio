@@ -7,7 +7,7 @@ import {
   VolumeOff,
   Clipboard,
 } from 'lucide-react';
-import { cn } from '@/utils/cn';
+import { cn } from '@/lib/utils';
 import { TimelineClip } from '@/lib/studio/components/Timeline/TimelineClip';
 import { useDocStore, useInteractionStore } from '../../hooks/useStudioStores';
 import { ContextMenu } from '@/components/ContextMenu';

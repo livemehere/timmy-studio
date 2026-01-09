@@ -1,5 +1,5 @@
 import type { IAsset, IAssetMetadata } from '@/lib/studio/domains/Asset/types';
-import { cn } from '@/utils/cn';
+import { cn } from '@/lib/utils';
 import { formatTime } from '@/lib/studio/utils/time';
 import { toFilePath } from '@/lib/studio/utils/toFilePath';
 import { useAsset } from '@/lib/studio/domains/Asset/hooks/useAsset';

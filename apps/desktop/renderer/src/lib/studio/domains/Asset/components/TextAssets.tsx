@@ -1,4 +1,4 @@
-import { Button } from '@/components/Button';
+import { Button } from '@/components/ui/button';
 import { useDocStore } from '@/lib/studio/hooks/useStudioStores';
 import { Track } from '@/lib/studio/domains/Track/Track';
 import { Clip } from '@/lib/studio/domains/Clip/Clip';

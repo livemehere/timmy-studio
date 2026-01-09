@@ -7,7 +7,7 @@ import {
 } from '../../hooks/useStudioStores';
 import { msToSec } from '../../utils/time';
 import type { IGraphicClip } from '@/lib/studio/domains/Clip/types';
-import { cn } from '@/utils/cn';
+import { cn } from '@/lib/utils';
 import { Track } from '@/lib/studio/domains/Track/Track';
 import { ContextMenu } from '@/components/ContextMenu';
 import { useToast } from '@/components/Toast';

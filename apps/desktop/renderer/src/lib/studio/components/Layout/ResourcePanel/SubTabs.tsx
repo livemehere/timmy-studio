@@ -1,4 +1,4 @@
-import { cn } from '@/utils/cn';
+import { cn } from '@/lib/utils';
 import type { IResourceTab } from '@/lib/studio/constants/resource';
 
 interface SubTabsProps {
