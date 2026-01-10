@@ -38,9 +38,14 @@ export async function createWindow(options: CreateWindowOptions) {
       webSecurity: false,
       nodeIntegrationInWorker: true,
       backgroundThrottling: false,
+      zoomFactor: 1,
     },
     frame: false,
     titleBarStyle: 'hiddenInset',
+  });
+
+  win.webContents.on('did-finish-load', () => {
+    win.webContents.setZoomFactor(1); // cmd+ +/- 를 초기화
   });
   await loadWindow(win, 'video-editor');
 

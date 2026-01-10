@@ -22,11 +22,123 @@ import {
 } from 'lucide-react';
 import { MotionNumberInput } from '@/components/motion-number-input';
 
+class Item {
+  private readonly container: PIXI.Container;
+  private readonly sprite: PIXI.Sprite;
+
+  constructor() {
+    this.container = new PIXI.Container();
+    this.sprite = new PIXI.Sprite();
+    this.container.addChild(this.sprite);
+  }
+
+  get() {
+    return this.container;
+  }
+
+  get texture() {
+    return this.sprite.texture;
+  }
+
+  async load(filePath: string) {
+    if (PIXI.Assets.cache.has(filePath)) {
+      this.sprite.texture = PIXI.Assets.cache.get(filePath) as PIXI.Texture;
+    } else {
+      this.sprite.texture = await PIXI.Assets.load(filePath);
+    }
+    this.syncPivot();
+  }
+
+  // getter
+  get y() {
+    return this.container.y;
+  }
+  get x() {
+    return this.container.x;
+  }
+  get w() {
+    return this.sprite.width;
+  }
+  get h() {
+    return this.sprite.height;
+  }
+  get rotation() {
+    return this.container.rotation;
+  }
+
+  get visible() {
+    return this.container.visible;
+  }
+
+  // setter
+  set x(value: number) {
+    if (value === this.container.x) return;
+    this.container.x = value;
+  }
+  set y(value: number) {
+    if (value === this.container.y) return;
+    this.container.y = value;
+  }
+  set w(value: number) {
+    if (value === this.sprite.width) return;
+    this.sprite.width = value;
+    this.syncPivot();
+  }
+  set h(value: number) {
+    if (value === this.sprite.height) return;
+    this.sprite.height = value;
+    this.syncPivot();
+  }
+  set rotation(angle: number) {
+    if (angle === this.container.rotation) return;
+    this.container.rotation = angle;
+  }
+  set visible(value: boolean) {
+    if (value === this.container.visible) return;
+    this.container.visible = value;
+  }
+
+  private syncPivot() {
+    const w = this.sprite.width;
+    const h = this.sprite.height;
+
+    this.sprite.x = w / 2;
+    this.sprite.y = h / 2;
+    this.container.pivot.set(w / 2, h / 2);
+  }
+
+  debugPosition() {
+    console.log(
+      `container - pos: (${this.container.x},${this.container.y}), globalPos: (${this.container.getGlobalPosition().x},${this.container.getGlobalPosition().y})`
+    );
+    console.log(
+      `sprite - pos: (${this.sprite.x},${this.sprite.y}), globalPos: (${this.sprite.getGlobalPosition().x},${this.sprite.getGlobalPosition().y})`
+    );
+  }
+
+  debugSize() {
+    console.log(
+      `container - size: (${this.container.width},${this.container.height}), scale: (${this.container.scale.x}, ${this.container.scale.y})`
+    );
+    console.log(
+      `sprite - size: (${this.sprite.width},${this.sprite.height}), scale: (${this.sprite.scale.x}, ${this.sprite.scale.y})`
+    );
+  }
+
+  mount(parent: PIXI.Container) {
+    parent.addChild(this.container);
+  }
+
+  unmount() {
+    this.container.parent!.removeChild(this.container);
+  }
+}
+
 export default function PixiPlaygroundPage() {
   const parentRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<PIXI.Application | null>(null);
 
-  const spriteRef = useRef<PIXI.Sprite | null>(null);
+  const itemRef = useRef<Item | null>(null);
 
   // sprite values
   const x = useMotionValue(0);
@@ -46,6 +158,9 @@ export default function PixiPlaygroundPage() {
   };
 
   const create = async (width: number, height: number) => {
+    await PIXI.Assets.init({
+      basePath: 'source://',
+    });
     const app = new PIXI.Application();
     appRef.current = app;
     await app.init({
@@ -81,38 +196,44 @@ export default function PixiPlaygroundPage() {
   };
 
   const initRender = async () => {
-    await PIXI.Assets.init({
-      basePath: 'source://',
-    });
     const imgUrl = `/path/path/to/sample-media.png`;
-    const texture = await PIXI.Assets.load<PIXI.Texture>(imgUrl);
 
-    console.log(PIXI.Assets.cache.get(imgUrl));
-
-    const sprite = new PIXI.Sprite(texture);
+    const item = new Item();
+    await item.load(imgUrl);
+    itemRef.current = item;
 
     // 렌더링 요소에 추가
-    getApp().stage.addChild(sprite);
+    item.mount(getApp().stage);
 
-    // init
-    sprite.width = sprite.width / 2;
-    sprite.height = sprite.height / 2;
+    // item.w = item.texture.width / 2;
+    // item.h = item.texture.height / 2;
 
-    // binding to react
-    spriteRef.current = sprite;
-    x.set(sprite.x);
-    y.set(sprite.y);
-    width.set(sprite.width);
-    height.set(sprite.height);
+    x.set(item.x);
+    y.set(item.y);
+    width.set(item.w);
+    height.set(item.h);
 
-    console.log(appRef.current);
+    item.debugPosition();
+    item.debugSize();
   };
 
   const swapTexture = async () => {
     const imgUrl = `/path/path/to/sample-media.jpeg`;
-    spriteRef.current!.texture = await PIXI.Assets.load<PIXI.Texture>(imgUrl);
-    spriteRef.current!.width = spriteRef.current!.texture.width / 2;
-    spriteRef.current!.height = spriteRef.current!.texture.height / 2;
+    await itemRef.current!.load(imgUrl);
+
+    // 크기 조정
+    itemRef.current!.w = itemRef.current!.texture.width / 2;
+    itemRef.current!.h = itemRef.current!.texture.height / 2;
+
+    width.set(itemRef.current!.w);
+    height.set(itemRef.current!.h);
+
+    itemRef.current!.debugPosition();
+    itemRef.current!.debugSize();
+  };
+
+  const umount = () => {
+    itemRef.current!.unmount();
   };
 
   useEffect(() => {
@@ -143,13 +264,8 @@ export default function PixiPlaygroundPage() {
             <Button variant={'outline'} onClick={destroy}>
               Destroy
             </Button>
-            <Button
-              variant={'outline'}
-              onClick={() => {
-                spriteRef.current!.parent!.removeChild(spriteRef.current!);
-              }}
-            >
-              Remove
+            <Button variant={'outline'} onClick={umount}>
+              Unmount
             </Button>
             <Button variant={'outline'} onClick={swapTexture}>
               Swap Texture
@@ -179,8 +295,8 @@ export default function PixiPlaygroundPage() {
                         '[&_svg]:stroke-blue-500': horizontalAlign === 'left',
                       })}
                       onClick={() => {
-                        spriteRef.current!.x = 0;
-                        x.set(spriteRef.current!.x);
+                        itemRef.current!.x = 0;
+                        x.set(itemRef.current!.x);
                         setHorizontalAlign('left');
                       }}
                     >
@@ -193,10 +309,8 @@ export default function PixiPlaygroundPage() {
                         '[&_svg]:stroke-blue-500': horizontalAlign === 'center',
                       })}
                       onClick={() => {
-                        spriteRef.current!.x =
-                          (getApp().renderer.width - spriteRef.current!.width) /
-                          2;
-                        x.set(spriteRef.current!.x);
+                        itemRef.current!.x = getApp().renderer.width / 2;
+                        x.set(itemRef.current!.x);
                         setHorizontalAlign('center');
                       }}
                     >
@@ -209,9 +323,8 @@ export default function PixiPlaygroundPage() {
                         '[&_svg]:stroke-blue-500': horizontalAlign === 'right',
                       })}
                       onClick={() => {
-                        spriteRef.current!.x =
-                          getApp().renderer.width - spriteRef.current!.width;
-                        x.set(spriteRef.current!.x);
+                        itemRef.current!.x = getApp().renderer.width;
+                        x.set(itemRef.current!.x);
                         setHorizontalAlign('right');
                       }}
                     >
@@ -226,7 +339,7 @@ export default function PixiPlaygroundPage() {
                       value={x}
                       map={(v) => Number(v.toFixed(2))}
                       onChange={(v) => {
-                        spriteRef.current!.x = v;
+                        itemRef.current!.x = v;
                       }}
                       icon={<div className={'text-sm opacity-50'}>X</div>}
                     />
@@ -237,7 +350,7 @@ export default function PixiPlaygroundPage() {
                       value={y}
                       map={(v) => Number(v.toFixed(2))}
                       onChange={(v) => {
-                        spriteRef.current!.y = v;
+                        itemRef.current!.y = v;
                       }}
                       icon={<div className={'text-sm opacity-50'}>Y</div>}
                     />
@@ -270,16 +383,15 @@ export default function PixiPlaygroundPage() {
                       value={width}
                       map={(v) => Math.max(0, Number(v.toFixed(2)))}
                       onChange={(v) => {
-                        spriteRef.current!.width = v;
-
                         if (sizeChained) {
                           const aspectRatio =
-                            spriteRef.current!.texture.width /
-                            spriteRef.current!.texture.height;
+                            itemRef.current!.w / itemRef.current!.h;
                           const newHeight = v / aspectRatio;
-                          spriteRef.current!.height = newHeight;
+                          itemRef.current!.h = newHeight;
                           height.set(newHeight);
                         }
+
+                        itemRef.current!.w = v;
                       }}
                       icon={<div className={'text-sm opacity-50'}>W</div>}
                     />
@@ -290,15 +402,14 @@ export default function PixiPlaygroundPage() {
                       value={height}
                       map={(v) => Math.max(0, Number(v.toFixed(2)))}
                       onChange={(v) => {
-                        spriteRef.current!.height = v;
                         if (sizeChained) {
                           const aspectRatio =
-                            spriteRef.current!.texture.width /
-                            spriteRef.current!.texture.height;
+                            itemRef.current!.w / itemRef.current!.h;
                           const newWidth = v * aspectRatio;
-                          spriteRef.current!.width = newWidth;
+                          itemRef.current!.w = newWidth;
                           width.set(newWidth);
                         }
+                        itemRef.current!.h = v;
                       }}
                       icon={<div className={'text-sm opacity-50'}>H</div>}
                     />
@@ -323,9 +434,7 @@ export default function PixiPlaygroundPage() {
                     onClick={() => {
                       const newVisible = !visible;
                       setVisible(newVisible);
-                      if (spriteRef.current) {
-                        spriteRef.current.visible = newVisible;
-                      }
+                      itemRef.current!.visible = newVisible;
                     }}
                   >
                     {visible ? <Eye size={16} /> : <EyeOff size={16} />}
