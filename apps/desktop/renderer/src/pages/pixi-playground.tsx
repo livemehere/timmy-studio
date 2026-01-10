@@ -473,6 +473,8 @@ export default function PixiPlaygroundPage() {
                   <MotionNumberInput
                     value={rotation}
                     map={(v) => Number(v.toFixed(2))}
+                    step={0.01}
+                    sensitivity={0.5}
                     onChange={(v) => {
                       itemRef.current!.rotation = v;
                     }}

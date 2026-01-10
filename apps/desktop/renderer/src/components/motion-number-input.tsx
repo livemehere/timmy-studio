@@ -7,13 +7,24 @@ function MotionNumberInput({
   value,
   onChange,
   map = (v) => v,
+  min = -Infinity,
+  max = Infinity,
+  step = 1,
+  sensitivity = 1,
 }: {
   icon?: React.ReactNode;
   value: MotionValue<number>;
   onChange: (v: number) => void;
   map?: (v: number) => number;
+  min?: number;
+  max?: number;
+  step?: number;
+  sensitivity?: number;
 }) {
   const ref = useRef<HTMLInputElement>(null);
+
+  const dragStartValue = useRef(0);
+  const dragAccumulated = useRef(0);
 
   useMotionValueEvent(value, 'change', (v) => {
     onChange(v);
@@ -31,10 +42,24 @@ function MotionNumberInput({
         className={'shrink-0 px-1 cursor-ew-resize select-none'}
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={false}
+        onDragStart={() => {
+          dragStartValue.current = value.get();
+          dragAccumulated.current = 0;
+        }}
         onDrag={(_, info) => {
-          const newValue = map(value.get() + info.delta.x);
-          value.set(newValue);
-          ref.current!.value = String(newValue);
+          dragAccumulated.current += info.delta.x;
+
+          // 픽셀 → 값 변환 (감도)
+          const steppedDelta =
+            Math.round(dragAccumulated.current * sensitivity) * step;
+
+          let next = dragStartValue.current + steppedDelta;
+
+          // clamp
+          next = Math.min(max, Math.max(min, next));
+
+          value.set(next);
+          ref.current!.value = String(map(next));
         }}
       >
         {icon}
@@ -42,6 +67,9 @@ function MotionNumberInput({
       <input
         ref={ref}
         type={'number'}
+        min={min}
+        max={max}
+        step={step}
         defaultValue={value.get()}
         onChange={(e) => {
           const v = map(Number(e.target.value));
