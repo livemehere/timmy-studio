@@ -1,39 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import * as PIXI from 'pixi.js';
 import {
   Field,
-  FieldDescription,
   FieldGroup,
   FieldLabel,
   FieldLegend,
+  FieldSeparator,
   FieldSet,
 } from '@/components/ui/field';
-import {
-  motion,
-  type MotionValue,
-  useMotionValue,
-  useMotionValueEvent,
-} from 'motion/react';
+import { useMotionValue } from 'motion/react';
 import { cn } from '@/lib/utils';
 import {
-  Link2,
-  AlignStartVertical,
-  AlignEndVertical,
   AlignCenterVertical,
+  AlignEndVertical,
+  AlignStartVertical,
+  Eye,
+  EyeOff,
+  Link2,
 } from 'lucide-react';
 import { MotionNumberInput } from '@/components/motion-number-input';
-import { Separator } from '@/components/ui/separator';
 
 export default function PixiPlaygroundPage() {
   const parentRef = useRef<HTMLDivElement>(null);
@@ -47,6 +34,7 @@ export default function PixiPlaygroundPage() {
   const width = useMotionValue(0);
   const height = useMotionValue(0);
   const [sizeChained, setSizeChained] = useState(false);
+  const [visible, setVisible] = useState(true);
 
   const [horizontalAlign, setHorizontalAlign] = useState<
     'left' | 'center' | 'right' | 'none'
@@ -93,22 +81,38 @@ export default function PixiPlaygroundPage() {
   };
 
   const initRender = async () => {
-    const image = new Image();
-    image.src = 'file:///path/to/sample-media.png';
-    await image.decode();
-    const texture = PIXI.Texture.from(image);
-    const sprite = new PIXI.Sprite(texture);
-    spriteRef.current = sprite;
+    await PIXI.Assets.init({
+      basePath: 'source://',
+    });
+    const imgUrl = `/path/path/to/sample-media.png`;
+    const texture = await PIXI.Assets.load<PIXI.Texture>(imgUrl);
 
+    console.log(PIXI.Assets.cache.get(imgUrl));
+
+    const sprite = new PIXI.Sprite(texture);
+
+    // 렌더링 요소에 추가
     getApp().stage.addChild(sprite);
 
+    // init
     sprite.width = sprite.width / 2;
     sprite.height = sprite.height / 2;
 
+    // binding to react
+    spriteRef.current = sprite;
     x.set(sprite.x);
     y.set(sprite.y);
     width.set(sprite.width);
     height.set(sprite.height);
+
+    console.log(appRef.current);
+  };
+
+  const swapTexture = async () => {
+    const imgUrl = `/path/path/to/sample-media.jpeg`;
+    spriteRef.current!.texture = await PIXI.Assets.load<PIXI.Texture>(imgUrl);
+    spriteRef.current!.width = spriteRef.current!.texture.width / 2;
+    spriteRef.current!.height = spriteRef.current!.texture.height / 2;
   };
 
   useEffect(() => {
@@ -139,6 +143,17 @@ export default function PixiPlaygroundPage() {
             <Button variant={'outline'} onClick={destroy}>
               Destroy
             </Button>
+            <Button
+              variant={'outline'}
+              onClick={() => {
+                spriteRef.current!.parent!.removeChild(spriteRef.current!);
+              }}
+            >
+              Remove
+            </Button>
+            <Button variant={'outline'} onClick={swapTexture}>
+              Swap Texture
+            </Button>
           </ButtonGroup>
           {/* 가운데 - Renderer */}
           <div
@@ -149,134 +164,177 @@ export default function PixiPlaygroundPage() {
           ></div>
         </div>
 
-        <Card className={'gap-2'}>
-          <CardHeader>
-            <CardTitle className={'text-sm'}>Properties</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <section>
-              <p className={'text-md mb-3'}>Position</p>
-              <p className={'text-xs mb-2 opacity-60'}>Alignment</p>
-              <ButtonGroup>
-                <Button
-                  size={'icon-sm'}
-                  variant={'outline'}
-                  className={cn({
-                    '[&_svg]:stroke-blue-500': horizontalAlign === 'left',
-                  })}
-                  onClick={() => {
-                    spriteRef.current!.x = 0;
-                    x.set(spriteRef.current!.x);
-                    setHorizontalAlign('left');
-                  }}
-                >
-                  <AlignStartVertical size={16} />
-                </Button>
-                <Button
-                  size={'icon-sm'}
-                  variant={'outline'}
-                  className={cn({
-                    '[&_svg]:stroke-blue-500': horizontalAlign === 'center',
-                  })}
-                  onClick={() => {
-                    spriteRef.current!.x =
-                      (getApp().renderer.width - spriteRef.current!.width) / 2;
-                    x.set(spriteRef.current!.x);
-                    setHorizontalAlign('center');
-                  }}
-                >
-                  <AlignCenterVertical size={16} />
-                </Button>
-                <Button
-                  size={'icon-sm'}
-                  variant={'outline'}
-                  className={cn({
-                    '[&_svg]:stroke-blue-500': horizontalAlign === 'right',
-                  })}
-                  onClick={() => {
-                    spriteRef.current!.x =
-                      getApp().renderer.width - spriteRef.current!.width;
-                    x.set(spriteRef.current!.x);
-                    setHorizontalAlign('right');
-                  }}
-                >
-                  <AlignEndVertical size={16} />
-                </Button>
-              </ButtonGroup>
+        <div className="w-full max-w-sm bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
+          <FieldGroup>
+            <FieldSet>
+              <FieldLegend>Position</FieldLegend>
+              <FieldGroup>
+                <Field>
+                  <FieldLabel>Alignment</FieldLabel>
+                  <ButtonGroup>
+                    <Button
+                      size={'icon-sm'}
+                      variant={'outline'}
+                      className={cn({
+                        '[&_svg]:stroke-blue-500': horizontalAlign === 'left',
+                      })}
+                      onClick={() => {
+                        spriteRef.current!.x = 0;
+                        x.set(spriteRef.current!.x);
+                        setHorizontalAlign('left');
+                      }}
+                    >
+                      <AlignStartVertical size={16} />
+                    </Button>
+                    <Button
+                      size={'icon-sm'}
+                      variant={'outline'}
+                      className={cn({
+                        '[&_svg]:stroke-blue-500': horizontalAlign === 'center',
+                      })}
+                      onClick={() => {
+                        spriteRef.current!.x =
+                          (getApp().renderer.width - spriteRef.current!.width) /
+                          2;
+                        x.set(spriteRef.current!.x);
+                        setHorizontalAlign('center');
+                      }}
+                    >
+                      <AlignCenterVertical size={16} />
+                    </Button>
+                    <Button
+                      size={'icon-sm'}
+                      variant={'outline'}
+                      className={cn({
+                        '[&_svg]:stroke-blue-500': horizontalAlign === 'right',
+                      })}
+                      onClick={() => {
+                        spriteRef.current!.x =
+                          getApp().renderer.width - spriteRef.current!.width;
+                        x.set(spriteRef.current!.x);
+                        setHorizontalAlign('right');
+                      }}
+                    >
+                      <AlignEndVertical size={16} />
+                    </Button>
+                  </ButtonGroup>
+                </Field>
+                <div className={'flex gap-2'}>
+                  <Field>
+                    <FieldLabel>X</FieldLabel>
+                    <MotionNumberInput
+                      value={x}
+                      map={(v) => Number(v.toFixed(2))}
+                      onChange={(v) => {
+                        spriteRef.current!.x = v;
+                      }}
+                      icon={<div className={'text-sm opacity-50'}>X</div>}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel>Y</FieldLabel>
+                    <MotionNumberInput
+                      value={y}
+                      map={(v) => Number(v.toFixed(2))}
+                      onChange={(v) => {
+                        spriteRef.current!.y = v;
+                      }}
+                      icon={<div className={'text-sm opacity-50'}>Y</div>}
+                    />
+                  </Field>
+                </div>
+              </FieldGroup>
+            </FieldSet>
 
-              <p className={'text-xs mb-2 opacity-60'}>Position</p>
-              <div className={'flex gap-2'}>
-                <MotionNumberInput
-                  value={x}
-                  map={(v) => Number(v.toFixed(2))}
-                  onChange={(v) => {
-                    spriteRef.current!.x = v;
-                  }}
-                  icon={<div className={'text-sm opacity-50'}>X</div>}
-                />
-                <MotionNumberInput
-                  value={y}
-                  map={(v) => Number(v.toFixed(2))}
-                  onChange={(v) => {
-                    spriteRef.current!.y = v;
-                  }}
-                  icon={<div className={'text-sm opacity-50'}>Y</div>}
-                />
-              </div>
-            </section>
-            <Separator className={'my-4'} />
-            <section>
-              <p className={'text-md mb-2'}>Size</p>
-              <div className={'flex gap-2'}>
-                <Button
-                  size={'icon-sm'}
-                  variant={'outline'}
-                  className={cn({
-                    '[&_svg]:stroke-blue-500': sizeChained,
-                  })}
-                  onClick={() => {
-                    setSizeChained(!sizeChained);
-                  }}
-                >
-                  <Link2 size={16} />
-                </Button>
-                <MotionNumberInput
-                  value={width}
-                  map={(v) => Math.max(0, Number(v.toFixed(2)))}
-                  onChange={(v) => {
-                    spriteRef.current!.width = v;
+            <FieldSeparator />
 
-                    if (sizeChained) {
-                      const aspectRatio =
-                        spriteRef.current!.texture.width /
-                        spriteRef.current!.texture.height;
-                      const newHeight = v / aspectRatio;
-                      spriteRef.current!.height = newHeight;
-                      height.set(newHeight);
-                    }
-                  }}
-                  icon={<div className={'text-sm opacity-50'}>W</div>}
-                />
-                <MotionNumberInput
-                  value={height}
-                  map={(v) => Math.max(0, Number(v.toFixed(2)))}
-                  onChange={(v) => {
-                    spriteRef.current!.height = v;
-                    if (sizeChained) {
-                      const aspectRatio =
-                        spriteRef.current!.texture.width /
-                        spriteRef.current!.texture.height;
-                      const newWidth = v * aspectRatio;
-                      spriteRef.current!.width = newWidth;
-                      width.set(newWidth);
-                    }
-                  }}
-                  icon={<div className={'text-sm opacity-50'}>H</div>}
-                />
-              </div>
-            </section>
-          </CardContent>
-        </Card>
+            <FieldSet>
+              <FieldLegend>Size</FieldLegend>
+              <FieldGroup>
+                <div className={'flex gap-2'}>
+                  <Button
+                    size={'icon-sm'}
+                    variant={'outline'}
+                    className={cn({
+                      '[&_svg]:stroke-blue-500': sizeChained,
+                    })}
+                    onClick={() => {
+                      setSizeChained(!sizeChained);
+                    }}
+                  >
+                    <Link2 size={16} />
+                  </Button>
+                  <Field>
+                    <FieldLabel>Width</FieldLabel>
+                    <MotionNumberInput
+                      value={width}
+                      map={(v) => Math.max(0, Number(v.toFixed(2)))}
+                      onChange={(v) => {
+                        spriteRef.current!.width = v;
+
+                        if (sizeChained) {
+                          const aspectRatio =
+                            spriteRef.current!.texture.width /
+                            spriteRef.current!.texture.height;
+                          const newHeight = v / aspectRatio;
+                          spriteRef.current!.height = newHeight;
+                          height.set(newHeight);
+                        }
+                      }}
+                      icon={<div className={'text-sm opacity-50'}>W</div>}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel>Height</FieldLabel>
+                    <MotionNumberInput
+                      value={height}
+                      map={(v) => Math.max(0, Number(v.toFixed(2)))}
+                      onChange={(v) => {
+                        spriteRef.current!.height = v;
+                        if (sizeChained) {
+                          const aspectRatio =
+                            spriteRef.current!.texture.width /
+                            spriteRef.current!.texture.height;
+                          const newWidth = v * aspectRatio;
+                          spriteRef.current!.width = newWidth;
+                          width.set(newWidth);
+                        }
+                      }}
+                      icon={<div className={'text-sm opacity-50'}>H</div>}
+                    />
+                  </Field>
+                </div>
+              </FieldGroup>
+            </FieldSet>
+
+            <FieldSeparator />
+
+            <FieldSet>
+              <FieldLegend>Appearance</FieldLegend>
+              <FieldGroup>
+                <Field orientation="horizontal">
+                  <FieldLabel>Visible</FieldLabel>
+                  <Button
+                    size={'icon-sm'}
+                    variant={'outline'}
+                    className={cn({
+                      'bg-blue-500/20 border-blue-500': visible,
+                    })}
+                    onClick={() => {
+                      const newVisible = !visible;
+                      setVisible(newVisible);
+                      if (spriteRef.current) {
+                        spriteRef.current.visible = newVisible;
+                      }
+                    }}
+                  >
+                    {visible ? <Eye size={16} /> : <EyeOff size={16} />}
+                  </Button>
+                </Field>
+              </FieldGroup>
+            </FieldSet>
+          </FieldGroup>
+        </div>
       </div>
     </div>
   );
