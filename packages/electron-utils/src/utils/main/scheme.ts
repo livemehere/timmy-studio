@@ -19,10 +19,23 @@ export const SOURCE_SCHEME: CustomScheme = {
 
 /**
  * app 의 'ready' 이벤트 이후에 호출
+ * @example source://open?path=/path/to/file.mp4
  */
 export function handleSourceScheme() {
   protocol.handle('source', async (req) => {
     try {
+      // Handle OPTIONS request for CORS
+      if (req.method === 'OPTIONS') {
+        return new Response(null, {
+          status: 200,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+            'Access-Control-Allow-Headers': '*',
+          },
+        });
+      }
+
       const url = new URL(req.url);
       const filePath = decodeURIComponent(url.searchParams.get('path') || '');
 
@@ -109,6 +122,9 @@ export function handleSourceScheme() {
         'Content-Type': contentType,
         'Accept-Ranges': 'bytes',
         'Content-Length': String(chunkSize),
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+        'Access-Control-Allow-Headers': '*',
       };
 
       if (range) {
