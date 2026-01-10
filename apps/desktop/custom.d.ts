@@ -109,6 +109,28 @@ declare module '@timmy-studio/electron-utils/ipc' {
         outputPath: string;
       };
     };
+
+    'record:systemAudio': {
+      payload: [];
+      response: {
+        outputPath: string;
+      };
+    };
+
+    'record:stopSystemAudio': {
+      payload: [];
+      response: void;
+    };
+
+    'display:getAll': {
+      payload: [type: 'screen' | 'window'];
+      response: {
+        id: string;
+        name: string;
+        thumbnailDataUrl: string;
+        displayId: string;
+      }[];
+    };
   }
 
   interface IpcSendChannels {

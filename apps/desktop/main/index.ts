@@ -1,4 +1,4 @@
-import { app, BrowserWindow, protocol } from 'electron';
+import { app, BrowserWindow, protocol, session } from 'electron';
 import log from 'electron-log/main';
 import { debug } from '@timmy-studio/electron-utils/utils/main';
 import { createWindow, setupTray } from './setup-utils';
@@ -37,6 +37,21 @@ app.whenReady().then(async () => {
   } catch (err) {
     log.info(`Error while installing extension: ${err}`);
   }
+
+  session.defaultSession.setDisplayMediaRequestHandler(
+    async (_request, _callback) => {
+      // callback 호출하면 고정
+      // const resources = await desktopCapturer.getSources({
+      //   types: ['screen'],
+      // });
+      // callback({
+      //   video: resources[0],
+      //   audio: 'loopback',
+      // });
+    },
+    // 아래 옵션 넣어주면 디스코드처럼 화면 선택 창이 뜸
+    { useSystemPicker: true }
+  );
 
   FileUtils.ensureDirectory([
     MediaUtils.THUMBNAILS_DIR,

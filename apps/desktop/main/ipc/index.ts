@@ -1,5 +1,9 @@
-import { app, dialog, type BrowserWindow } from 'electron';
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import { app, desktopCapturer, dialog, type BrowserWindow } from 'electron';
+import {
+  ChildProcess,
+  spawn,
+  type ChildProcessWithoutNullStreams,
+} from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { ipc } from '@timmy-studio/electron-utils/ipc/main';
@@ -10,6 +14,7 @@ import {
   mergeVideoAndAudio,
   type AudioTrackSpec,
 } from '@main/utils/AudioMixerUtils';
+import { getExtraResourcePath } from '@timmy-studio/electron-utils/utils/main';
 
 // 개발 중 토글: export 후 임시 파일(output.video.mp4, output.audio.m4a) 삭제 여부
 const CLEANUP_TEMP_FILES = true;
@@ -34,6 +39,8 @@ type ExportSession = {
 };
 
 let exportSession: ExportSession | null = null;
+
+let audioRecordProc: ChildProcess | null = null;
 
 function sendExportProgress(win: BrowserWindow, session: ExportSession) {
   const percent =
@@ -601,4 +608,52 @@ export function registerIpcHandlers(win: BrowserWindow) {
       }
     }
   );
+
+  ipc.handle('record:systemAudio', async () => {
+    const outputDir = path.join(app.getPath('downloads'));
+    const filename = `system_audio_${Date.now()}`;
+    const outputPath = path.join(outputDir, `${filename}.flac`);
+
+    audioRecordProc = spawn(
+      `${getExtraResourcePath('recorder-cli')}`,
+      ['--record', outputDir, '--filename', filename],
+      {
+        stdio: 'inherit',
+      }
+    );
+
+    return {
+      outputPath,
+    };
+  });
+
+  ipc.handle('record:stopSystemAudio', async () => {
+    return new Promise<void>((resolve, reject) => {
+      if (!audioRecordProc) {
+        reject(new Error('No recording in progress'));
+        return;
+      }
+
+      audioRecordProc.on('close', (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(`Recording process exited with code ${code}`));
+        }
+      });
+
+      audioRecordProc.kill('SIGINT');
+      audioRecordProc = null;
+    });
+  });
+
+  ipc.handle('display:getAll', async (_, type) => {
+    const sources = await desktopCapturer.getSources({ types: [type] });
+    return sources.map((source) => ({
+      id: source.id,
+      name: source.name,
+      thumbnailDataUrl: source.thumbnail.toDataURL(),
+      displayId: source.display_id,
+    }));
+  });
 }

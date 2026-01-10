@@ -137,6 +137,7 @@ class Item {
 export default function PixiPlaygroundPage() {
   const parentRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<PIXI.Application | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
 
   const itemRef = useRef<Item | null>(null);
 
@@ -236,6 +237,15 @@ export default function PixiPlaygroundPage() {
     itemRef.current!.unmount();
   };
 
+  const recordAudio = async () => {
+    const output = await window.app.invoke('record:systemAudio');
+    console.log(output);
+  };
+
+  const stopRecordingAudio = () => {
+    window.app.invoke('record:stopSystemAudio');
+  };
+
   useEffect(() => {
     create(1920, 1080);
     return () => {
@@ -269,6 +279,56 @@ export default function PixiPlaygroundPage() {
             </Button>
             <Button variant={'outline'} onClick={swapTexture}>
               Swap Texture
+            </Button>
+            <Button variant={'outline'} onClick={recordAudio}>
+              Recording audio
+            </Button>
+            <Button variant={'outline'} onClick={stopRecordingAudio}>
+              Stop Recording audio
+            </Button>
+            <Button
+              variant={'outline'}
+              onClick={async () => {
+                // video
+                const res = await navigator.mediaDevices.getDisplayMedia({
+                  audio: true,
+                  video: true,
+                });
+                console.log(res.getVideoTracks());
+                const audioTracks = res.getVideoTracks();
+                const audioStream = new MediaStream(audioTracks);
+                const recorder = new MediaRecorder(audioStream);
+                recorderRef.current = recorder;
+                let chunks: BlobPart[] = [];
+
+                recorder.ondataavailable = (e) => {
+                  chunks.push(e.data);
+                };
+
+                recorder.onstop = () => {
+                  const blob = new Blob(chunks, { type: 'video/webm' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.style.display = 'none';
+                  a.href = url;
+                  a.download = 'recorded_audio.webm';
+                  document.body.appendChild(a);
+                  a.click();
+                  window.URL.revokeObjectURL(url);
+                };
+
+                recorder.start();
+              }}
+            >
+              Recording Screen
+            </Button>
+            <Button
+              variant={'outline'}
+              onClick={() => {
+                recorderRef.current?.stop();
+              }}
+            >
+              Stop Recording
             </Button>
           </ButtonGroup>
           {/* 가운데 - Renderer */}

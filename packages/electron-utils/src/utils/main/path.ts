@@ -28,12 +28,12 @@ export function getRendererPath(): string {
 /**
  * 패키징 할 때, extra-resources 폴더의 경로를 반환합니다.
  */
-export function toExtraResourcePath(...pahts: string[]): string {
+export function getExtraResourcePath(...paths: string[]): string {
   if (app.isPackaged) {
     /** 패키징 된 경우 asar 경로에서 한번 나가야함 */
-    return path.join(app.getAppPath(), '..', 'extra-resources', ...pahts);
+    return path.join(app.getAppPath(), '..', 'extra-resources', ...paths);
   }
 
   /** vite 개발 모드인 경우, packge.json 의 경로 */
-  return path.join(app.getAppPath(), 'extra-resources', ...pahts);
+  return path.join(app.getAppPath(), 'extra-resources', ...paths);
 }

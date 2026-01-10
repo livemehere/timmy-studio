@@ -1,7 +1,7 @@
 import {
-  toExtraResourcePath,
   getPreloadPath,
   loadWindow,
+  getExtraResourcePath,
 } from '@timmy-studio/electron-utils/utils/main';
 import { app, BrowserWindow, Menu, nativeImage, Tray } from 'electron';
 
@@ -11,7 +11,7 @@ interface CreateWindowOptions {
 
 export function setupTray() {
   const icon = nativeImage
-    .createFromPath(toExtraResourcePath('tray.png'))
+    .createFromPath(getExtraResourcePath('tray.png'))
     .resize({ width: 24, height: 24 });
 
   const tray = new Tray(icon);
