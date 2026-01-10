@@ -50,3 +50,11 @@ temp/
 
 # 실제 I/O 테스트를 위한 데이터
 test-data/
+
+
+# swift project
+
+
+apps/desktop/swift/.build/
+apps/desktop/swift/Packages
+apps/desktop/swift/.swiftpm/
