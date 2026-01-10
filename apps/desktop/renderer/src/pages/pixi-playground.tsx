@@ -19,6 +19,7 @@ import {
   Eye,
   EyeOff,
   Link2,
+  TriangleRight,
 } from 'lucide-react';
 import { MotionNumberInput } from '@/components/motion-number-input';
 
@@ -65,9 +66,11 @@ class Item {
   get rotation() {
     return this.container.rotation;
   }
-
   get visible() {
     return this.container.visible;
+  }
+  get opacity() {
+    return this.container.alpha;
   }
 
   // setter
@@ -96,6 +99,10 @@ class Item {
   set visible(value: boolean) {
     if (value === this.container.visible) return;
     this.container.visible = value;
+  }
+  set opacity(value: number) {
+    if (value === this.container.alpha) return;
+    this.container.alpha = value;
   }
 
   private syncPivot() {
@@ -146,6 +153,8 @@ export default function PixiPlaygroundPage() {
   const y = useMotionValue(0);
   const width = useMotionValue(0);
   const height = useMotionValue(0);
+  const rotation = useMotionValue(0);
+  const opacity = useMotionValue(1);
   const [aspectRatio, setAspectRatio] = useState<number | null>(null);
   const [visible, setVisible] = useState(true);
 
@@ -172,6 +181,7 @@ export default function PixiPlaygroundPage() {
       resolution: 1,
       autoDensity: false,
     });
+
     const aspectRatio = width / height;
     if (aspectRatio > 1) {
       app.canvas.style.maxWidth = '100%';
@@ -206,13 +216,15 @@ export default function PixiPlaygroundPage() {
     // 렌더링 요소에 추가
     item.mount(getApp().stage);
 
-    // item.w = item.texture.width / 2;
-    // item.h = item.texture.height / 2;
+    item.w = item.texture.width / 2;
+    item.h = item.texture.height / 2;
 
     x.set(item.x);
     y.set(item.y);
     width.set(item.w);
     height.set(item.h);
+    rotation.set(item.rotation);
+    opacity.set(item.opacity);
 
     item.debugPosition();
     item.debugSize();
@@ -242,8 +254,9 @@ export default function PixiPlaygroundPage() {
     console.log(output);
   };
 
-  const stopRecordingAudio = () => {
-    window.app.invoke('record:stopSystemAudio');
+  const stopRecordingAudio = async () => {
+    await window.app.invoke('record:stopSystemAudio');
+    console.log('done!');
   };
 
   useEffect(() => {
@@ -279,12 +292,6 @@ export default function PixiPlaygroundPage() {
             </Button>
             <Button variant={'outline'} onClick={swapTexture}>
               Swap Texture
-            </Button>
-            <Button variant={'outline'} onClick={recordAudio}>
-              Recording audio
-            </Button>
-            <Button variant={'outline'} onClick={stopRecordingAudio}>
-              Stop Recording audio
             </Button>
             <Button
               variant={'outline'}
@@ -392,9 +399,9 @@ export default function PixiPlaygroundPage() {
                     </Button>
                   </ButtonGroup>
                 </Field>
-                <div className={'flex gap-2'}>
-                  <Field>
-                    <FieldLabel>X</FieldLabel>
+                <Field>
+                  <FieldLabel>Position</FieldLabel>
+                  <div className={'flex gap-2'}>
                     <MotionNumberInput
                       value={x}
                       map={(v) => Number(v.toFixed(2))}
@@ -403,9 +410,6 @@ export default function PixiPlaygroundPage() {
                       }}
                       icon={<div className={'text-sm opacity-50'}>X</div>}
                     />
-                  </Field>
-                  <Field>
-                    <FieldLabel>Y</FieldLabel>
                     <MotionNumberInput
                       value={y}
                       map={(v) => Number(v.toFixed(2))}
@@ -414,38 +418,47 @@ export default function PixiPlaygroundPage() {
                       }}
                       icon={<div className={'text-sm opacity-50'}>Y</div>}
                     />
-                  </Field>
-                </div>
+                  </div>
+                </Field>
+                <Field>
+                  <FieldLabel>Rotation</FieldLabel>
+                  <MotionNumberInput
+                    value={rotation}
+                    map={(v) => Number(v.toFixed(2))}
+                    onChange={(v) => {
+                      itemRef.current!.rotation = v;
+                    }}
+                    icon={<TriangleRight size={16} />}
+                  />
+                </Field>
               </FieldGroup>
             </FieldSet>
 
             <FieldSeparator />
 
             <FieldSet>
-              <FieldLegend>Size</FieldLegend>
+              <FieldLegend>Layout</FieldLegend>
               <FieldGroup>
-                <div className={'flex gap-2'}>
-                  <Button
-                    size={'icon-sm'}
-                    variant={'outline'}
-                    className={cn({
-                      '[&_svg]:stroke-blue-500': aspectRatio !== null,
-                    })}
-                    onClick={() => {
-                      if (aspectRatio !== null) {
-                        // 체인을 푸는 경우
-                        setAspectRatio(null);
-                      } else {
-                        // 체인을 잠그는 경우 - 현재 비율을 저장
-                        const currentAspectRatio = width.get() / height.get();
-                        setAspectRatio(currentAspectRatio);
-                      }
-                    }}
-                  >
-                    <Link2 size={16} />
-                  </Button>
-                  <Field>
-                    <FieldLabel>Width</FieldLabel>
+                <Field>
+                  <FieldLabel>Dimensions</FieldLabel>
+                  <div className={'flex gap-2'}>
+                    <Button
+                      size={'icon-sm'}
+                      variant={'outline'}
+                      className={cn({
+                        '[&_svg]:stroke-blue-500': aspectRatio !== null,
+                      })}
+                      onClick={() => {
+                        if (aspectRatio !== null) {
+                          setAspectRatio(null);
+                        } else {
+                          const currentAspectRatio = width.get() / height.get();
+                          setAspectRatio(currentAspectRatio);
+                        }
+                      }}
+                    >
+                      <Link2 size={16} />
+                    </Button>
                     <MotionNumberInput
                       value={width}
                       map={(v) => Math.max(0, Number(v.toFixed(2)))}
@@ -460,9 +473,6 @@ export default function PixiPlaygroundPage() {
                       }}
                       icon={<div className={'text-sm opacity-50'}>W</div>}
                     />
-                  </Field>
-                  <Field>
-                    <FieldLabel>Height</FieldLabel>
                     <MotionNumberInput
                       value={height}
                       map={(v) => Math.max(0, Number(v.toFixed(2)))}
@@ -477,8 +487,8 @@ export default function PixiPlaygroundPage() {
                       }}
                       icon={<div className={'text-sm opacity-50'}>H</div>}
                     />
-                  </Field>
-                </div>
+                  </div>
+                </Field>
               </FieldGroup>
             </FieldSet>
 
@@ -487,6 +497,19 @@ export default function PixiPlaygroundPage() {
             <FieldSet>
               <FieldLegend>Appearance</FieldLegend>
               <FieldGroup>
+                <Field>
+                  <FieldLabel>Opacity</FieldLabel>
+                  <MotionNumberInput
+                    value={opacity}
+                    map={(v) => Math.max(0, Math.min(1, Number(v.toFixed(2))))}
+                    onChange={(v) => {
+                      const clampedValue = Math.max(0, Math.min(1, v));
+                      itemRef.current!.opacity = clampedValue;
+                      opacity.set(clampedValue);
+                    }}
+                    icon={<div className={'text-sm opacity-50'}>%</div>}
+                  />
+                </Field>
                 <Field orientation="horizontal">
                   <FieldLabel>Visible</FieldLabel>
                   <Button
