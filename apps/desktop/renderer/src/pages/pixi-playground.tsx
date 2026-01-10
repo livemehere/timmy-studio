@@ -51,6 +51,7 @@ class Item {
       this.sprite.texture = await PIXI.Assets.load(filePath);
     }
     this.syncTransform();
+    this.drawDebug();
   }
 
   // getter
@@ -89,11 +90,13 @@ class Item {
     if (value === this.sprite.width) return;
     this.sprite.width = value;
     this.syncTransform();
+    this.drawDebug();
   }
   set h(value: number) {
     if (value === this.sprite.height) return;
     this.sprite.height = value;
     this.syncTransform();
+    this.drawDebug();
   }
   set rotation(angle: number) {
     if (angle === this.container.rotation) return;
@@ -261,6 +264,8 @@ export default function PixiPlaygroundPage() {
 
     item.w = item.texture.width / 2;
     item.h = item.texture.height / 2;
+    item.x = (getApp().renderer.width - item.w) / 2;
+    item.y = (getApp().renderer.height - item.h) / 2;
 
     x.set(item.x);
     y.set(item.y);
@@ -271,8 +276,6 @@ export default function PixiPlaygroundPage() {
 
     item.debugPosition();
     item.debugSize();
-
-    item.drawDebug();
   };
 
   const swapTexture = async () => {
