@@ -47,7 +47,6 @@ class Item {
     } else {
       this.sprite.texture = await PIXI.Assets.load(filePath);
     }
-    this.syncPivot();
   }
 
   // getter
@@ -85,12 +84,10 @@ class Item {
   set w(value: number) {
     if (value === this.sprite.width) return;
     this.sprite.width = value;
-    this.syncPivot();
   }
   set h(value: number) {
     if (value === this.sprite.height) return;
     this.sprite.height = value;
-    this.syncPivot();
   }
   set rotation(angle: number) {
     if (angle === this.container.rotation) return;
@@ -103,15 +100,6 @@ class Item {
   set opacity(value: number) {
     if (value === this.container.alpha) return;
     this.container.alpha = value;
-  }
-
-  private syncPivot() {
-    const w = this.sprite.width;
-    const h = this.sprite.height;
-
-    this.sprite.x = w / 2;
-    this.sprite.y = h / 2;
-    this.container.pivot.set(w / 2, h / 2);
   }
 
   debugPosition() {
