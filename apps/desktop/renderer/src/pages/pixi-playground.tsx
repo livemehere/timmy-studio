@@ -27,6 +27,9 @@ class Item {
   private readonly container: PIXI.Container;
   private readonly sprite: PIXI.Sprite;
 
+  private _x: number = 0;
+  private _y: number = 0;
+
   constructor() {
     this.container = new PIXI.Container();
     this.sprite = new PIXI.Sprite();
@@ -47,14 +50,15 @@ class Item {
     } else {
       this.sprite.texture = await PIXI.Assets.load(filePath);
     }
+    this.syncTransform();
   }
 
   // getter
-  get y() {
-    return this.container.y;
-  }
   get x() {
-    return this.container.x;
+    return this._x;
+  }
+  get y() {
+    return this._y;
   }
   get w() {
     return this.sprite.width;
@@ -74,20 +78,22 @@ class Item {
 
   // setter
   set x(value: number) {
-    if (value === this.container.x) return;
-    this.container.x = value;
+    this._x = value;
+    this.syncTransform();
   }
   set y(value: number) {
-    if (value === this.container.y) return;
-    this.container.y = value;
+    this._y = value;
+    this.syncTransform();
   }
   set w(value: number) {
     if (value === this.sprite.width) return;
     this.sprite.width = value;
+    this.syncTransform();
   }
   set h(value: number) {
     if (value === this.sprite.height) return;
     this.sprite.height = value;
+    this.syncTransform();
   }
   set rotation(angle: number) {
     if (angle === this.container.rotation) return;
@@ -100,6 +106,18 @@ class Item {
   set opacity(value: number) {
     if (value === this.container.alpha) return;
     this.container.alpha = value;
+  }
+
+  private syncTransform() {
+    const w = this.sprite.width;
+    const h = this.sprite.height;
+
+    // contianer 중점을 항상 중앙으로
+    this.container.pivot.set(w / 2, h / 2);
+
+    // 논리적 좌표계는 좌상든을 유지하기 위해서, 절반만큼 항상 더해줌
+    this.container.x = this._x + w / 2;
+    this.container.y = this._y + h / 2;
   }
 
   debugPosition() {
@@ -118,6 +136,43 @@ class Item {
     console.log(
       `sprite - size: (${this.sprite.width},${this.sprite.height}), scale: (${this.sprite.scale.x}, ${this.sprite.scale.y})`
     );
+  }
+
+  removeDebug() {
+    this.container.removeChild(
+      this.container.children.filter((c) => c.label === 'debug')[0]
+    );
+  }
+
+  drawDebug() {
+    this.removeDebug();
+
+    const g = new PIXI.Graphics();
+    g.label = 'debug';
+
+    // --- 1. 로컬 bounds (중요!)
+    const bounds = this.container.getLocalBounds();
+    console.log(bounds);
+
+    // 🟦 bounds 사각형
+    g.beginPath();
+    g.setStrokeStyle({ width: 10, color: 0xff0000, alpha: 0.8 });
+    g.rect(bounds.x, bounds.y, bounds.width, bounds.height);
+    g.stroke();
+    g.closePath();
+
+    // --- 2. container 로컬 원점 (0,0)
+    g.fill(0xff0000);
+    g.circle(0, 0, 10);
+    g.fill();
+
+    // --- 3. pivot 위치 (회전 중심)
+    g.fill(0xff0000);
+    g.circle(this.container.pivot.x, this.container.pivot.y, 10);
+    g.fill();
+
+    this.container.addChild(g);
+    this.container.sortChildren();
   }
 
   mount(parent: PIXI.Container) {
@@ -216,6 +271,8 @@ export default function PixiPlaygroundPage() {
 
     item.debugPosition();
     item.debugSize();
+
+    item.drawDebug();
   };
 
   const swapTexture = async () => {
