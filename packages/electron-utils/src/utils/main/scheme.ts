@@ -19,7 +19,12 @@ export const SOURCE_SCHEME: CustomScheme = {
 
 /**
  * app 의 'ready' 이벤트 이후에 호출
- * @example source://open?path=/path/to/file.mp4
+ * @example
+ * // Query parameter 방식
+ * source://any/?path=/path/to/file.mp4
+ *
+ * // Path 방식 (basePath와 함께 사용 가능)
+ * source://path/path/to/file.mp4
  */
 export function handleSourceScheme() {
   protocol.handle('source', async (req) => {
@@ -37,9 +42,24 @@ export function handleSourceScheme() {
       }
 
       const url = new URL(req.url);
-      const filePath = decodeURIComponent(url.searchParams.get('path') || '');
+      let filePath = '';
 
-      // 파일 존재 확인
+      // 1. Query parameter 방식: source://?path=/path/to/file
+      const pathParam = url.searchParams.get('path');
+      if (pathParam) {
+        filePath = decodeURIComponent(pathParam);
+      }
+      // 2. Path 방식: source://open/path/to/file
+      else if (url.hostname === 'path' && url.pathname) {
+        // pathname은 /path/to/file 형태로 시작하므로 그대로 사용
+        filePath = decodeURIComponent(url.pathname);
+      }
+
+      // 파일 경로가 없거나 파일이 존재하지 않으면 404
+      if (!filePath) {
+        return new Response('File path not provided', { status: 400 });
+      }
+
       if (!fs.existsSync(filePath)) {
         return new Response('File not found', { status: 404 });
       }
