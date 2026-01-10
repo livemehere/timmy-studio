@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, protocol } from 'electron';
 import log from 'electron-log/main';
 import { debug } from '@timmy-studio/electron-utils/utils/main';
 import { createWindow, setupTray } from './setup-utils';
@@ -12,6 +12,10 @@ import {
 import { FileUtils } from '@main/utils/FileUtils';
 import { registerIpcHandlers } from './ipc';
 import { MediaUtils } from '@main/utils/MediaUtils';
+import {
+  handleSourceScheme,
+  SOURCE_SCHEME,
+} from '@timmy-studio/electron-utils/utils/main';
 
 log.initialize();
 log.info('App starting...');
@@ -22,8 +26,11 @@ console.log();
 // app.commandLine.appendSwitch('enable-accelerated-video-decode');
 // app.commandLine.appendSwitch('ignore-gpu-blocklist'); // Optional, but can help in some cases
 
+protocol.registerSchemesAsPrivileged([SOURCE_SCHEME]);
+
 app.whenReady().then(async () => {
   try {
+    handleSourceScheme();
     await installExtension([REACT_DEVELOPER_TOOLS]);
     await checkExtensionServiceWorker();
     log.info(`Added Extension: react`);
