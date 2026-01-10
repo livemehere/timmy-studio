@@ -145,7 +145,7 @@ export default function PixiPlaygroundPage() {
   const y = useMotionValue(0);
   const width = useMotionValue(0);
   const height = useMotionValue(0);
-  const [sizeChained, setSizeChained] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState<number | null>(null);
   const [visible, setVisible] = useState(true);
 
   const [horizontalAlign, setHorizontalAlign] = useState<
@@ -369,10 +369,17 @@ export default function PixiPlaygroundPage() {
                     size={'icon-sm'}
                     variant={'outline'}
                     className={cn({
-                      '[&_svg]:stroke-blue-500': sizeChained,
+                      '[&_svg]:stroke-blue-500': aspectRatio !== null,
                     })}
                     onClick={() => {
-                      setSizeChained(!sizeChained);
+                      if (aspectRatio !== null) {
+                        // 체인을 푸는 경우
+                        setAspectRatio(null);
+                      } else {
+                        // 체인을 잠그는 경우 - 현재 비율을 저장
+                        const currentAspectRatio = width.get() / height.get();
+                        setAspectRatio(currentAspectRatio);
+                      }
                     }}
                   >
                     <Link2 size={16} />
@@ -383,15 +390,13 @@ export default function PixiPlaygroundPage() {
                       value={width}
                       map={(v) => Math.max(0, Number(v.toFixed(2)))}
                       onChange={(v) => {
-                        if (sizeChained) {
-                          const aspectRatio =
-                            itemRef.current!.w / itemRef.current!.h;
+                        itemRef.current!.w = v;
+
+                        if (aspectRatio !== null) {
                           const newHeight = v / aspectRatio;
                           itemRef.current!.h = newHeight;
                           height.set(newHeight);
                         }
-
-                        itemRef.current!.w = v;
                       }}
                       icon={<div className={'text-sm opacity-50'}>W</div>}
                     />
@@ -402,14 +407,13 @@ export default function PixiPlaygroundPage() {
                       value={height}
                       map={(v) => Math.max(0, Number(v.toFixed(2)))}
                       onChange={(v) => {
-                        if (sizeChained) {
-                          const aspectRatio =
-                            itemRef.current!.w / itemRef.current!.h;
+                        itemRef.current!.h = v;
+
+                        if (aspectRatio !== null) {
                           const newWidth = v * aspectRatio;
                           itemRef.current!.w = newWidth;
                           width.set(newWidth);
                         }
-                        itemRef.current!.h = v;
                       }}
                       icon={<div className={'text-sm opacity-50'}>H</div>}
                     />
