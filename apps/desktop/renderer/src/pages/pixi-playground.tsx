@@ -1,3 +1,4 @@
+import gsap from 'gsap';
 import { initDevtools } from '@pixi/devtools';
 import { useEffect, useRef, useState } from 'react';
 import { ButtonGroup } from '@/components/ui/button-group';
@@ -23,6 +24,9 @@ import {
   TriangleRight,
 } from 'lucide-react';
 import { MotionNumberInput } from '@/components/motion-number-input';
+import { BlurFilter, Graphics, NoiseFilter } from 'pixi.js';
+import { css } from '@emotion/react';
+import { animate } from 'motion';
 
 class Item {
   readonly container: PIXI.Container;
@@ -46,11 +50,7 @@ class Item {
   }
 
   async load(filePath: string) {
-    if (PIXI.Assets.cache.has(filePath)) {
-      this.sprite.texture = PIXI.Assets.cache.get(filePath) as PIXI.Texture;
-    } else {
-      this.sprite.texture = await PIXI.Assets.load(filePath);
-    }
+    this.sprite.texture = await PIXI.Assets.load(filePath); // 자동으로 filePath 기준으로 cache 관리됨
     this.syncTransform();
     this.drawDebug();
   }
@@ -208,10 +208,11 @@ export default function PixiPlaygroundPage() {
     await app.init({
       width,
       height,
-      background: '#000000',
-      antialias: true,
+      background: '#1e1e1e',
+      antialias: false,
       resolution: 1,
       autoDensity: false,
+      powerPreference: 'high-performance',
     });
 
     initDevtools({ app });
@@ -267,6 +268,247 @@ export default function PixiPlaygroundPage() {
     height.set(item.h);
     rotation.set(item.rotation);
     opacity.set(item.opacity);
+
+    /* masking */
+    // const rect = new Graphics();
+    // rect.rect(0, 0, 400, 400).fill('#000000');
+    //
+    // item.get().mask = rect;
+
+    /* filter */
+    // const filter = new PIXI.BlurFilter({
+    //   strength: 20,
+    //   quality: 4,
+    // });
+    // item.get().filters = [filter];
+
+    /* tint */
+    // item.get().tint = 'dodgerblue';
+
+    /* blend mode */
+    // item.get().blendMode = 'multiply';
+
+    item.get().interactive = true;
+    item.get().on('pointerdown', (e) => {
+      console.log('pointerdown', e);
+      const point = new PIXI.Graphics();
+      point.circle(0, 0, 10);
+      point.fill('red');
+      point.x = e.globalX;
+      point.y = e.globalY;
+      getApp().stage.addChild(point);
+    });
+
+    // item.get().onRender = () => {
+    //   item.get().rotation += 0.001;
+    // };
+
+    /* tiling */
+    // const tile = new PIXI.TilingSprite({
+    //   texture: PIXI.Texture.from(imgUrl),
+    //   width: 800,
+    //   height: 200,
+    // });
+    // tile.x = 100;
+    // tile.y = 100;
+    // getApp().stage.addChild(tile);
+
+    /* texture 로 칠하기 (마스킹느낌) */
+    // const g = new Graphics().rect(0, 0, 500, 500).fill({
+    // texture: PIXI.Texture.from(imgUrl),
+    // textureSpace: 'global',
+    // matrix: new PIXI.Matrix().scale(0.5, 0.5),
+    // });
+
+    // 원을 로컬 좌표계 (0, 0)에 그리고, 그라디언트도 원의 범위에 맞춤
+    // const g = new Graphics().circle(0, 0, 250).fill(
+    //   new PIXI.FillGradient({
+    //     type: 'linear',
+    //     start: { x: 0, y: 0 }, // 0~1
+    //     end: { x: 1, y: 0 }, // 0~1
+    //     // start: { x: -250, y: -250 }, // global 인 경우
+    //     // end: { x: 250, y: 250 }, // global 인 경우
+    //     // textureSpace: 'global',
+    //     colorStops: [
+    //       { offset: 0, color: 'yellow' },
+    //       { offset: 1, color: 'red' },
+    //     ],
+    //   })
+    // );
+    //
+    // g.x = 100;
+    // g.y = 600;
+    // getApp().stage.addChild(g);
+
+    const style = new PIXI.TextStyle({
+      fontSize: 200,
+      fill: '#fff',
+      fontFamily: 'Arial',
+      stroke: {
+        color: 'red',
+        width: 10,
+      },
+      dropShadow: {
+        color: 'blue',
+        blur: 10,
+        distance: 30,
+        angle: Math.PI / 6,
+      },
+      fontStyle: 'italic',
+      align: 'center',
+      wordWrap: true,
+      wordWrapWidth: 1000,
+      letterSpacing: 10,
+      breakWords: true,
+      fontWeight: 'bold',
+    });
+
+    const t = new PIXI.SplitText({
+      text: '안녕하세요 오늘의 먹방은\n맛있는 MacBook 입니다',
+      style,
+      autoSplit: true,
+      lineAnchor: {
+        x: 0.5,
+        y: 0.5,
+      },
+    });
+
+    t.chars.forEach((c, i) => {
+      gsap.from(c, {
+        y: -100,
+        delay: i * 0.05,
+      });
+    });
+
+    t.eventMode = 'static';
+    t.on('pointerdown', (e) => {
+      console.log(e);
+    });
+
+    t.filters = [
+      new BlurFilter({ strength: 4 }),
+      new NoiseFilter({ noise: 1.2 }),
+    ];
+
+    // const t = new PIXI.HTMLText({
+    //   text: `<div style="box-sizing:border-box; max-width:1000px; background:#232323;padding-left:80px; padding-right:80px; word-break: break-all; white-space: break-spaces;">hello world!오늘의 먹방은!🙏안녕하세요!</div>`,
+    //   style: {
+    //     fontSize: 100,
+    //     fontWeight: 'bold',
+    //     fill: '#ffffff',
+    //     fontFamily: 'Arial',
+    //   },
+    // });
+    //
+    // t.x = 100;
+    // t.y = 100;
+    // t.onRender = () => {
+    //   t.width += 0.1;
+    // };
+
+    // const rect = new PIXI.Graphics();
+    // rect.rect(0, 0, 500, 500).fill('#ffffff');
+    // rect.zIndex = 10;
+    // rect.alpha = 0.9;
+    // rect.blendMode = 'overlay';
+    // rect.filters = [new BlurFilter({ strength: 90 })];
+    //
+    // getApp().stage.addChild(rect);
+    //
+    // // 모자이크 처리: sample-image 이미지의 특정 영역에만 적용
+    // const mosaicArea = new PIXI.Container();
+    //
+    // // 원본 이미지와 동일한 위치에 배치
+    // mosaicArea.x = item.x;
+    // mosaicArea.y = item.y;
+    // mosaicArea.zIndex = item.get().zIndex + 1; // item 위에 위치
+    //
+    // // 모자이크할 영역의 스프라이트 (같은 텍스처 사용)
+    // const mosaicSprite = new PIXI.Sprite(item.texture);
+    // mosaicSprite.width = item.w;
+    // mosaicSprite.height = item.h;
+    // mosaicSprite.anchor.set(0.5, 0.5); // item과 동일한 중심점
+    //
+    // // 강한 블러로 모자이크 효과
+    // const mosaicBlur = new BlurFilter({
+    //   strength: 30,
+    //   quality: 2,
+    // });
+    // mosaicSprite.filters = [mosaicBlur];
+    //
+    // // 마스크: 특정 영역(예: 오른쪽 절반)만 보이게
+    // const mosaicMask = new PIXI.Graphics();
+    // // 이미지의 오른쪽 절반을 모자이크 처리
+    // mosaicMask.rect(0, -item.h / 2, item.w / 2, item.h).fill('#000000');
+    //
+    // mosaicArea.addChild(mosaicSprite);
+    // mosaicArea.addChild(mosaicMask);
+    // mosaicSprite.mask = mosaicMask;
+    //
+    // getApp().stage.addChild(mosaicArea);
+    //
+    // getApp().stage.eventMode = 'static';
+    //
+    // getApp().stage.on('pointermove', (e) => {
+    //   rect.position.copyFrom(e.global);
+    // });
+    //
+    // getApp().stage.addChild(t);
+    //
+    // const element = document.createElement('textarea');
+    //
+    // element.value = 'Type here...';
+    //
+    // const dom = new PIXI.DOMContainer({
+    //   element,
+    // });
+    // dom.zIndex = 20;
+    // dom.x = 1920 / 2;
+    // dom.y = 300;
+    // getApp().stage.addChild(dom);
+
+    await PIXI.Assets.load('/path/path/to/sample-media.svg');
+
+    // gap이 있는 타일 패턴 만들기
+    const logoTexture = PIXI.Texture.from(
+      '/path/path/to/sample-media.svg'
+    );
+
+    const tileSize = 150; // 로고 크기
+    const gap = 150; // 타일 사이 간격
+    const patternSize = tileSize + gap;
+
+    // 패턴용 컨테이너 생성
+    const patternContainer = new PIXI.Container();
+    const logoSprite = new PIXI.Sprite(logoTexture);
+    logoSprite.width = tileSize;
+    logoSprite.height = tileSize;
+    patternContainer.addChild(logoSprite);
+
+    // RenderTexture로 패턴 생성
+    const renderTexture = PIXI.RenderTexture.create({
+      width: patternSize,
+      height: patternSize,
+    });
+
+    getApp().renderer.render({
+      container: patternContainer,
+      target: renderTexture,
+    });
+
+    const bg = new PIXI.TilingSprite({
+      texture: renderTexture,
+      width: getApp().renderer.width,
+      height: getApp().renderer.height,
+    });
+
+    // 우하단으로 계속 이동
+    bg.onRender = () => {
+      bg.tilePosition.x += 0.5; // 오른쪽으로 이동 속도
+      bg.tilePosition.y += 0.5; // 아래로 이동 속도
+    };
+
+    getApp().stage.addChildAt(bg, 0);
   };
 
   const swapTexture = async () => {
