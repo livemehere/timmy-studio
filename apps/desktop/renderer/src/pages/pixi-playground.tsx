@@ -124,24 +124,6 @@ class Item {
     this.container.y = this._y + h / 2;
   }
 
-  debugPosition() {
-    console.log(
-      `container - pos: (${this.container.x},${this.container.y}), globalPos: (${this.container.getGlobalPosition().x},${this.container.getGlobalPosition().y})`
-    );
-    console.log(
-      `sprite - pos: (${this.sprite.x},${this.sprite.y}), globalPos: (${this.sprite.getGlobalPosition().x},${this.sprite.getGlobalPosition().y})`
-    );
-  }
-
-  debugSize() {
-    console.log(
-      `container - size: (${this.container.width},${this.container.height}), scale: (${this.container.scale.x}, ${this.container.scale.y})`
-    );
-    console.log(
-      `sprite - size: (${this.sprite.width},${this.sprite.height}), scale: (${this.sprite.scale.x}, ${this.sprite.scale.y})`
-    );
-  }
-
   removeDebug() {
     this.container.removeChild(
       this.container.children.filter((c) => c.label === 'debug')[0]
@@ -214,6 +196,10 @@ export default function PixiPlaygroundPage() {
   };
 
   const create = async (width: number, height: number) => {
+    if (appRef.current) {
+      destroy();
+    }
+
     await PIXI.Assets.init({
       basePath: 'source://',
     });
@@ -247,11 +233,17 @@ export default function PixiPlaygroundPage() {
     parentRef.current!.appendChild(app.canvas);
 
     await initRender();
+
+    app.stage.on('pointerdown', (e) => {
+      console.log(e);
+    });
   };
 
   const destroy = async () => {
-    appRef.current!.destroy(true);
-    appRef.current = null;
+    if (appRef.current) {
+      appRef.current.destroy(true);
+      appRef.current = null;
+    }
   };
 
   const initRender = async () => {
@@ -275,9 +267,6 @@ export default function PixiPlaygroundPage() {
     height.set(item.h);
     rotation.set(item.rotation);
     opacity.set(item.opacity);
-
-    item.debugPosition();
-    item.debugSize();
   };
 
   const swapTexture = async () => {
@@ -290,13 +279,12 @@ export default function PixiPlaygroundPage() {
 
     width.set(itemRef.current!.w);
     height.set(itemRef.current!.h);
-
-    itemRef.current!.debugPosition();
-    itemRef.current!.debugSize();
   };
 
   const umount = () => {
-    itemRef.current!.unmount();
+    if (itemRef.current) {
+      itemRef.current.unmount();
+    }
   };
 
   const recordAudio = async () => {
