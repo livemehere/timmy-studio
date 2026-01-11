@@ -54,6 +54,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
+    "@pixi/devtools": "^2.0.1",
     "@tailwindcss/vite": "^4.1.16",
     "@timmy-studio/electron-utils": "workspace:*",
     "@types/fluent-ffmpeg": "^2.1.28",

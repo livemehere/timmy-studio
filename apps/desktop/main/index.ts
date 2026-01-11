@@ -2,7 +2,11 @@ import { app, BrowserWindow, protocol, session } from 'electron';
 import log from 'electron-log/main';
 import { debug } from '@timmy-studio/electron-utils/utils/main';
 import { createWindow, setupTray } from './setup-utils';
-import { checkExtensionServiceWorker } from '@main/utils/installExtension';
+import {
+  checkExtensionServiceWorker,
+  loadSingleExtension,
+  PIXIJS_DEVTOOLS,
+} from '@main/utils/installExtension';
 import { userConfigStore } from '@main/store';
 
 import {
@@ -32,6 +36,7 @@ app.whenReady().then(async () => {
   try {
     handleSourceScheme();
     await installExtension([REACT_DEVELOPER_TOOLS]);
+    await loadSingleExtension(PIXIJS_DEVTOOLS);
     await checkExtensionServiceWorker();
     log.info(`Added Extension: react`);
   } catch (err) {

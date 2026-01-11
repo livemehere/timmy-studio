@@ -132,6 +132,9 @@ importers:
       '@eslint/js':
         specifier: ^9.36.0
         version: 9.38.0
+      '@pixi/devtools':
+        specifier: ^2.0.1
+        version: 2.0.1(pixi.js@8.14.0)
       '@tailwindcss/vite':
         specifier: ^4.1.16
         version: 4.1.16(vite@7.1.11(@types/node@24.8.1)(jiti@2.6.1)(lightningcss@1.30.2))
@@ -795,6 +798,11 @@ packages:
 
   '@pixi/colord@2.9.6':
     resolution: {integrity: sha512-nezytU2pw587fQstUu1AsJZDVEynjskwOL+kibwcdxsMBFqPsFFNA7xl0ii/gXuDi6M0xj3mfRJj8pBSc2jCfA==, tarball: https://registry.npmjs.org/@pixi/colord/-/colord-2.9.6.tgz}
+
+  '@pixi/devtools@2.0.1':
+    resolution: {integrity: sha512-TFCqNkJoLNYHDELgQ3bKWvA33twWpoUhQB8Y+hneBdDBunRsqZ5ZzwH7+6E5eVaVn7eeLAXHs9QGRGsxM0fRlw==, tarball: https://registry.npmjs.org/@pixi/devtools/-/devtools-2.0.1.tgz}
+    peerDependencies:
+      pixi.js: ^7 || ^8
 
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==, tarball: https://registry.npmjs.org/@pkgjs/parseargs/-/parseargs-0.11.0.tgz}
@@ -5002,6 +5010,10 @@ snapshots:
       rimraf: 3.0.2
 
   '@pixi/colord@2.9.6': {}
+
+  '@pixi/devtools@2.0.1(pixi.js@8.14.0)':
+    dependencies:
+      pixi.js: 8.14.0
 
   '@pkgjs/parseargs@0.11.0':
     optional: true

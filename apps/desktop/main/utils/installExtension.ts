@@ -5,8 +5,9 @@ import os from 'os';
 
 export const REACT_DEVELOPER_TOOLS = 'fmkadmapgofadopljbjfkapdkoienihi';
 export const REDUX_TOOLS = 'lmhkpmbekcpmknklioeibfkpmmfibljd'; // 설치친는되나, store 인식이 안됨
+export const PIXIJS_DEVTOOLS = 'dlkffcaaoccbofklocbjcmppahjjboce';
 
-async function loadSingleExtension(extensionId: string) {
+export async function loadSingleExtension(extensionId: string) {
   const basePath = path.join(
     os.homedir(),
     'Library/Application Support/Google/Chrome/Default/Extensions',

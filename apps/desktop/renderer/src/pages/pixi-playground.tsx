@@ -1,3 +1,4 @@
+import { initDevtools } from '@pixi/devtools';
 import { useEffect, useRef, useState } from 'react';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Button } from '@/components/ui/button';
@@ -24,8 +25,8 @@ import {
 import { MotionNumberInput } from '@/components/motion-number-input';
 
 class Item {
-  private readonly container: PIXI.Container;
-  private readonly sprite: PIXI.Sprite;
+  readonly container: PIXI.Container;
+  readonly sprite: PIXI.Sprite;
 
   private _x: number = 0;
   private _y: number = 0;
@@ -155,7 +156,6 @@ class Item {
 
     // --- 1. 로컬 bounds (중요!)
     const bounds = this.container.getLocalBounds();
-    console.log(bounds);
 
     // 🟦 bounds 사각형
     g.beginPath();
@@ -164,14 +164,14 @@ class Item {
     g.stroke();
     g.closePath();
 
-    // --- 2. container 로컬 원점 (0,0)
-    g.fill(0xff0000);
-    g.circle(0, 0, 10);
+    // container 좌표
+    g.fill('red');
+    g.circle(this.container.x, this.container.y, 10);
     g.fill();
 
-    // --- 3. pivot 위치 (회전 중심)
-    g.fill(0xff0000);
-    g.circle(this.container.pivot.x, this.container.pivot.y, 10);
+    // sprite 좌표
+    g.fill('blue');
+    g.circle(this.sprite.x, this.sprite.y, 10);
     g.fill();
 
     this.container.addChild(g);
@@ -227,6 +227,8 @@ export default function PixiPlaygroundPage() {
       resolution: 1,
       autoDensity: false,
     });
+
+    initDevtools({ app });
 
     const aspectRatio = width / height;
     if (aspectRatio > 1) {
@@ -341,6 +343,14 @@ export default function PixiPlaygroundPage() {
             <Button variant={'outline'} onClick={swapTexture}>
               Swap Texture
             </Button>
+            <Button variant={'outline'} onClick={recordAudio}>
+              Record System Audio
+            </Button>
+            <Button variant={'outline'} onClick={stopRecordingAudio}>
+              Stop Recording Audio
+            </Button>
+          </ButtonGroup>
+          <ButtonGroup className="relative z-10">
             <Button
               variant={'outline'}
               onClick={async () => {
