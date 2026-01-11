@@ -248,6 +248,31 @@ export default function PixiPlaygroundPage() {
   };
 
   const initRender = async () => {
+    const world = new PIXI.Container();
+    // getApp().stage.addChild(world);
+
+    const rt = PIXI.RenderTexture.create({
+      width: getApp().renderer.width,
+      height: getApp().renderer.height,
+    });
+
+    getApp().ticker.add(() => {
+      getApp().renderer.render({
+        container: world,
+        target: rt,
+        clear: true,
+      });
+    });
+
+    const adjustmentSprite = new PIXI.Sprite(rt);
+    adjustmentSprite.filters = [
+      new PIXI.BlurFilter({
+        strength: 30,
+        quality: 4,
+      }),
+    ];
+    getApp().stage.addChild(adjustmentSprite);
+
     const imgUrl = `/path/path/to/sample-media.png`;
 
     const item = new Item();
@@ -255,7 +280,7 @@ export default function PixiPlaygroundPage() {
     itemRef.current = item;
 
     // 렌더링 요소에 추가
-    item.mount(getApp().stage);
+    item.mount(world);
 
     item.w = item.texture.width / 2;
     item.h = item.texture.height / 2;
@@ -296,7 +321,7 @@ export default function PixiPlaygroundPage() {
       point.fill('red');
       point.x = e.globalX;
       point.y = e.globalY;
-      getApp().stage.addChild(point);
+      world.addChild(point);
     });
 
     // item.get().onRender = () => {
@@ -311,7 +336,7 @@ export default function PixiPlaygroundPage() {
     // });
     // tile.x = 100;
     // tile.y = 100;
-    // getApp().stage.addChild(tile);
+    // world.addChild(tile);
 
     /* texture 로 칠하기 (마스킹느낌) */
     // const g = new Graphics().rect(0, 0, 500, 500).fill({
@@ -338,7 +363,7 @@ export default function PixiPlaygroundPage() {
     //
     // g.x = 100;
     // g.y = 600;
-    // getApp().stage.addChild(g);
+    // world.addChild(g);
 
     const style = new PIXI.TextStyle({
       fontSize: 200,
@@ -385,10 +410,7 @@ export default function PixiPlaygroundPage() {
       console.log(e);
     });
 
-    t.filters = [
-      new BlurFilter({ strength: 4 }),
-      new NoiseFilter({ noise: 1.2 }),
-    ];
+    world.addChild(t);
 
     // const t = new PIXI.HTMLText({
     //   text: `<div style="box-sizing:border-box; max-width:1000px; background:#232323;padding-left:80px; padding-right:80px; word-break: break-all; white-space: break-spaces;">hello world!오늘의 먹방은!🙏안녕하세요!</div>`,
@@ -413,7 +435,7 @@ export default function PixiPlaygroundPage() {
     // rect.blendMode = 'overlay';
     // rect.filters = [new BlurFilter({ strength: 90 })];
     //
-    // getApp().stage.addChild(rect);
+    // world.addChild(rect);
     //
     // // 모자이크 처리: sample-image 이미지의 특정 영역에만 적용
     // const mosaicArea = new PIXI.Container();
@@ -445,15 +467,15 @@ export default function PixiPlaygroundPage() {
     // mosaicArea.addChild(mosaicMask);
     // mosaicSprite.mask = mosaicMask;
     //
-    // getApp().stage.addChild(mosaicArea);
+    // world.addChild(mosaicArea);
     //
-    // getApp().stage.eventMode = 'static';
+    // world.eventMode = 'static';
     //
-    // getApp().stage.on('pointermove', (e) => {
+    // world.on('pointermove', (e) => {
     //   rect.position.copyFrom(e.global);
     // });
     //
-    // getApp().stage.addChild(t);
+    // world.addChild(t);
     //
     // const element = document.createElement('textarea');
     //
@@ -465,7 +487,7 @@ export default function PixiPlaygroundPage() {
     // dom.zIndex = 20;
     // dom.x = 1920 / 2;
     // dom.y = 300;
-    // getApp().stage.addChild(dom);
+    // world.addChild(dom);
 
     await PIXI.Assets.load('/path/path/to/sample-media.svg');
 
@@ -508,7 +530,7 @@ export default function PixiPlaygroundPage() {
       bg.tilePosition.y += 0.5; // 아래로 이동 속도
     };
 
-    getApp().stage.addChildAt(bg, 0);
+    world.addChildAt(bg, 0);
   };
 
   const swapTexture = async () => {
