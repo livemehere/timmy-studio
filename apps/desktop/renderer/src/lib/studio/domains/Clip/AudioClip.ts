@@ -41,10 +41,9 @@ export class AudioClip extends Clip {
       .getDoc()
       .assets.find((a: any) => a.id === this.data.assetId);
     if (!asset || asset.type !== 'audio') {
-      console.warn(
+      throw new Error(
         `[AudioClip] Asset not found or invalid: ${this.data.assetId}`
       );
-      return;
     }
 
     this.filePath = asset.filePath;

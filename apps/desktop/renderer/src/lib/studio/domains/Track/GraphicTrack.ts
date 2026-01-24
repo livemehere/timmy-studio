@@ -40,10 +40,11 @@ export class GraphicTrack extends Track<
   }
 
   /** 트랙 속성 및 내부 클립들을 동기화합니다. */
-  async sync(data: IGraphicTrack): Promise<void> {
+  async sync(data: IGraphicTrack): Promise<{ failedClipIds: string[] }> {
     this.updateContainerProps(data);
-    await this.syncClips(data.clips);
+    const { failedClipIds } = await this.syncClips(data.clips);
     this.container.sortChildren();
+    return { failedClipIds };
   }
 
   private updateContainerProps(data: IGraphicTrack) {

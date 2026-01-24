@@ -32,14 +32,17 @@ export abstract class Track<
     this.id = data.id;
   }
 
-  abstract sync(data: ITrack): Promise<void>;
+  abstract sync(data: ITrack): Promise<{ failedClipIds: string[] }>;
   abstract destroy(): void;
   protected abstract addClip(data: TClipData): Promise<void>;
   protected abstract removeClip(clipId: string): void;
 
   /** 트랙 내의 클립들을 동기화합니다. */
-  protected async syncClips(clipsData: TClipData[]): Promise<void> {
+  protected async syncClips(
+    clipsData: TClipData[]
+  ): Promise<{ failedClipIds: string[] }> {
     const newClipIds = new Set(clipsData.map((c) => c.id));
+    const failedClipIds: string[] = [];
 
     // 1. 제거된 클립 처리
     for (const [clipId, _clip] of this.clips) {
@@ -49,16 +52,28 @@ export abstract class Track<
     }
 
     // 2. 추가되거나 업데이트된 클립 처리
-    const tasks: Promise<void>[] = [];
-    for (const clipData of clipsData) {
+    const tasks = clipsData.map(async (clipData) => {
       if (this.clips.has(clipData.id)) {
-        const clip = this.clips.get(clipData.id);
-        clip?.update(clipData);
-      } else {
-        tasks.push(this.addClip(clipData));
+        try {
+          const clip = this.clips.get(clipData.id);
+          clip?.update(clipData);
+        } catch (error) {
+          failedClipIds.push(clipData.id);
+          this.removeClip(clipData.id);
+        }
+        return;
       }
-    }
+
+      try {
+        await this.addClip(clipData);
+      } catch (error) {
+        failedClipIds.push(clipData.id);
+        this.removeClip(clipData.id);
+      }
+    });
     await Promise.all(tasks);
+
+    return { failedClipIds };
   }
 
   /** 렌더링 루프: 소속 클립들의 tick 실행 */

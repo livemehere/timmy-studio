@@ -86,6 +86,8 @@ export class AudioRenderer {
   async syncTracks(tracksData: IAudioTrack[]): Promise<{
     syncedTrackIds: string[];
     syncedClipIds: string[];
+    failedTrackIds: string[];
+    failedClipIds: Array<{ trackId: string; clipId: string }>;
   }> {
     const trackIds = new Set(tracksData.map((t) => t.id));
 
@@ -98,17 +100,42 @@ export class AudioRenderer {
     }
 
     // 추가/업데이트
-    const tasks: Promise<void>[] = [];
-    for (const trackData of tracksData) {
+    const failedTrackIds: string[] = [];
+    const failedClipIds: Array<{ trackId: string; clipId: string }> = [];
+
+    const tasks = tracksData.map(async (trackData) => {
       if (this.tracks.has(trackData.id)) {
-        tasks.push(this.tracks.get(trackData.id)!.sync(trackData));
-      } else {
-        const track = new AudioTrack(this, trackData);
-        this.tracks.set(trackData.id, track);
-        tasks.push(track.sync(trackData));
+        const { failedClipIds } = await this.tracks
+          .get(trackData.id)!
+          .sync(trackData);
+        return { trackId: trackData.id, failedClipIds };
       }
-    }
-    await Promise.all(tasks);
+
+      const track = new AudioTrack(this, trackData);
+      this.tracks.set(trackData.id, track);
+      const { failedClipIds } = await track.sync(trackData);
+      return { trackId: trackData.id, failedClipIds };
+    });
+
+    const results = await Promise.allSettled(tasks);
+    results.forEach((result, index) => {
+      const trackData = tracksData[index];
+      if (result.status === 'fulfilled') {
+        result.value.failedClipIds.forEach((clipId) => {
+          failedClipIds.push({ trackId: result.value.trackId, clipId });
+        });
+        return;
+      }
+
+      failedTrackIds.push(trackData.id);
+      trackData.clips.forEach((clip) => {
+        failedClipIds.push({ trackId: trackData.id, clipId: clip.id });
+      });
+      if (this.tracks.has(trackData.id)) {
+        this.tracks.get(trackData.id)?.destroy();
+        this.tracks.delete(trackData.id);
+      }
+    });
 
     // 동기화 결과 반환 준비
     const syncedClipIds: string[] = [];
@@ -121,6 +148,8 @@ export class AudioRenderer {
     return {
       syncedTrackIds: Array.from(this.tracks.keys()),
       syncedClipIds: syncedClipIds,
+      failedTrackIds,
+      failedClipIds,
     };
   }
 

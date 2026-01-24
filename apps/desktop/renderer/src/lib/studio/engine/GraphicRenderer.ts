@@ -170,15 +170,37 @@ export class GraphicRenderer {
     }
 
     // 2. 트랙 추가 또는 업데이트
-    const tasks: Promise<void>[] = [];
-    for (const trackData of tracksData) {
+    const failedTrackIds: string[] = [];
+    const failedClipIds: Array<{ trackId: string; clipId: string }> = [];
+
+    const tasks = tracksData.map(async (trackData) => {
       if (this.tracks.has(trackData.id)) {
-        tasks.push(this.updateTrack(trackData));
-      } else {
-        tasks.push(this.addTrack(trackData));
+        const { failedClipIds } = await this.updateTrack(trackData);
+        return { trackId: trackData.id, failedClipIds };
       }
-    }
-    await Promise.all(tasks);
+
+      const { failedClipIds } = await this.addTrack(trackData);
+      return { trackId: trackData.id, failedClipIds };
+    });
+
+    const results = await Promise.allSettled(tasks);
+    results.forEach((result, index) => {
+      const trackData = tracksData[index];
+      if (result.status === 'fulfilled') {
+        result.value.failedClipIds.forEach((clipId) => {
+          failedClipIds.push({ trackId: result.value.trackId, clipId });
+        });
+        return;
+      }
+
+      failedTrackIds.push(trackData.id);
+      trackData.clips.forEach((clip) => {
+        failedClipIds.push({ trackId: trackData.id, clipId: clip.id });
+      });
+      if (this.tracks.has(trackData.id)) {
+        this.removeTrack(trackData.id);
+      }
+    });
 
     // z-index 정렬 적용 (컨테이너 레벨)
     this._sceneContainer.sortChildren();
@@ -194,24 +216,31 @@ export class GraphicRenderer {
     return {
       syncedTrackIds: Array.from(this.tracks.keys()),
       syncedClipIds: syncedClipIds,
+      failedTrackIds,
+      failedClipIds,
     };
   }
 
-  private async addTrack(data: IGraphicTrack) {
+  private async addTrack(
+    data: IGraphicTrack
+  ): Promise<{ failedClipIds: string[] }> {
     const track = new GraphicTrack(this, data);
 
     this._sceneContainer.addChild(track.container);
     this.tracks.set(data.id, track);
     console.log(`[Renderer] 트랙(${data.id}) 추가됨`);
 
-    await track.sync(data);
+    const { failedClipIds } = await track.sync(data);
+    return { failedClipIds };
   }
 
-  private async updateTrack(data: IGraphicTrack) {
+  private async updateTrack(
+    data: IGraphicTrack
+  ): Promise<{ failedClipIds: string[] }> {
     const track = this.tracks.get(data.id);
-    if (!track) return;
+    if (!track) return { failedClipIds: data.clips.map((clip) => clip.id) };
 
-    await track.sync(data);
+    return track.sync(data);
   }
 
   private removeTrack(trackId: string): void {

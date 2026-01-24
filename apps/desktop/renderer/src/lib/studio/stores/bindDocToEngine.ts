@@ -26,10 +26,12 @@ export async function bindDocToEngine(
   /** initial sync */
   await Promise.all([
     syncGraphicTracks(
+      docStore,
       engine,
       doc.tracks.filter((track) => track.type === 'graphic')
     ),
     syncAudioTracks(
+      docStore,
       engine,
       doc.tracks.filter((track) => track.type === 'audio')
     ),
@@ -50,12 +52,14 @@ export async function bindDocToEngine(
       console.log('[Binding] 트랙 변경이 감지되었습니다');
 
       syncGraphicTracks(
+        docStore,
         engine,
         state.tracks.filter((track) => track.type === 'graphic')
       ).catch((e) => {
         console.error('[GraphicRenderer] 트랙 동기화 실패', e);
       });
       syncAudioTracks(
+        docStore,
         engine,
         state.tracks.filter((track) => track.type === 'audio')
       ).catch((e) => {
@@ -80,10 +84,11 @@ export async function bindDocToEngine(
  */
 
 async function syncGraphicTracks(
+  docStore: StoreApi<DocStore>,
   engine: EngineStore,
   tracks: IGraphicTrack[]
 ): Promise<void> {
-  const { syncedTrackIds, syncedClipIds } =
+  const { syncedTrackIds, syncedClipIds, failedTrackIds, failedClipIds } =
     await engine.renderer!.syncTracks(tracks);
 
   engine.applyRendererSyncResult({
@@ -94,12 +99,22 @@ async function syncGraphicTracks(
   console.log(
     `[Renderer] 트랙 동기화 완료 - tracks: ${syncedTrackIds.length}개, clips: ${syncedClipIds.length}개`
   );
+
+  if (failedTrackIds.length > 0) {
+    docStore.getState().removeTrack(failedTrackIds);
+  }
+  if (failedClipIds.length > 0) {
+    failedClipIds.forEach(({ trackId, clipId }) => {
+      docStore.getState().removeClip(trackId, clipId);
+    });
+  }
 }
 async function syncAudioTracks(
+  docStore: StoreApi<DocStore>,
   engine: EngineStore,
   tracks: IAudioTrack[]
 ): Promise<void> {
-  const { syncedTrackIds, syncedClipIds } =
+  const { syncedTrackIds, syncedClipIds, failedTrackIds, failedClipIds } =
     await engine.audioRenderer!.syncTracks(tracks);
 
   engine.applyAudioSyncResult({
@@ -110,4 +125,13 @@ async function syncAudioTracks(
   console.log(
     `[AudioRenderer] 트랙 동기화 완료 - tracks: ${syncedTrackIds.length}개, clips: ${syncedClipIds.length}개`
   );
+
+  if (failedTrackIds.length > 0) {
+    docStore.getState().removeTrack(failedTrackIds);
+  }
+  if (failedClipIds.length > 0) {
+    failedClipIds.forEach(({ trackId, clipId }) => {
+      docStore.getState().removeClip(trackId, clipId);
+    });
+  }
 }

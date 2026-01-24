@@ -28,10 +28,11 @@ export class AudioTrack extends Track<IAudioClip, AudioRenderer, AudioClip> {
     this.updateProps(data);
   }
 
-  async sync(data: IAudioTrack): Promise<void> {
+  async sync(data: IAudioTrack): Promise<{ failedClipIds: string[] }> {
     this.data = data;
     this.updateProps(data);
-    await this.syncClips(data.clips);
+    const { failedClipIds } = await this.syncClips(data.clips);
+    return { failedClipIds };
   }
 
   private updateProps(data: IAudioTrack) {
@@ -59,8 +60,11 @@ export class AudioTrack extends Track<IAudioClip, AudioRenderer, AudioClip> {
    * Override syncClips to inject trackId into clip data.
    * Or we can just let addClip handle new clips, and update existing ones.
    */
-  protected async syncClips(clipsData: IAudioClip[]): Promise<void> {
+  protected async syncClips(
+    clipsData: IAudioClip[]
+  ): Promise<{ failedClipIds: string[] }> {
     const newClipIds = new Set(clipsData.map((c) => c.id));
+    const failedClipIds: string[] = [];
 
     // 1. 제거된 클립 처리
     for (const [clipId, clip] of this.clips) {
@@ -71,18 +75,30 @@ export class AudioTrack extends Track<IAudioClip, AudioRenderer, AudioClip> {
     }
 
     // 2. 추가되거나 업데이트된 클립 처리
-    const tasks: Promise<void>[] = [];
-    for (const clipData of clipsData) {
+    const tasks = clipsData.map(async (clipData) => {
       // trackId 주입
       const dataWithTrackId = { ...clipData, trackId: this.id };
 
       if (this.clips.has(clipData.id)) {
-        this.clips.get(clipData.id)?.update(dataWithTrackId);
-      } else {
-        tasks.push(this.addClip(clipData));
+        try {
+          this.clips.get(clipData.id)?.update(dataWithTrackId);
+        } catch (error) {
+          failedClipIds.push(clipData.id);
+          this.removeClip(clipData.id);
+        }
+        return;
       }
-    }
+
+      try {
+        await this.addClip(clipData);
+      } catch (error) {
+        failedClipIds.push(clipData.id);
+        this.removeClip(clipData.id);
+      }
+    });
     await Promise.all(tasks);
+
+    return { failedClipIds };
   }
 
   destroy(): void {
