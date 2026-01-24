@@ -33,40 +33,41 @@ export class VideoClip extends GraphicClip {
       | undefined;
 
     if (!asset || asset.type !== 'video') {
-      console.warn(`[VideoClip] Asset not found ${this.data.assetId}`);
-      return;
+      throw new Error(
+        `[VideoClip] Asset not found or invalid: ${this.data.assetId}`
+      );
     }
 
-    try {
-      this.element = await this.createVideoElement(asset);
-      this.element.pause();
-      this.element.currentTime = 0;
+    this.element = await this.createVideoElement(asset);
+    this.element.pause();
+    this.element.currentTime = 0;
 
+    try {
       this.proxyElement = await this.createProxyVideoElement(asset);
       if (this.proxyElement) {
         this.proxyElement.pause();
         this.proxyElement.currentTime = 0;
       }
+    } catch (error) {
+      console.warn(`[VideoClip] Proxy init failed for ${this.id}`, error);
+    }
 
-      this.videoSource = new VideoSource({
-        resource: this.element,
+    this.videoSource = new VideoSource({
+      resource: this.element,
+      autoPlay: false,
+    });
+    this.sprite.texture = Texture.from(this.videoSource);
+
+    if (this.proxyElement) {
+      this.proxyVideoSource = new VideoSource({
+        resource: this.proxyElement,
         autoPlay: false,
       });
-      this.sprite.texture = Texture.from(this.videoSource);
-
-      if (this.proxyElement) {
-        this.proxyVideoSource = new VideoSource({
-          resource: this.proxyElement,
-          autoPlay: false,
-        });
-      }
-
-      this.applyTransform(this.data.transforms);
-
-      console.log(`[VideoClip] VideoClip(${this.id}) initialized`);
-    } catch (error) {
-      console.error(`[VideoClip] Failed to init clip ${this.id}`, error);
     }
+
+    this.applyTransform(this.data.transforms);
+
+    console.log(`[VideoClip] VideoClip(${this.id}) initialized`);
   }
 
   // 수동 업데이트

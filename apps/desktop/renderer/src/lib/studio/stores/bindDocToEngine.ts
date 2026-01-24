@@ -2,6 +2,7 @@ import type { StoreApi } from 'zustand/vanilla';
 import type { DocStore } from './docStore';
 import type { EngineStore } from './engineStore';
 import isEqual from 'fast-deep-equal';
+import { toast } from 'sonner';
 import type {
   IAudioTrack,
   IGraphicTrack,
@@ -57,6 +58,9 @@ export async function bindDocToEngine(
         state.tracks.filter((track) => track.type === 'graphic')
       ).catch((e) => {
         console.error('[GraphicRenderer] 트랙 동기화 실패', e);
+        toast.error('Graphic sync failed', {
+          description: 'Renderer sync error occurred',
+        });
       });
       syncAudioTracks(
         docStore,
@@ -64,6 +68,9 @@ export async function bindDocToEngine(
         state.tracks.filter((track) => track.type === 'audio')
       ).catch((e) => {
         console.error('[AudioRenderer] 트랙 동기화 실패', e);
+        toast.error('Audio sync failed', {
+          description: 'Audio renderer sync error occurred',
+        });
       });
     }
   });

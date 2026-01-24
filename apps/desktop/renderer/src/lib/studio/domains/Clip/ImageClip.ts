@@ -22,18 +22,18 @@ export class ImageClip extends GraphicClip {
     const asset = this.renderer
       .getDoc()
       .assets.find((a: any) => a.id === this.data.assetId) as IImageAsset;
-    if (!asset || asset.type !== 'image') return;
-
-    try {
-      this.element = await this.createImageElement(asset);
-      this.sprite.texture = Texture.from(this.element);
-
-      this.applyTransform(this.data.transforms);
-
-      console.log(`[ImageClip] ImageClip(${this.id}) initialized`);
-    } catch (e) {
-      console.error(e);
+    if (!asset || asset.type !== 'image') {
+      throw new Error(
+        `[ImageClip] Asset not found or invalid: ${this.data.assetId}`
+      );
     }
+
+    this.element = await this.createImageElement(asset);
+    this.sprite.texture = Texture.from(this.element);
+
+    this.applyTransform(this.data.transforms);
+
+    console.log(`[ImageClip] ImageClip(${this.id}) initialized`);
   }
 
   update(data: IImageClip): void {
