@@ -102,7 +102,7 @@ export type DocStore = DocState & DocActions;
 export const createDocStore = (initialProject?: IProject) => {
   const project = initialProject ?? DEFAULT_PROJECT;
 
-  console.log(`[DocStore] Doc 스토어 생성됨`);
+  console.log(`[DocStore] 스토어 생성됨`);
 
   // Helper function to sort tracks by zIndex (descending)
   const sortTracksByZIndex = (tracks: ITrack[]): ITrack[] => {

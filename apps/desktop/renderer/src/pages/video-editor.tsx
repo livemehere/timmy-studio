@@ -1,4 +1,4 @@
-import { StudioProvider } from '@/lib/studio/contexts/StudioProvider';
+import { StudioProvider } from '@/lib/studio/providers/StudioProvider';
 import { StudioApp } from '@/lib/studio/components';
 import type { IProject } from '@/lib/studio/types/project';
 

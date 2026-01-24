@@ -1,9 +1,9 @@
 import { useRef } from 'react';
-import { useBindRenderer } from '@/lib/studio/hooks/useBindRenderer';
+import { useMountRenderer } from '@/lib/studio/hooks/useMountRenderer';
 
 export function PreviewRenderer() {
   const parentRef = useRef<HTMLDivElement | null>(null);
-  useBindRenderer(parentRef);
+  useMountRenderer(parentRef);
 
   return (
     <div className="relative w-full h-[calc(100%-40px)] flex items-center justify-center">

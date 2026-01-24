@@ -4,18 +4,9 @@ import { PropertiesPanel } from '@/lib/studio/components/Layout/PropertiesPanel'
 import { TimelinePanel } from '@/lib/studio/components/Layout/TimelinePanel';
 import { ResourcePanel } from '@/lib/studio/components/Layout/ResourcePanel';
 import { useAssetUpdateSubscription } from '@/lib/studio/domains/Asset/hooks/useAssetUpdateSubscription';
-import { useDocStore } from '@/lib/studio/hooks/useStudioStores';
-import { useEffect } from 'react';
 
 export function StudioApp() {
   useAssetUpdateSubscription();
-
-  const docStore = useDocStore((store) => store);
-
-  useEffect(() => {
-    console.log('doc changed');
-    console.log(JSON.stringify(docStore.getProject()));
-  }, [docStore]);
 
   return (
     <div className="h-full p-2 overflow-hidden">

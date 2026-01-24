@@ -17,6 +17,7 @@ export interface EngineState {
   // AudioRenderer sync state (Audio 객체 접근용)
   syncedAudioTrackIds: string[];
   syncedAudioClipIds: string[];
+  isRendererReady: boolean;
   isAudioReady: boolean;
 }
 
@@ -32,12 +33,13 @@ export interface EngineActions {
     clipIds: string[];
   }) => void;
   setAudioReady: (ready: boolean) => void;
+  setRendererReady: (ready: boolean) => void;
 }
 
 export type EngineStore = EngineState & EngineActions;
 
 export const createEngineStore = (docGetter: DocGetter) => {
-  console.group('[EngineStore] Engine 스토어 생성됨.');
+  console.group('[EngineStore] 스토어 생성됨.');
 
   const initialProject = docGetter();
   const timer = new Timer(initialProject.settings.duration);
@@ -67,6 +69,7 @@ export const createEngineStore = (docGetter: DocGetter) => {
     syncedAudioTrackIds: [],
     syncedAudioClipIds: [],
     isAudioReady: false,
+    isRendererReady: false,
 
     // ...existing code...
 
@@ -99,6 +102,7 @@ export const createEngineStore = (docGetter: DocGetter) => {
         syncedAudioTrackIds: [],
         syncedAudioClipIds: [],
         isAudioReady: false,
+        isRendererReady: false,
       });
     },
     applyRendererSyncResult: ({ trackIds, clipIds }) => {
@@ -115,6 +119,9 @@ export const createEngineStore = (docGetter: DocGetter) => {
       });
     },
 
+    setRendererReady: (ready) => {
+      set({ isRendererReady: ready });
+    },
     setAudioReady: (ready) => {
       set({ isAudioReady: ready });
     },

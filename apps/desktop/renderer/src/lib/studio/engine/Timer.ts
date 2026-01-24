@@ -19,7 +19,7 @@ export class Timer {
   constructor(duration: number) {
     this.durationMs$.next(duration);
     console.log(
-      `[Timer] 생성됨 - ${duration} ms (${(duration / 1000).toFixed(2)}s)`
+      `[Timer] 인스턴스 생성됨 - ${duration} ms (${(duration / 1000).toFixed(2)}s)`
     );
   }
 

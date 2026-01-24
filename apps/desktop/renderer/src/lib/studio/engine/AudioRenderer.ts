@@ -19,16 +19,13 @@ export class AudioRenderer {
     public timer: Timer,
     public getDoc: DocGetter
   ) {
-    console.log('[AudioRenderer] Created');
-
-    // AudioContext 생성 (브라우저 호환성 고려)
-    const AudioContextClass =
-      window.AudioContext || (window as any).webkitAudioContext;
-    this.audioContext = new AudioContextClass();
+    this.audioContext = new AudioContext();
 
     // Master Node 생성
     this.masterNode = this.audioContext.createGain();
     this.masterNode.connect(this.audioContext.destination);
+
+    console.log('[AudioRenderer] 인스턴스 생성됨');
 
     // [DEBUG]
     // console.log('[AudioRenderer] Master Node connected to destination');
@@ -78,12 +75,11 @@ export class AudioRenderer {
     this.lastState = { isPlaying, currentMs };
   }
 
-  async init(): Promise<void> {
+  async init() {
     if (this.audioContext.state === 'suspended') {
       await this.audioContext.resume();
     }
     this.isInitialized = true;
-    console.log('[AudioRenderer] Initialized');
   }
 
   // 데이터 동기화

@@ -21,8 +21,8 @@ export class GraphicRenderer {
   static readonly LABELS = {
     SCENE_CONTAINER: 'SCENE_CONTAINER',
   };
-  private _app: Application;
-  private _sceneContainer: Container;
+  private _app!: Application;
+  private _sceneContainer!: Container;
   tracks = new Map<string, GraphicTrack>();
 
   /** seek 할 때 사용할 모드 (when editing : proxy, exporting : origin) */
@@ -41,19 +41,17 @@ export class GraphicRenderer {
   private _lastCurrentMs = 0;
 
   constructor(timer: Timer, docGetter: DocGetter) {
-    console.log('[Renderer] 생성됨');
     this.timer = timer;
     this.getDoc = docGetter;
+    console.log('[GraphicRenderer] 인스턴스 생성됨');
+  }
 
-    /** PIXI init */
+  async init() {
     this._app = new Application();
     this._sceneContainer = new Container();
     this._sceneContainer.label = GraphicRenderer.LABELS.SCENE_CONTAINER;
     this._app.stage.addChild(this._sceneContainer);
-  }
 
-  /** 부모 요소를 받아 Pixi Application을 초기화하고 렌더 루프를 시작합니다. */
-  async init(parent: HTMLDivElement): Promise<void> {
     const { settings } = this.getDoc();
     await this._app.init({
       width: settings.width,
@@ -61,8 +59,8 @@ export class GraphicRenderer {
       background: settings.background,
       resolution: 1,
       autoDensity: false,
-      resizeTo: undefined,
     });
+    this._app.ticker.maxFPS = settings.frameRate;
 
     // Canvas 스타일 적용
     const canvas = this._app.canvas;
@@ -72,33 +70,39 @@ export class GraphicRenderer {
 
     const aspectRatio = settings.width / settings.height;
     if (aspectRatio > 1) {
-      canvas.style.width = 'auto';
+      canvas.style.width = '100%';
       canvas.style.height = 'auto';
     } else {
       canvas.style.width = 'auto';
-      canvas.style.height = 'auto';
+      canvas.style.height = '100%';
     }
 
-    // 부모 요소에 canvas 추가
-    parent.appendChild(canvas);
-
-    this._app.ticker.maxFPS = settings.frameRate;
-
-    this.startLoop();
-    this._isInitialized = true;
     if (import.meta.env.DEV) {
       initDevtools({ app: this._app });
     }
 
+    this._isInitialized = true;
+
     console.log(
-      `[Renderer] 초기화 완료 (${settings.width}x${settings.height})`
+      `[GraphicRenderer] Pixi 초기화 (${settings.width}x${settings.height}) - FPS: ${settings.frameRate}`
     );
+
+    this.startLoop();
+  }
+
+  /** DOM 에 마운트합니다. */
+  mount(parent: HTMLDivElement) {
+    // 부모 요소에 canvas 추가
+    parent.appendChild(this._app.canvas);
   }
 
   /** 렌더러를 정리하고 메모리를 해제합니다. */
   destroy(): void {
     if (!this._isInitialized) return;
-    if (!this._app || !this._app.stage) return;
+    // if (!this._app || !this._app.stage) return;
+
+    // 부모 요소에서 canvas 제거
+    this._app.canvas.remove();
 
     // 모든 트랙 정리
     for (const trackId of this.tracks.keys()) {
@@ -220,10 +224,6 @@ export class GraphicRenderer {
     console.log(`[Renderer] 트랙(${trackId}) 제거됨`);
   }
 
-  // --------------------------------------------------------------------------
-  // 렌더링 루프 (Rendering Loop)
-  // --------------------------------------------------------------------------
-
   private startLoop(): void {
     console.log('[Renderer] 렌더 루프 시작');
     this._app.ticker.add(() => {
@@ -234,7 +234,11 @@ export class GraphicRenderer {
         track.tick(ctx);
       }
 
+      // timer.seekAndWait(ms) -> waitForSeekSettled(ms) 호출되면, promise 가 채워지고, 매틱마다 체크
+      // export 하는 과정이 아면면 그냥 넘어감.
       this.maybeResolveSeekWait(ctx.isSeeking);
+
+      // 다음 프레임에 사용될, 현재 틱 상태 저장
       this.commitFrameContext(ctx);
     });
   }
