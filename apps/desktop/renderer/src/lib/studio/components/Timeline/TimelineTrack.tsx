@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { TimelineClip } from '@/lib/studio/components/Timeline/TimelineClip';
 import { useDocStore, useInteractionStore } from '../../hooks/useStudioStores';
 import { ContextMenu } from '@/components/ContextMenu';
-import { useToast } from '@/components/Toast';
+import { toast } from 'sonner';
 
 function TrackButton({
   icon: IconComp,
@@ -59,8 +59,6 @@ export function TimelineTrack({
   const setLastClickedTime = useInteractionStore(
     (state) => state.setLastClickedTime
   );
-
-  const toast = useToast();
 
   const [contextMenuPosition, setContextMenuPosition] = react.useState<
     number | null
@@ -140,7 +138,9 @@ export function TimelineTrack({
 
       if (hasOverlap) {
         console.error('[TimelineTrack] Cannot paste: clip would overlap');
-        toast.error('Cannot paste', 'Clip would overlap with existing clip');
+        toast.error('Cannot paste', {
+          description: 'Clip would overlap with existing clip',
+        });
         return;
       }
 
@@ -186,7 +186,9 @@ export function TimelineTrack({
         const targetTrack = tracks.find((t) => t.id === newClip.trackId);
         if (!targetTrack) {
           console.error('[TimelineTrack] Track not found:', newClip.trackId);
-          toast.error('Cannot paste', 'Original track not found');
+          toast.error('Cannot paste', {
+            description: 'Original track not found',
+          });
           return;
         }
 
@@ -199,10 +201,9 @@ export function TimelineTrack({
 
         if (hasOverlap) {
           console.error('[TimelineTrack] Cannot paste: clips would overlap');
-          toast.error(
-            'Cannot paste',
-            'Clips would overlap with existing clips'
-          );
+          toast.error('Cannot paste', {
+            description: 'Clips would overlap with existing clips',
+          });
           return;
         }
       }

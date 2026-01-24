@@ -9,7 +9,7 @@ import {
 } from '../../hooks/useStudioStores';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { useToast } from '@/components/Toast';
+import { toast } from 'sonner';
 
 const MIN_PIXELS_PER_SECOND = 2;
 const MAX_PIXELS_PER_SECOND = 100;
@@ -42,8 +42,6 @@ export function TimelinePanel() {
   const setClipboard = useInteractionStore((state) => state.setClipboard);
   const lastClickedTime = useInteractionStore((state) => state.lastClickedTime);
   const activeTrackId = useDocStore((state) => state.activeTrackId);
-
-  const toast = useToast();
 
   // Backspace 또는 Delete 키로 선택된 클립 삭제
   useHotkeys('backspace, delete', () => {
@@ -154,7 +152,7 @@ export function TimelinePanel() {
       clipDataArray.length === 1
         ? 'Clip copied'
         : `${clipDataArray.length} clips copied`,
-      'Press ⌘V to paste'
+      { description: 'Press ⌘V to paste' }
     );
   });
 
@@ -214,7 +212,7 @@ export function TimelinePanel() {
       clipDataArray.length === 1
         ? 'Clip cut'
         : `${clipDataArray.length} clips cut`,
-      'Press ⌘V to paste'
+      { description: 'Press ⌘V to paste' }
     );
   });
 
@@ -258,7 +256,9 @@ export function TimelinePanel() {
 
       if (hasOverlap) {
         console.error('[TimelinePanel] Cannot paste: clip would overlap');
-        toast.error('Cannot paste', 'Clip would overlap with existing clip');
+        toast.error('Cannot paste', {
+          description: 'Clip would overlap with existing clip',
+        });
         return;
       }
 
@@ -304,7 +304,9 @@ export function TimelinePanel() {
         const targetTrack = tracks.find((t) => t.id === newClip.trackId);
         if (!targetTrack) {
           console.error('[TimelinePanel] Track not found:', newClip.trackId);
-          toast.error('Cannot paste', 'Original track not found');
+          toast.error('Cannot paste', {
+            description: 'Original track not found',
+          });
           return;
         }
 
@@ -317,10 +319,9 @@ export function TimelinePanel() {
 
         if (hasOverlap) {
           console.error('[TimelinePanel] Cannot paste: clips would overlap');
-          toast.error(
-            'Cannot paste',
-            'Clips would overlap with existing clips'
-          );
+          toast.error('Cannot paste', {
+            description: 'Clips would overlap with existing clips',
+          });
           return;
         }
       }

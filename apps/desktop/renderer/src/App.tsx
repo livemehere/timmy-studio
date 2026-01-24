@@ -3,7 +3,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Suspense } from 'react';
 import { AppRoutes } from './routes';
 import { Spinner } from './components/Spinner';
-import { ToastProvider } from './components/Toast';
+import { Toaster } from './components/ui/sonner';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,18 +17,17 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <ReactQueryDevtools initialIsOpen={false} />
-        <Suspense
-          fallback={
-            <div className="h-full flex items-center justify-center">
-              <Spinner />
-            </div>
-          }
-        >
-          <AppRoutes />
-        </Suspense>
-      </ToastProvider>
+      <ReactQueryDevtools initialIsOpen={false} />
+      <Suspense
+        fallback={
+          <div className="h-full flex items-center justify-center">
+            <Spinner />
+          </div>
+        }
+      >
+        <Toaster />
+        <AppRoutes />
+      </Suspense>
     </QueryClientProvider>
   );
 }

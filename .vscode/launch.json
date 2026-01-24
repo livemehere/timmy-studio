@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:timmy-studio}/apps/desktop/swift",
+            "name": "Debug recorder-cli (apps/desktop/swift)",
+            "target": "recorder-cli",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug recorder-cli (apps/desktop/swift)"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:timmy-studio}/apps/desktop/swift",
+            "name": "Release recorder-cli (apps/desktop/swift)",
+            "target": "recorder-cli",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release recorder-cli (apps/desktop/swift)"
+        }
+    ]
+}

@@ -17,8 +17,8 @@ export class AudioClip extends Clip {
 
   // Audio Graph - MediaElement 방식 (대용량 파일 스트리밍 지원)
   private audioElement: HTMLAudioElement | null = null;
-  private mediaSourceNode: MediaElementAudioSourceNode | null = null;
   private gainNode: GainNode | null = null;
+  private mediaSourceNode: MediaElementAudioSourceNode | null = null;
 
   public get outputNode(): GainNode | null {
     return this.gainNode;
