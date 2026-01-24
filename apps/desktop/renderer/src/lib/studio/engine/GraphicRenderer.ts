@@ -52,11 +52,10 @@ export class GraphicRenderer {
     this._app.stage.addChild(this._sceneContainer);
   }
 
-  /** 캔버스를 받아 Pixi Application을 초기화하고 렌더 루프를 시작합니다. */
-  async init(canvas: HTMLCanvasElement): Promise<void> {
+  /** 부모 요소를 받아 Pixi Application을 초기화하고 렌더 루프를 시작합니다. */
+  async init(parent: HTMLDivElement): Promise<void> {
     const { settings } = this.getDoc();
     await this._app.init({
-      canvas,
       width: settings.width,
       height: settings.height,
       background: settings.background,
@@ -64,6 +63,25 @@ export class GraphicRenderer {
       autoDensity: false,
       resizeTo: undefined,
     });
+
+    // Canvas 스타일 적용
+    const canvas = this._app.canvas;
+    canvas.style.display = 'block';
+    canvas.style.maxWidth = '100%';
+    canvas.style.maxHeight = '100%';
+
+    const aspectRatio = settings.width / settings.height;
+    if (aspectRatio > 1) {
+      canvas.style.width = 'auto';
+      canvas.style.height = 'auto';
+    } else {
+      canvas.style.width = 'auto';
+      canvas.style.height = 'auto';
+    }
+
+    // 부모 요소에 canvas 추가
+    parent.appendChild(canvas);
+
     this._app.ticker.maxFPS = settings.frameRate;
 
     this.startLoop();

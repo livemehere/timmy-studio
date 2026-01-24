@@ -1,17 +1,15 @@
 import { type RefObject, useEffect } from 'react';
 import { useEngineStore } from '@/lib/studio/hooks/useStudioStores';
 
-export function useBindRenderer(
-  canvasRef: RefObject<HTMLCanvasElement | null>
-) {
+export function useBindRenderer(parentRef: RefObject<HTMLDivElement | null>) {
   const renderer = useEngineStore((state) => state.renderer);
   const audioRenderer = useEngineStore((state) => state.audioRenderer);
   const setAudioReady = useEngineStore((state) => state.setAudioReady);
 
   useEffect(() => {
-    if (!renderer || !canvasRef.current) return;
+    if (!renderer || !parentRef.current) return;
 
-    renderer.init(canvasRef.current).catch((e: unknown) => {
+    renderer.init(parentRef.current).catch((e: unknown) => {
       console.error('[PreviewRenderer] renderer init error', e);
     });
     return () => {
