@@ -4,9 +4,21 @@ import { PropertiesPanel } from '@/lib/studio/components/Layout/PropertiesPanel'
 import { TimelinePanel } from '@/lib/studio/components/Layout/TimelinePanel';
 import { ResourcePanel } from '@/lib/studio/components/Layout/ResourcePanel';
 import { useAssetUpdateSubscription } from '@/lib/studio/domains/Asset/hooks/useAssetUpdateSubscription';
+import { useDocStore } from '../hooks/useStudioStores';
+import { useEffect } from 'react';
+import { runtimeDebugObj } from '@/utils/gui';
 
 export function StudioApp() {
   useAssetUpdateSubscription();
+
+  const doc = useDocStore((state) => state);
+
+  useEffect(() => {
+    if (runtimeDebugObj.autoSave) {
+      localStorage.setItem('autosave-doc', JSON.stringify(doc.getProject()));
+    }
+    console.log('doc changed');
+  }, [doc]);
 
   return (
     <div className="h-full p-2 overflow-hidden">

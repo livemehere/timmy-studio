@@ -3,43 +3,38 @@ import { StudioApp } from '@/lib/studio/components';
 import type { IProject } from '@/lib/studio/types/project';
 
 const mock: IProject = {
-  id: 'fe52',
+  id: '0',
   name: 'sample project',
   settings: {
     width: 720,
     height: 1280,
     frameRate: 30,
     sampleRate: 44100,
-    duration: 92939.5,
+    duration: 1000 * 60,
     background: '#000000',
   },
   metadata: {
-    createdAt: '2026-01-03T04:25:52.647Z',
-    updatedAt: '2026-01-03T04:25:52.647Z',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
   tracks: [],
-  assets: [
-    {
-      id: '6d8b3b13',
-      name: '신분증.png',
-      filePath: '/path/to/sample-media.png',
-      metadata: {
-        size: 5995745,
-        createdAt: '2025-01-25T07:03:05.310Z',
-        width: 2653,
-        height: 1669,
-        codec: 'png',
-        frameRate: 25,
-      },
-      type: 'image',
-      thumbnailPath: '/path/to/sample-media.png',
-    },
-  ],
+  assets: [],
 };
+
+let autoSaved: IProject | null = null;
+try {
+  const autoSavedStr = window.localStorage.getItem('autosave-doc');
+  if (!autoSavedStr) throw new Error('No autosave data');
+  autoSaved = JSON.parse(autoSavedStr) as IProject;
+} catch (e) {
+  autoSaved = null;
+}
+
+const initialProject = autoSaved || mock;
 
 export default function VideoEditorPage() {
   return (
-    <StudioProvider initialProject={mock}>
+    <StudioProvider initialProject={initialProject}>
       <StudioApp />
     </StudioProvider>
   );
