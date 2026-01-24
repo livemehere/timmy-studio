@@ -1,6 +1,6 @@
 import { createStore } from 'zustand/vanilla';
 import type { IAsset } from '@/lib/studio/domains/Asset/types';
-import { produce } from 'immer';
+import { produce, type WritableDraft } from 'immer';
 import { computeNextProjectDurationMs } from '@/lib/studio/utils/projectDuration';
 import type { IProject } from '../types/project';
 import type { ITrack } from '../domains/Track/types';
@@ -95,6 +95,9 @@ export interface DocActions {
 
   // Reset
   reset: () => void;
+
+  // Batch
+  batch: (fn: (draft: WritableDraft<DocStore>) => void) => void;
 }
 
 export type DocStore = DocState & DocActions;
@@ -412,6 +415,18 @@ export const createDocStore = (initialProject?: IProject) => {
           tracks: project.tracks,
           assets: project.assets,
           activeTrackId: null,
+        });
+      },
+      batch: (fn) => {
+        const state = get();
+        const nextState = produce(state, (draft) => {
+          fn(draft);
+        });
+
+        const sortedTracks = sortTracksByZIndex(nextState.tracks);
+        set({
+          ...nextState,
+          tracks: sortedTracks,
         });
       },
     };

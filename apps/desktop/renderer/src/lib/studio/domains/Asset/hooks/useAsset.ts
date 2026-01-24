@@ -31,8 +31,8 @@ function hasTimeOverlap(
 
 export function useAsset(asset: IAsset) {
   const { docStore } = useStudioStores();
-  const addTrackToDoc = useDocStore((state) => state.addTrack);
   const addClipToDoc = useDocStore((state) => state.addClip);
+  const batchDoc = useDocStore((state) => state.batch);
   const tracks = useDocStore((state) => state.tracks);
   const settings = useDocStore((state) => state.settings);
   const timer = useEngineStore((state) => state.timer);
@@ -84,6 +84,7 @@ export function useAsset(asset: IAsset) {
     const duration = clip.endTime - clip.startTime;
 
     let targetTrack: ITrack;
+    let createdNewTrack = false;
     let newStartTime: number;
 
     if (options.trackId) {
@@ -163,11 +164,11 @@ export function useAsset(asset: IAsset) {
           '[useAsset] All existing tracks have overlap, creating new track'
         );
         targetTrack = Track.create(trackType);
+        createdNewTrack = true;
         if (tracks.length > 0) {
           const minZIndex = Math.min(...tracks.map((t) => t.zIndex));
           targetTrack.zIndex = minZIndex - 1;
         }
-        addTrackToDoc(targetTrack);
       }
     } else {
       // ========== Layers 버튼: 새 트랙 생성 후 startTime 0에 배치 ==========
@@ -183,11 +184,11 @@ export function useAsset(asset: IAsset) {
       );
 
       targetTrack = Track.create(Track.AssetTypeToTrackType(asset.type));
+      createdNewTrack = true;
       if (tracks.length > 0) {
         const minZIndex = Math.min(...tracks.map((t) => t.zIndex));
         targetTrack.zIndex = minZIndex - 1;
       }
-      addTrackToDoc(targetTrack);
     }
 
     // 새로운 시작/종료 시간 설정
@@ -198,6 +199,14 @@ export function useAsset(asset: IAsset) {
       trackId: targetTrack.id,
       clipTiming: { start: clip.startTime, end: clip.endTime, duration },
     });
+
+    if (createdNewTrack) {
+      batchDoc((draft) => {
+        targetTrack.clips = [clip as any];
+        draft.tracks.push(targetTrack);
+      });
+      return;
+    }
 
     addClipToDoc(targetTrack.id, clip as any);
   };
