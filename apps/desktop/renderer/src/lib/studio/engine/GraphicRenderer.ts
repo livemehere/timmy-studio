@@ -1,3 +1,4 @@
+import { initDevtools } from '@pixi/devtools';
 import { Application, Container, Rectangle } from 'pixi.js';
 import type { IGraphicTrack } from '@/lib/studio/domains/Track/types';
 import type { Timer } from '@/lib/studio/engine/Timer';
@@ -10,71 +11,51 @@ import type {
 import { GraphicTrack } from '@/lib/studio/domains/Track/GraphicTrack';
 
 export class GraphicRenderer {
-  // --------------------------------------------------------------------------
-  // 상수 및 상태 속성
-  // --------------------------------------------------------------------------
+  private _isInitialized = false;
+
+  /** 외부 의존성 */
+  timer: Timer;
+  readonly getDoc: DocGetter;
+
+  /** PIXI */
   static readonly LABELS = {
     SCENE_CONTAINER: 'SCENE_CONTAINER',
   };
+  private _app: Application;
+  private _sceneContainer: Container;
+  tracks = new Map<string, GraphicTrack>();
 
-  private _isInitialized = false;
-  private _seekingRenderMode: SeekingRenderMode = 'proxy'; // 탐색 시 렌더링 모드 (proxy 우선)
-
-  // Seek Synchronization State
-  private seekSessionId = 0;
-  private activeSeekWait: {
+  /** seek 할 때 사용할 모드 (when editing : proxy, exporting : origin) */
+  seekingRenderMode: SeekingRenderMode = 'proxy';
+  /** 렌더러 전반으로 seek 완료 처리를 위한 promise 관리객체 */
+  private _seekSessionId = 0;
+  private _activeSeekWait: {
     id: number;
     targetMs: number;
     remainingDirty: number;
     started: boolean;
     resolve: () => void;
   } | null = null;
+  /** 직전 렌더 틱 상태 */
+  private _lastIsPlaying = false;
+  private _lastCurrentMs = 0;
 
-  // Pixi 어플리케이션
-  private app: Application;
-  private sceneContainer: Container;
-
-  // Track 관리
-  public tracks = new Map<string, GraphicTrack>();
-
-  // 렌더링 루프 상태
-  private lastIsPlaying = false;
-  private lastCurrentMs = 0;
-
-  // 외부 의존성
-  public timer: Timer;
-  readonly getDoc: DocGetter;
-
-  // 매니저
-  // public seekSynchronizer: SeekSynchronizer; // REMOVED
-  // public frameExporter: FrameExporter; // REMOVED
-
-  // --------------------------------------------------------------------------
-  // 생성자 (Constructor)
-  // --------------------------------------------------------------------------
   constructor(timer: Timer, docGetter: DocGetter) {
     console.log('[Renderer] 생성됨');
     this.timer = timer;
     this.getDoc = docGetter;
 
-    // Pixi 인스턴스 생성
-    this.app = new Application();
-    this.sceneContainer = new Container();
-    this.sceneContainer.label = GraphicRenderer.LABELS.SCENE_CONTAINER;
-    this.app.stage.addChild(this.sceneContainer);
-
-    // 매니저 초기화
-    // this.frameExporter = new FrameExporter(this.app, docGetter); // REMOVED
+    /** PIXI init */
+    this._app = new Application();
+    this._sceneContainer = new Container();
+    this._sceneContainer.label = GraphicRenderer.LABELS.SCENE_CONTAINER;
+    this._app.stage.addChild(this._sceneContainer);
   }
-
-  // --------------------------------------------------------------------------
-  // 초기화 및 생명주기 (Init & Lifecycle)
-  // --------------------------------------------------------------------------
 
   /** 캔버스를 받아 Pixi Application을 초기화하고 렌더 루프를 시작합니다. */
   async init(canvas: HTMLCanvasElement): Promise<void> {
     const { settings } = this.getDoc();
-    await this.app.init({
+    await this._app.init({
       canvas,
       width: settings.width,
       height: settings.height,
@@ -83,10 +64,14 @@ export class GraphicRenderer {
       autoDensity: false,
       resizeTo: undefined,
     });
-    this.app.ticker.maxFPS = settings.frameRate;
+    this._app.ticker.maxFPS = settings.frameRate;
 
     this.startLoop();
     this._isInitialized = true;
+    if (import.meta.env.DEV) {
+      initDevtools({ app: this._app });
+    }
+
     console.log(
       `[Renderer] 초기화 완료 (${settings.width}x${settings.height})`
     );
@@ -95,7 +80,7 @@ export class GraphicRenderer {
   /** 렌더러를 정리하고 메모리를 해제합니다. */
   destroy(): void {
     if (!this._isInitialized) return;
-    if (!this.app || !this.app.stage) return;
+    if (!this._app || !this._app.stage) return;
 
     // 모든 트랙 정리
     for (const trackId of this.tracks.keys()) {
@@ -104,12 +89,12 @@ export class GraphicRenderer {
     this.tracks.clear();
 
     // 씬 컨테이너 정리
-    if (this.sceneContainer) {
-      this.sceneContainer.destroy({ children: true });
+    if (this._sceneContainer) {
+      this._sceneContainer.destroy({ children: true });
     }
 
     // Pixi App 정리
-    this.app.destroy(true, {
+    this._app.destroy(true, {
       children: true,
       texture: true,
       textureSource: true,
@@ -126,52 +111,38 @@ export class GraphicRenderer {
     return this._isInitialized;
   }
 
-  get seekingRenderMode(): SeekingRenderMode {
-    return this._seekingRenderMode;
-  }
-
-  set seekingRenderMode(mode: SeekingRenderMode) {
-    this._seekingRenderMode = mode;
-  }
-
   get currentSeekSessionId(): number {
-    return this.seekSessionId;
+    return this._seekSessionId;
   }
 
   resize(width: number, height: number): void {
     if (!this._isInitialized) return;
     if (
-      width === this.app.renderer.width &&
-      height === this.app.renderer.height
+      width === this._app.renderer.width &&
+      height === this._app.renderer.height
     )
       return;
-    this.app.renderer.resize(width, height);
+    this._app.renderer.resize(width, height);
   }
 
   set background(color: string) {
     if (!this._isInitialized) return;
-    if (this.app.renderer.background.color.value === color) return;
-    this.app.renderer.background.color = color;
+    if (this._app.renderer.background.color.value === color) return;
+    this._app.renderer.background.color = color;
   }
 
   set frameRate(frameRate: number) {
     if (!this._isInitialized) return;
-    if (this.app.ticker.maxFPS === frameRate) return;
-    this.app.ticker.maxFPS = frameRate;
+    if (this._app.ticker.maxFPS === frameRate) return;
+    this._app.ticker.maxFPS = frameRate;
   }
-
-  // --------------------------------------------------------------------------
-  // 트랙 및 클립 동기화 (Sync Logic)
-  // - 위임된 메서드들
-  // --------------------------------------------------------------------------
 
   async syncTracks(tracksData: IGraphicTrack[]) {
     console.log(`[Renderer] 트랙 ${tracksData.length}개 동기화 시작`);
-    const trackIds = new Set(tracksData.map((t) => t.id));
 
     // 1. 존재하지 않는 트랙 제거
     for (const trackId of this.tracks.keys()) {
-      if (!trackIds.has(trackId)) {
+      if (!tracksData.some((t) => t.id === trackId)) {
         this.removeTrack(trackId);
       }
     }
@@ -188,7 +159,7 @@ export class GraphicRenderer {
     await Promise.all(tasks);
 
     // z-index 정렬 적용 (컨테이너 레벨)
-    this.sceneContainer.sortChildren();
+    this._sceneContainer.sortChildren();
 
     // 동기화 결과 반환
     const syncedClipIds: string[] = [];
@@ -207,7 +178,7 @@ export class GraphicRenderer {
   private async addTrack(data: IGraphicTrack) {
     const track = new GraphicTrack(this, data);
 
-    this.sceneContainer.addChild(track.container);
+    this._sceneContainer.addChild(track.container);
     this.tracks.set(data.id, track);
     console.log(`[Renderer] 트랙(${data.id}) 추가됨`);
 
@@ -225,7 +196,7 @@ export class GraphicRenderer {
     const track = this.tracks.get(trackId);
     if (!track) return;
 
-    this.sceneContainer.removeChild(track.container);
+    this._sceneContainer.removeChild(track.container);
     track.destroy();
     this.tracks.delete(trackId);
     console.log(`[Renderer] 트랙(${trackId}) 제거됨`);
@@ -237,7 +208,7 @@ export class GraphicRenderer {
 
   private startLoop(): void {
     console.log('[Renderer] 렌더 루프 시작');
-    this.app.ticker.add(() => {
+    this._app.ticker.add(() => {
       const ctx = this.captureTickContext();
 
       // 각 트랙의 클립들에게 틱 위임
@@ -253,8 +224,8 @@ export class GraphicRenderer {
   private captureTickContext(): TickContext {
     const currentTime = this.timer.currentMs;
     const isPlaying = this.timer.isPlaying;
-    const wasPlaying = this.lastIsPlaying;
-    const lastTime = this.lastCurrentMs;
+    const wasPlaying = this._lastIsPlaying;
+    const lastTime = this._lastCurrentMs;
 
     return {
       currentTime,
@@ -267,8 +238,8 @@ export class GraphicRenderer {
   }
 
   private commitFrameContext(ctx: TickContext): void {
-    this.lastIsPlaying = ctx.isPlaying;
-    this.lastCurrentMs = ctx.currentTime;
+    this._lastIsPlaying = ctx.isPlaying;
+    this._lastCurrentMs = ctx.currentTime;
   }
 
   // --------------------------------------------------------------------------
@@ -285,9 +256,9 @@ export class GraphicRenderer {
       return Promise.resolve();
     }
 
-    const id = ++this.seekSessionId;
+    const id = ++this._seekSessionId;
     return new Promise<void>((resolve) => {
-      this.activeSeekWait = {
+      this._activeSeekWait = {
         id,
         targetMs,
         remainingDirty: 0,
@@ -299,7 +270,7 @@ export class GraphicRenderer {
 
   /** 렌더 루프에서 호출되어 Seek 대기 상태를 해제할지 판단합니다. */
   private maybeResolveSeekWait(isSeeking: boolean): void {
-    const wait = this.activeSeekWait;
+    const wait = this._activeSeekWait;
     if (!wait) return;
 
     // 목표 시간에 도달했는지 확인
@@ -312,7 +283,7 @@ export class GraphicRenderer {
 
     // 대기 중인 비동기 작업(remainingDirty)이 없으면 완료 처리
     if (wait.started && wait.remainingDirty === 0) {
-      this.activeSeekWait = null;
+      this._activeSeekWait = null;
       wait.resolve();
     }
   }
@@ -322,7 +293,7 @@ export class GraphicRenderer {
     if (!state.dirty) {
       state.dirty = true;
       state.dirtySessionId = sessionId;
-      const wait = this.activeSeekWait;
+      const wait = this._activeSeekWait;
       if (wait && sessionId != null && wait.id === sessionId) {
         wait.remainingDirty += 1;
       }
@@ -338,7 +309,7 @@ export class GraphicRenderer {
   public clearClipDirty(state: Dirtyable, sessionId: number | null): void {
     if (!state.dirty) return;
 
-    const wait = this.activeSeekWait;
+    const wait = this._activeSeekWait;
     if (
       wait &&
       sessionId != null &&
@@ -353,7 +324,7 @@ export class GraphicRenderer {
 
     // 모든 작업이 완료되었다면 대기 해제
     if (wait && wait.started && wait.remainingDirty === 0) {
-      this.activeSeekWait = null;
+      this._activeSeekWait = null;
       wait.resolve();
     }
   }
@@ -364,7 +335,7 @@ export class GraphicRenderer {
 
   /** 현재 캔버스 화면을 HTMLCanvasElement로 추출합니다. */
   async exportCurrentFrame(): Promise<HTMLCanvasElement> {
-    const canvas = this.app.renderer.extract.canvas(this.app.stage);
+    const canvas = this._app.renderer.extract.canvas(this._app.stage);
     return canvas as unknown as HTMLCanvasElement;
   }
 
@@ -374,8 +345,8 @@ export class GraphicRenderer {
     const width = settings.width;
     const height = settings.height;
 
-    const out = this.app.renderer.extract.pixels({
-      target: this.app.stage,
+    const out = this._app.renderer.extract.pixels({
+      target: this._app.stage,
       frame: new Rectangle(0, 0, width, height),
       resolution: 1,
     });
