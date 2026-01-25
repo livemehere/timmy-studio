@@ -94,6 +94,7 @@ export abstract class Clip<
     }
 
     const wasVisible = this.lastTickVisible;
+    const isFirstTick = this.lastTickTime === null;
     const isVisible = this.shouldRenderAt(ctx.currentTime);
 
     this.lastTickTime = ctx.currentTime;
@@ -102,8 +103,8 @@ export abstract class Clip<
 
     return {
       isVisible,
-      becameVisible: isVisible && !wasVisible,
-      becameHidden: !isVisible && wasVisible,
+      becameVisible: isFirstTick ? isVisible : isVisible && !wasVisible,
+      becameHidden: isFirstTick ? !isVisible : !isVisible && wasVisible,
     };
   }
 

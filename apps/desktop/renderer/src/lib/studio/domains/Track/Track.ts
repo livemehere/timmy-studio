@@ -43,6 +43,7 @@ export abstract class Track<
     if (!this.hasVisibilityState) {
       this.hasVisibilityState = true;
       this.lastVisible = isVisible;
+      console.log('first visible');
       return isVisible;
     }
 

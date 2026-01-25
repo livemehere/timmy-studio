@@ -229,6 +229,9 @@ export class GraphicRenderer extends RendererBase {
     // z-index 정렬 적용 (컨테이너 레벨)
     this._sceneContainer.sortChildren();
 
+    // 동기화 직후 한 프레임 즉시 반영
+    this.renderOnce();
+
     return {
       addedTrackIds,
       updatedTrackIds,
@@ -291,6 +294,23 @@ export class GraphicRenderer extends RendererBase {
       // 다음 프레임에 사용될, 현재 틱 상태 저장
       this.commitFrameContext(ctx);
     });
+  }
+
+  private renderOnce(): void {
+    if (!this._isInitialized) return;
+
+    const ctx = this.captureTickContextFromState(
+      this.timer.currentMs,
+      this.timer.isPlaying
+    );
+
+    for (const track of this.tracks.values()) {
+      track.onTick(ctx);
+    }
+
+    this.maybeResolveSeekWait(ctx.isSeeking);
+    this.commitFrameContext(ctx);
+    this._app.renderer.render(this._app.stage);
   }
 
   /**
