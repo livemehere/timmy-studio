@@ -46,7 +46,7 @@ export class ImageClip extends GraphicClip {
     console.log(`[ImageClip] Clip(${this.id}) destroyed`);
   }
 
-  updateOnTick(_ctx: TickContext): void {
+  tick(_ctx: TickContext): void {
     this.applyTransform(this._data.transforms);
     this.applyEffects();
   }

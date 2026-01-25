@@ -39,7 +39,7 @@ export class ShapeClip extends GraphicClip {
     console.log('ShapeClip destroy called', this.id);
   }
 
-  updateOnTick(_ctx: TickContext): void {
+  tick(_ctx: TickContext): void {
     this.applyTransform((this._data as IShapeClip).transforms);
     this.applyEffects();
   }

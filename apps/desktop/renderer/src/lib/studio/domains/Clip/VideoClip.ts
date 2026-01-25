@@ -84,7 +84,7 @@ export class VideoClip extends GraphicClip {
     console.log(`[VideoClip] Clip(${this.id}) destroyed`);
   }
 
-  updateOnTick(ctx: TickContext): void {
+  tick(ctx: TickContext): void {
     const { currentTime, isPlaying, playStateChanged, isSeeking } = ctx;
 
     // 전 tick 에서 보이지 않았었다면, 이번 프레임이 보이게 된 시점
@@ -105,7 +105,7 @@ export class VideoClip extends GraphicClip {
     this.wasVisible = true;
   }
 
-  protected onHidden(): void {
+  protected onHiddenTick(_ctx: TickContext): void {
     this.pauseVideoClip();
     this.wasVisible = false;
   }

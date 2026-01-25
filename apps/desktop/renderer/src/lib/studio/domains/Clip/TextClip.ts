@@ -42,7 +42,7 @@ export class TextClip extends GraphicClip {
     this.sprite.destroy(true);
   }
 
-  updateOnTick(_ctx: TickContext): void {
+  tick(_ctx: TickContext): void {
     this.applyTransform(this._data.transforms);
   }
 

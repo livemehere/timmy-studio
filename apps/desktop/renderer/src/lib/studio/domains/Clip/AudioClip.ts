@@ -56,15 +56,7 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
     }
   }
 
-  shouldUpdateOnTick(ctx: TickContext): boolean {
-    return this.getTickVisibility(ctx);
-  }
-
-  updateOnTick(_ctx: TickContext): void {
-    // Reserved for time-based audio automation (e.g., volume envelopes)
-  }
-
-  shouldClipTick(_ctx: TickContext): boolean {
+  shouldTick(_ctx: TickContext): boolean {
     return this._data.enabled || this.isPlaying;
   }
 
@@ -104,7 +96,7 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
     }
 
     const { isPlaying, currentTime, playStateChanged, isSeeking } = ctx;
-    const isVisible = this.getTickVisibility(ctx);
+    const isVisible = this.getTickVisibility();
 
     // 1. 재생 상태 변경 or 탐색 시
     if (playStateChanged || isSeeking) {

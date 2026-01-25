@@ -57,9 +57,7 @@ export abstract class Clip<
   abstract destroy(): void;
 
   // Track 에서 흐름을 제어하기 위한 hook
-  abstract shouldUpdateOnTick(ctx: TickContext): boolean;
-  abstract updateOnTick(ctx: TickContext): void;
-  abstract shouldClipTick(ctx: TickContext): boolean;
+  abstract shouldTick(ctx: TickContext): boolean;
 
   // GraphicClip, AudioClip 1단계 상속 레벨에서 구현
   abstract tick(ctx: TickContext): void;
@@ -77,41 +75,55 @@ export abstract class Clip<
     return timeMs >= visibleStart && timeMs < visibleEnd;
   }
 
-  shouldShowAt(timeMs: number): boolean {
+  shouldRenderAt(timeMs: number): boolean {
     return this._data.enabled && this.isInRangeAt(timeMs);
   }
 
-  protected onBecameVisible(_ctx: TickContext): void {
+  // --- Tick lifecycle hooks (Track.tick에서 호출됨) ---
+  onBecameVisible(_ctx: TickContext): void {
     // Optional hook for subclasses
   }
 
-  protected onBecameHidden(_ctx: TickContext): void {
+  onBecameHidden(_ctx: TickContext): void {
     // Optional hook for subclasses
   }
 
-  protected getTickVisibility(ctx: TickContext): boolean {
+  onHidden(_ctx: TickContext): void {
+    // Optional hook for subclasses
+  }
+
+  getTickVisibility(): boolean {
+    return this.lastTickVisible;
+  }
+
+  prepareTick(ctx: TickContext): {
+    isVisible: boolean;
+    becameVisible: boolean;
+    becameHidden: boolean;
+  } {
     if (
       this.lastTickTime === ctx.currentTime &&
       this.lastTickData === this._data
     ) {
-      return this.lastTickVisible;
+      return {
+        isVisible: this.lastTickVisible,
+        becameVisible: false,
+        becameHidden: false,
+      };
     }
 
-    const isVisible = this.shouldShowAt(ctx.currentTime);
     const wasVisible = this.lastTickVisible;
+    const isVisible = this.shouldRenderAt(ctx.currentTime);
 
     this.lastTickTime = ctx.currentTime;
     this.lastTickData = this._data;
     this.lastTickVisible = isVisible;
 
-    if (isVisible && !wasVisible) {
-      this.onBecameVisible(ctx);
-    }
-    if (!isVisible && wasVisible) {
-      this.onBecameHidden(ctx);
-    }
-
-    return isVisible;
+    return {
+      isVisible,
+      becameVisible: isVisible && !wasVisible,
+      becameHidden: !isVisible && wasVisible,
+    };
   }
 
   private static createBaseClipFromAsset(asset: IAsset): IBaseClip {

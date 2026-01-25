@@ -38,7 +38,7 @@ export abstract class Track<
   protected abstract onTrackBecameVisible(): void;
   protected abstract onTrackBecameHidden(): void;
 
-  private getTrackVisibility(): boolean {
+  private handleTrackVisible(): boolean {
     const isVisible = this.isTrackVisible();
     if (!this.hasVisibilityState) {
       this.hasVisibilityState = true;
@@ -107,13 +107,23 @@ export abstract class Track<
 
   /** 렌더링 루프: 소속 클립들의 tick 실행 */
   tick(ctx: TickContext): void {
-    if (!this.getTrackVisibility()) return;
+    if (!this.handleTrackVisible()) return;
     for (const clip of this.clips.values()) {
-      if (!clip.shouldShowAt(ctx.currentTime)) continue;
-      if (clip.shouldUpdateOnTick(ctx)) {
-        clip.updateOnTick(ctx);
+      const visibility = clip.prepareTick(ctx);
+
+      if (visibility.becameVisible) {
+        clip.onBecameVisible(ctx);
       }
-      if (clip.shouldClipTick(ctx)) {
+      if (visibility.becameHidden) {
+        clip.onBecameHidden(ctx);
+      }
+
+      if (!visibility.isVisible) {
+        clip.onHidden(ctx);
+      }
+
+      const shouldTick = clip.shouldTick(ctx);
+      if (shouldTick) {
         clip.tick(ctx);
       }
     }
