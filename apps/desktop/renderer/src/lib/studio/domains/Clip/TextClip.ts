@@ -39,7 +39,7 @@ export class TextClip extends GraphicClip {
       this.underline.destroy();
       this.underline = null;
     }
-    this.sprite.destroy(true);
+    this.container.destroy({ children: true });
   }
 
   override onTick(ctx: TickContext): void {
@@ -66,42 +66,49 @@ export class TextClip extends GraphicClip {
    * It should render at its natural size (based on font) and only be scaled by explicit scaleX/Y.
    */
   protected applyTransform(transforms: ITransform): void {
-    const sprite = this.sprite;
+    const root = this.container;
+    const text = this.text;
+    if (!text) return;
 
-    // 1) anchor
-    // Apply anchor to text for rotation to work correctly
-    const anchorX = transforms.anchorX ?? 0;
-    const anchorY = transforms.anchorY ?? 0;
-    if (this.text) {
-      this.text.anchor.set(anchorX, anchorY);
-    }
+    const contentWidth = text.width;
+    const contentHeight = text.height;
+    const hasSize = contentWidth > 0 && contentHeight > 0;
 
-    // 2) position
-    if (transforms.position) {
-      sprite.x = transforms.position.x;
-      sprite.y = transforms.position.y;
-    }
-
-    // Update zIndex for sorting in container
-    if (this._data.zIndex !== undefined) {
-      sprite.zIndex = this._data.zIndex;
-    }
-
-    // 3) Scale
-    // We intentionally IGNORE transforms.size for scaling purposes.
-    // Text size is determined by fontSize and wordWrapWidth.
-    // We only apply the explicit scale transform.
+    // 1) Scale (ignore transforms.size)
     const userScaleX = transforms.scaleX ?? 1;
     const userScaleY = transforms.scaleY ?? 1;
 
-    sprite.scale.set(userScaleX, userScaleY);
+    root.scale.set(userScaleX, userScaleY);
 
-    // 4) rotation / alpha
+    // 2) pivot (center)
+    if (hasSize) {
+      root.pivot.set(contentWidth / 2, contentHeight / 2);
+    } else {
+      root.pivot.set(0, 0);
+    }
+
+    // 3) position (top-left -> center)
+    if (transforms.position) {
+      if (hasSize) {
+        root.x = transforms.position.x + (contentWidth * userScaleX) / 2;
+        root.y = transforms.position.y + (contentHeight * userScaleY) / 2;
+      } else {
+        root.x = transforms.position.x;
+        root.y = transforms.position.y;
+      }
+    }
+
+    // 4) zIndex
+    if (this._data.zIndex !== undefined) {
+      root.zIndex = this._data.zIndex;
+    }
+
+    // 5) rotation / alpha
     if (transforms.rotation !== undefined) {
-      sprite.rotation = transforms.rotation;
+      root.rotation = transforms.rotation;
     }
     if (transforms.opacity !== undefined) {
-      sprite.alpha = transforms.opacity;
+      root.alpha = transforms.opacity;
     }
   }
 
@@ -153,11 +160,11 @@ export class TextClip extends GraphicClip {
 
     this.updateBackground();
 
-    // 3. Add to Sprite (Order matters: Background -> Text)
+    // 3. Add to Container (Order matters: Background -> Text)
     if (this.background) {
-      this.sprite.addChild(this.background);
+      this.container.addChild(this.background);
     }
-    this.sprite.addChild(this.text);
+    this.container.addChild(this.text);
 
     // 4. Create Selection Bounds
     this.updateSelectionBounds();
@@ -225,7 +232,7 @@ export class TextClip extends GraphicClip {
     if (bgData && typeof bgData === 'object') {
       if (!this.background) {
         this.background = new Graphics();
-        this.sprite.addChildAt(this.background, 0);
+        this.container.addChildAt(this.background, 0);
       }
 
       const paddingX = bgData.paddingX ?? 0;
@@ -261,7 +268,7 @@ export class TextClip extends GraphicClip {
       this.selectionBounds.clear();
     } else {
       this.selectionBounds = new Graphics();
-      this.sprite.addChild(this.selectionBounds);
+      this.container.addChild(this.selectionBounds);
     }
 
     const width = this.text?.width ?? 0;
@@ -284,7 +291,7 @@ export class TextClip extends GraphicClip {
     if (underlineEnabled) {
       if (!this.underline) {
         this.underline = new Graphics();
-        this.sprite.addChild(this.underline);
+        this.container.addChild(this.underline);
       }
 
       this.underline.clear();

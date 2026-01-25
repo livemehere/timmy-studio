@@ -1,12 +1,12 @@
 import { Texture, VideoSource } from 'pixi.js';
 import type { IVideoClip } from './types';
-import { GraphicClip } from './GraphicClip';
+import { SpriteClip } from './SpriteClip';
 import { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
 import type { SeekingRenderMode, TickContext } from '@/lib/studio/engine/types';
 import { toFilePath } from '@/lib/studio/utils/toFilePath';
 import type { IVideoAsset } from '../Asset/types';
 
-export class VideoClip extends GraphicClip {
+export class VideoClip extends SpriteClip {
   readonly type = 'video';
 
   declare protected _data: IVideoClip;
@@ -72,7 +72,7 @@ export class VideoClip extends GraphicClip {
   }
 
   destroy(): void {
-    this.sprite.destroy(true);
+    this.container.destroy({ children: true });
 
     if (this.element) {
       this.cleanupVideoElement(this.element);

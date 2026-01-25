@@ -1,12 +1,12 @@
 import { Texture } from 'pixi.js';
 import type { IImageClip } from './types';
-import { GraphicClip } from './GraphicClip';
+import { SpriteClip } from './SpriteClip';
 import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
 import type { TickContext } from '@/lib/studio/engine/types';
 import { toFilePath } from '@/lib/studio/utils/toFilePath';
 import type { IImageAsset } from '../Asset/types';
 
-export class ImageClip extends GraphicClip {
+export class ImageClip extends SpriteClip {
   readonly type = 'image';
   public _data: IImageClip;
 
@@ -37,7 +37,7 @@ export class ImageClip extends GraphicClip {
   }
 
   destroy(): void {
-    this.sprite.destroy(true);
+    this.container.destroy({ children: true });
 
     if (this.element) {
       this.cleanupImageElement(this.element);

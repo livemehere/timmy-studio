@@ -23,8 +23,8 @@ export class ShapeClip extends GraphicClip {
     this.graphics = new Graphics();
     this.graphics.label = `ShapeClip-${this.id}`;
 
-    // sprite에 graphics를 자식으로 추가
-    this.sprite.addChild(this.graphics);
+    // container에 graphics를 자식으로 추가
+    this.container.addChild(this.graphics);
 
     this.renderShape();
     this.applyTransform((this._data as IShapeClip).transforms);
@@ -35,7 +35,7 @@ export class ShapeClip extends GraphicClip {
       this.graphics.destroy();
       this.graphics = null;
     }
-    this.sprite.destroy(true);
+    this.container.destroy({ children: true });
     console.log('ShapeClip destroy called', this.id);
   }
 
@@ -61,52 +61,60 @@ export class ShapeClip extends GraphicClip {
    * transform.size에 맞게 스케일 적용
    */
   protected applyTransform(transforms: ITransform): void {
-    const sprite = this.sprite;
-    const graphics = this.graphics;
+    const root = this.container;
     const shape = this.shapeData;
+    const contentWidth = shape.width;
+    const contentHeight = shape.height;
+    const hasSize = contentWidth > 0 && contentHeight > 0;
 
-    // 1) anchor - Graphics는 pivot 사용
-    const anchorX = transforms.anchorX ?? 0;
-    const anchorY = transforms.anchorY ?? 0;
-
-    if (graphics) {
-      // Graphics의 pivot을 설정하여 회전 중심점 조정
-      graphics.pivot.set(shape.width * anchorX, shape.height * anchorY);
-    }
-
-    // 2) position
-    if (transforms.position) {
-      sprite.x = transforms.position.x;
-      sprite.y = transforms.position.y;
-    }
-
-    // Update zIndex for sorting in container
-    if ((this._data as IShapeClip).zIndex !== undefined) {
-      sprite.zIndex = (this._data as IShapeClip).zIndex;
-    }
-
-    // 3) base scale (size -> scale)
+    // 1) base scale (size -> scale)
     // shapeData의 width/height를 원본 크기로 간주
     let baseScaleX = 1;
     let baseScaleY = 1;
 
-    if (transforms.size && shape.width > 0 && shape.height > 0) {
-      baseScaleX = transforms.size.width / shape.width;
-      baseScaleY = transforms.size.height / shape.height;
+    if (transforms.size && hasSize) {
+      baseScaleX = transforms.size.width / contentWidth;
+      baseScaleY = transforms.size.height / contentHeight;
     }
 
-    // 4) user scale
+    // 2) user scale
     const userScaleX = transforms.scaleX ?? 1;
     const userScaleY = transforms.scaleY ?? 1;
 
-    sprite.scale.set(baseScaleX * userScaleX, baseScaleY * userScaleY);
+    const scaleX = baseScaleX * userScaleX;
+    const scaleY = baseScaleY * userScaleY;
 
-    // 5) rotation / alpha
+    root.scale.set(scaleX, scaleY);
+
+    // 3) pivot (center)
+    if (hasSize) {
+      root.pivot.set(contentWidth / 2, contentHeight / 2);
+    } else {
+      root.pivot.set(0, 0);
+    }
+
+    // 4) position (top-left -> center)
+    if (transforms.position) {
+      if (hasSize) {
+        root.x = transforms.position.x + (contentWidth * scaleX) / 2;
+        root.y = transforms.position.y + (contentHeight * scaleY) / 2;
+      } else {
+        root.x = transforms.position.x;
+        root.y = transforms.position.y;
+      }
+    }
+
+    // 5) zIndex
+    if ((this._data as IShapeClip).zIndex !== undefined) {
+      root.zIndex = (this._data as IShapeClip).zIndex;
+    }
+
+    // 6) rotation / alpha
     if (transforms.rotation !== undefined) {
-      sprite.rotation = transforms.rotation;
+      root.rotation = transforms.rotation;
     }
     if (transforms.opacity !== undefined) {
-      sprite.alpha = transforms.opacity;
+      root.alpha = transforms.opacity;
     }
   }
 
