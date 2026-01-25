@@ -11,10 +11,8 @@ import type { TickContext } from '@/lib/studio/engine/types';
  * - AudioBuffer 방식: 전체 파일을 메모리에 로드 (1시간 = ~600MB)
  * - MediaElement 방식: 스트리밍으로 재생 (메모리 절약)
  */
-export class AudioClip extends Clip {
+export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
   readonly type = 'audio';
-  public data: IAudioClip;
-  declare public readonly renderer: AudioRenderer;
 
   // Audio Graph - MediaElement 방식 (대용량 파일 스트리밍 지원)
   private audioElement: HTMLAudioElement | null = null;
@@ -50,12 +48,24 @@ export class AudioClip extends Clip {
     console.log(`[AudioClip] Initialized for ${this.id}`);
   }
 
-  update(data: IAudioClip): void {
+  sync(data: IAudioClip): void {
     this.data = data;
     // 볼륨 등 업데이트
     if (this.gainNode) {
       this.gainNode.gain.value = data.volume ?? 1;
     }
+  }
+
+  shouldUpdateOnTick(ctx: TickContext): boolean {
+    return this.shouldRender(ctx.currentTime);
+  }
+
+  updateOnTick(_ctx: TickContext): void {
+    // Reserved for time-based audio automation (e.g., volume envelopes)
+  }
+
+  shouldClipTick(_ctx: TickContext): boolean {
+    return this.data.enabled || this.isPlaying;
   }
 
   destroy(): void {

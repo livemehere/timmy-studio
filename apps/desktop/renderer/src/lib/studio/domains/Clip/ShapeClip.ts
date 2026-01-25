@@ -30,20 +30,6 @@ export class ShapeClip extends GraphicClip {
     this.applyTransform((this.data as IShapeClip).transforms);
   }
 
-  update(data: IGraphicClip): void {
-    this.data = data;
-    this.renderShape();
-    this.applyEffects();
-
-    const curTimeMs = this.renderer.timer.currentMs;
-    const isVisible = data.enabled && this.isVisibleAt(curTimeMs);
-    this.sprite.visible = isVisible;
-    if (isVisible) {
-      this.applyTransform((data as IShapeClip).transforms);
-    }
-    console.log('ShapeClip update called', data);
-  }
-
   destroy(): void {
     if (this.graphics) {
       this.graphics.destroy();
@@ -53,9 +39,21 @@ export class ShapeClip extends GraphicClip {
     console.log('ShapeClip destroy called', this.id);
   }
 
-  protected updateOnTick(_ctx: TickContext): void {
+  updateOnTick(_ctx: TickContext): void {
     this.applyTransform((this.data as IShapeClip).transforms);
     this.applyEffects();
+  }
+
+  protected onUpdateData(
+    _prevData: IGraphicClip,
+    _nextData: IGraphicClip
+  ): void {
+    this.renderShape();
+    this.applyEffects();
+  }
+
+  protected onUpdateVisible(_currentTime: number): void {
+    this.applyTransform((this.data as IShapeClip).transforms);
   }
 
   /**

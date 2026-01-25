@@ -19,7 +19,12 @@ import type {
 import type { AudioRenderer } from '@/lib/studio/engine/AudioRenderer';
 import type { TrackType } from '@/lib/studio/domains/Track/types';
 
-export abstract class Clip {
+export abstract class Clip<
+  TClipData extends IClip = IClip,
+  TRenderer extends GraphicRenderer | AudioRenderer =
+    | GraphicRenderer
+    | AudioRenderer,
+> {
   static readonly DEFAULT_CLIP_DURATION_MS = 3000; //ms
   static readonly DEFAULT_TRANSFORM_SIZE = {
     width: 150,
@@ -28,16 +33,13 @@ export abstract class Clip {
 
   abstract readonly type: ClipType;
   readonly id: string;
-  readonly renderer: GraphicRenderer | AudioRenderer;
+  readonly renderer: TRenderer;
 
   dirty: boolean = false;
   dirtySessionId: number | null = null;
-  data: IClip;
+  data: TClipData;
 
-  protected constructor(
-    renderer: GraphicRenderer | AudioRenderer,
-    data: IClip
-  ) {
+  protected constructor(renderer: TRenderer, data: TClipData) {
     this.id = data.id;
     this.renderer = renderer;
     this.data = data;
@@ -46,12 +48,17 @@ export abstract class Clip {
   abstract init(): Promise<void>;
   abstract destroy(): void;
 
+  // Track 에서 흐름을 제어하기 위한 hook
+  abstract shouldUpdateOnTick(ctx: TickContext): boolean;
+  abstract updateOnTick(ctx: TickContext): void;
+  abstract shouldClipTick(ctx: TickContext): boolean;
+
   // GraphicClip, AudioClip 1단계 상속 레벨에서 구현
   abstract tick(ctx: TickContext): void;
   // 2단계 상속 클래스들에서 구현 (ShapeClip, TextClip, VideoClip, ImageClip...)
-  abstract update(data: IClip): void;
+  abstract sync(newData: TClipData): void;
 
-  isVisibleAt(timeMs: number): boolean {
+  protected isVisibleAt(timeMs: number): boolean {
     const trimStart = 'trimStart' in this.data ? (this.data.trimStart ?? 0) : 0;
     const trimEnd = 'trimEnd' in this.data ? (this.data.trimEnd ?? 0) : 0;
 
@@ -61,13 +68,9 @@ export abstract class Clip {
     return timeMs >= visibleStart && timeMs < visibleEnd;
   }
 
-  shouldRender(timeMs: number): boolean {
+  protected shouldRender(timeMs: number): boolean {
     return this.data.enabled && this.isVisibleAt(timeMs);
   }
-
-  // --------------------------------------------------------------------------
-  // Static Factory & Utility Methods
-  // --------------------------------------------------------------------------
 
   private static createBaseClipFromAsset(asset: IAsset): IBaseClip {
     return {
@@ -201,7 +204,7 @@ export abstract class Clip {
     };
   }
 
-  static ClipTypeToTrackType(type: ClipType): TrackType {
+  static convertClipTypeToTrackType(type: ClipType): TrackType {
     if (type === 'audio') return 'audio';
     return 'graphic';
   }

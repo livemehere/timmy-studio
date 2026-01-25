@@ -70,36 +70,6 @@ export class VideoClip extends GraphicClip {
     console.log(`[VideoClip] VideoClip(${this.id}) initialized`);
   }
 
-  // 수동 업데이트
-  update(data: IVideoClip): void {
-    this.data = data;
-
-    const curTimeMs = this.renderer.timer.currentMs;
-    const isVisible = this.shouldRender(curTimeMs);
-
-    this.sprite.visible = isVisible;
-
-    if (!isVisible) {
-      this.pauseVideoClip();
-      return;
-    }
-
-    this.applyTransform(data.transforms);
-    this.applyEffects();
-
-    // Sync time
-    const origin = this.element;
-    const proxy = this.proxyElement ?? null;
-    const clipRelativeTime = this.calcClipRelativeTime(data, curTimeMs);
-
-    if (origin) {
-      origin.currentTime = clipRelativeTime;
-      if (proxy) {
-        proxy.currentTime = clipRelativeTime;
-      }
-    }
-  }
-
   destroy(): void {
     this.sprite.destroy(true);
 
@@ -113,7 +83,7 @@ export class VideoClip extends GraphicClip {
     console.log(`[VideoClip] Clip(${this.id}) destroyed`);
   }
 
-  protected updateOnTick(ctx: TickContext): void {
+  updateOnTick(ctx: TickContext): void {
     const { currentTime, isPlaying, playStateChanged, isSeeking } = ctx;
 
     // 전 tick 에서 보이지 않았었다면, 이번 프레임이 보이게 된 시점
@@ -137,6 +107,26 @@ export class VideoClip extends GraphicClip {
   protected onHidden(): void {
     this.pauseVideoClip();
     this.wasVisible = false;
+  }
+
+  protected onUpdateVisible(currentTime: number): void {
+    this.applyTransform(this.data.transforms);
+    this.applyEffects();
+
+    const origin = this.element;
+    const proxy = this.proxyElement ?? null;
+    const clipRelativeTime = this.calcClipRelativeTime(this.data, currentTime);
+
+    if (origin) {
+      origin.currentTime = clipRelativeTime;
+      if (proxy) {
+        proxy.currentTime = clipRelativeTime;
+      }
+    }
+  }
+
+  protected onUpdateHidden(): void {
+    this.pauseVideoClip();
   }
 
   private handleVideoClip(

@@ -22,28 +22,6 @@ export class TextClip extends GraphicClip {
     this.applyTransform(this.data.transforms);
   }
 
-  update(data: ITextClip): void {
-    const prevData = this.data;
-    this.data = data;
-
-    // 데이터가 변경되었으므로 텍스트 업데이트
-    if (this.shouldRecreateText(prevData, data)) {
-      this.createContent();
-    } else {
-      this.updateContent();
-    }
-
-    // Bounds (Selection) update
-    this.updateSelectionBounds();
-
-    const curTimeMs = this.renderer.timer.currentMs;
-    const isVisible = data.enabled && this.isVisibleAt(curTimeMs);
-    this.sprite.visible = isVisible;
-    if (isVisible) {
-      this.applyTransform(data.transforms);
-    }
-  }
-
   destroy(): void {
     if (this.text) {
       this.text.destroy();
@@ -64,7 +42,21 @@ export class TextClip extends GraphicClip {
     this.sprite.destroy(true);
   }
 
-  protected updateOnTick(_ctx: TickContext): void {
+  updateOnTick(_ctx: TickContext): void {
+    this.applyTransform(this.data.transforms);
+  }
+
+  protected onUpdateData(prevData: ITextClip, nextData: ITextClip): void {
+    if (this.shouldRecreateText(prevData, nextData)) {
+      this.createContent();
+    } else {
+      this.updateContent();
+    }
+
+    this.updateSelectionBounds();
+  }
+
+  protected onUpdateVisible(_currentTime: number): void {
     this.applyTransform(this.data.transforms);
   }
 

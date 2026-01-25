@@ -4,7 +4,7 @@ import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
 import { Clip } from './Clip';
 import type { TickContext } from '@/lib/studio/engine/types';
 import type {
-  IClip,
+  IGraphicClip,
   ITransform,
   PlacementPreset,
   PlacementResult,
@@ -12,10 +12,8 @@ import type {
 } from './types';
 import type { IEffectMask } from '@/lib/studio/types/effect';
 
-export abstract class GraphicClip extends Clip {
+export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
   public sprite: Sprite;
-  declare public data: IClip;
-  declare public readonly renderer: GraphicRenderer;
 
   // For masked effects
   private effectContainers: Map<string, Container> = new Map();
@@ -41,28 +39,74 @@ export abstract class GraphicClip extends Clip {
     stretch: { fit: 'stretch', alignX: 'center', alignY: 'center' },
   } as const satisfies Record<string, PlacementPreset>;
 
-  protected constructor(renderer: GraphicRenderer, data: IClip) {
+  protected constructor(renderer: GraphicRenderer, data: IGraphicClip) {
     super(renderer, data);
     this.sprite = new Sprite();
     this.sprite.label = `Clip-${this.id}`;
   }
 
-  protected abstract updateOnTick(ctx: TickContext): void;
+  protected onUpdateData(
+    _prevData: IGraphicClip,
+    _nextData: IGraphicClip
+  ): void {
+    // Optional hook for subclasses
+  }
+
+  protected onUpdateVisible(_currentTime: number): void {
+    this.applyTransform(this.data.transforms);
+    this.applyEffects();
+  }
+
+  protected onUpdateHidden(_currentTime: number): void {
+    // Optional hook for subclasses
+  }
+
+  sync(newData: IGraphicClip): void {
+    const prevData = this.data;
+    this.data = newData;
+
+    this.onUpdateData(prevData, newData);
+
+    const currentTime = this.renderer.timer.currentMs;
+    const isVisible = this.shouldRender(currentTime);
+    this.sprite.visible = isVisible;
+
+    if (isVisible) {
+      this.onUpdateVisible(currentTime);
+      return;
+    }
+
+    this.onUpdateHidden(currentTime);
+  }
+
+  shouldUpdateOnTick(ctx: TickContext): boolean {
+    const isVisible = this.shouldRender(ctx.currentTime);
+    this.sprite.visible = isVisible;
+
+    if (!isVisible) {
+      this.onUpdateHidden(ctx.currentTime);
+    }
+
+    return isVisible;
+  }
+
+  abstract updateOnTick(ctx: TickContext): void;
+
+  shouldClipTick(ctx: TickContext): boolean {
+    const isVisible = this.shouldRender(ctx.currentTime);
+    if (!isVisible) {
+      this.onHidden(ctx);
+      return false;
+    }
+    return true;
+  }
 
   protected onHidden(_ctx: TickContext): void {
     // Optional hook for subclasses
   }
 
-  tick(ctx: TickContext): void {
-    const isVisible = this.shouldRender(ctx.currentTime);
-    this.sprite.visible = isVisible;
-
-    if (!isVisible) {
-      this.onHidden(ctx);
-      return;
-    }
-
-    this.updateOnTick(ctx);
+  tick(_ctx: TickContext): void {
+    // Optional hook for subclasses
   }
 
   mount(container: Container) {

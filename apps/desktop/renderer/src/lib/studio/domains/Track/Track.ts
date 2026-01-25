@@ -16,9 +16,12 @@ export abstract class Track<
     | GraphicRenderer
     | AudioRenderer,
   TClipInstance extends {
-    update: (data: TClipData) => void;
+    sync: (data: TClipData) => void;
     destroy: () => void;
     tick: (ctx: TickContext) => void;
+    shouldUpdateOnTick: (ctx: TickContext) => boolean;
+    updateOnTick: (ctx: TickContext) => void;
+    shouldClipTick: (ctx: TickContext) => boolean;
     init: () => Promise<void>;
     id: string;
   } = any,
@@ -63,7 +66,7 @@ export abstract class Track<
       if (this.clips.has(clipData.id)) {
         try {
           const clip = this.clips.get(clipData.id);
-          clip?.update(clipData);
+          clip?.sync(clipData);
           updatedClipIds.push(clipData.id);
         } catch (error) {
           failedClipIds.push(clipData.id);
@@ -92,7 +95,12 @@ export abstract class Track<
   tick(ctx: TickContext): void {
     if (!this.shouldTrackTick()) return;
     for (const clip of this.clips.values()) {
-      clip.tick(ctx);
+      if (clip.shouldUpdateOnTick(ctx)) {
+        clip.updateOnTick(ctx);
+      }
+      if (clip.shouldClipTick(ctx)) {
+        clip.tick(ctx);
+      }
     }
   }
 

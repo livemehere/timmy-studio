@@ -36,17 +36,6 @@ export class ImageClip extends GraphicClip {
     console.log(`[ImageClip] ImageClip(${this.id}) initialized`);
   }
 
-  update(data: IImageClip): void {
-    this.data = data;
-    const curTimeMs = this.renderer.timer.currentMs;
-    const isVisible = data.enabled && this.isVisibleAt(curTimeMs);
-    this.sprite.visible = isVisible;
-    if (isVisible) {
-      this.applyTransform(data.transforms);
-      this.applyEffects();
-    }
-  }
-
   destroy(): void {
     this.sprite.destroy(true);
 
@@ -57,7 +46,7 @@ export class ImageClip extends GraphicClip {
     console.log(`[ImageClip] Clip(${this.id}) destroyed`);
   }
 
-  protected updateOnTick(_ctx: TickContext): void {
+  updateOnTick(_ctx: TickContext): void {
     this.applyTransform(this.data.transforms);
     this.applyEffects();
   }
