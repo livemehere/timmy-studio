@@ -39,10 +39,7 @@ export abstract class GraphicClip extends Clip {
     stretch: { fit: 'stretch', alignX: 'center', alignY: 'center' },
   } as const satisfies Record<string, PlacementPreset>;
 
-  protected constructor(
-    public readonly renderer: GraphicRenderer,
-    data: IClip
-  ) {
+  protected constructor(renderer: GraphicRenderer, data: IClip) {
     super(renderer, data);
     this.sprite = new Sprite();
     this.sprite.label = `Clip-${this.id}`;

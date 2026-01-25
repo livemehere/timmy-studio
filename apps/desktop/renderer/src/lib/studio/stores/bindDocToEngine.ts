@@ -24,12 +24,10 @@ export async function bindDocToEngine(
   /** initial sync */
   await Promise.all([
     syncGraphicTracks(
-      docStore,
       engine,
       doc.tracks.filter((track) => track.type === 'graphic')
     ),
     syncAudioTracks(
-      docStore,
       engine,
       doc.tracks.filter((track) => track.type === 'audio')
     ),
@@ -59,7 +57,6 @@ export async function bindDocToEngine(
       console.log('[Binding] 트랙 변경이 감지되었습니다');
 
       syncGraphicTracks(
-        docStore,
         engine,
         state.tracks.filter((track) => track.type === 'graphic')
       ).catch((e) => {
@@ -69,7 +66,6 @@ export async function bindDocToEngine(
         });
       });
       syncAudioTracks(
-        docStore,
         engine,
         state.tracks.filter((track) => track.type === 'audio')
       ).catch((e) => {
@@ -92,17 +88,23 @@ export async function bindDocToEngine(
 
 /**
  * - 의도적으로 기다리지 않음
- * - sync 는 내부서서 에서 에러 처리를 track, clip 단위로 수행함, 따라서 여기서 에러 처리 불필요
- * - 단, sync 가 성공한 track, clip id 목록과 실패한 track, clip id 목록을 반환하기 때문에, 실패한  ids 는 docStore 에서 제거해 주는 작업이 필요함
+ * - sync 는 내부에서 track/clip 단위로 처리하고 결과(added/updated/removed/failed)를 반환
+ * - 실패 처리 정책은 외부에서 결정 (재시도/유지/제거 등)
  */
 
 async function syncGraphicTracks(
-  docStore: StoreApi<DocStore>,
   engine: EngineStore,
   tracks: IGraphicTrack[]
 ): Promise<void> {
-  const { syncedTrackIds, syncedClipIds, failedTrackIds, failedClipIds } =
-    await engine.renderer!.syncTracks(tracks);
+  const result = await engine.renderer!.syncTracks(tracks);
+
+  const syncedTrackIds = Array.from(engine.renderer!.tracks.keys());
+  const syncedClipIds: string[] = [];
+  for (const track of engine.renderer!.tracks.values()) {
+    for (const clipId of track.clips.keys()) {
+      syncedClipIds.push(clipId);
+    }
+  }
 
   engine.applyRendererSyncResult({
     trackIds: syncedTrackIds,
@@ -113,22 +115,32 @@ async function syncGraphicTracks(
     `[Renderer] 트랙 동기화 완료 - tracks: ${syncedTrackIds.length}개, clips: ${syncedClipIds.length}개`
   );
 
-  if (failedTrackIds.length > 0) {
-    docStore.getState().removeTrack(failedTrackIds);
+  if (result.failedTrackIds.length > 0) {
+    console.warn('[Renderer] 동기화 실패 트랙:', result.failedTrackIds);
   }
+  const failedClipIds = result.clipResults.flatMap((clipResult) =>
+    clipResult.failedClipIds.map((clipId) => ({
+      trackId: clipResult.trackId,
+      clipId,
+    }))
+  );
   if (failedClipIds.length > 0) {
-    failedClipIds.forEach(({ trackId, clipId }) => {
-      docStore.getState().removeClip(trackId, clipId);
-    });
+    console.warn('[Renderer] 동기화 실패 클립:', failedClipIds);
   }
 }
 async function syncAudioTracks(
-  docStore: StoreApi<DocStore>,
   engine: EngineStore,
   tracks: IAudioTrack[]
 ): Promise<void> {
-  const { syncedTrackIds, syncedClipIds, failedTrackIds, failedClipIds } =
-    await engine.audioRenderer!.syncTracks(tracks);
+  const result = await engine.audioRenderer!.syncTracks(tracks);
+
+  const syncedTrackIds = Array.from(engine.audioRenderer!.tracks.keys());
+  const syncedClipIds: string[] = [];
+  for (const track of engine.audioRenderer!.tracks.values()) {
+    for (const clipId of track.clips.keys()) {
+      syncedClipIds.push(clipId);
+    }
+  }
 
   engine.applyAudioSyncResult({
     trackIds: syncedTrackIds,
@@ -139,12 +151,16 @@ async function syncAudioTracks(
     `[AudioRenderer] 트랙 동기화 완료 - tracks: ${syncedTrackIds.length}개, clips: ${syncedClipIds.length}개`
   );
 
-  if (failedTrackIds.length > 0) {
-    docStore.getState().removeTrack(failedTrackIds);
+  if (result.failedTrackIds.length > 0) {
+    console.warn('[AudioRenderer] 동기화 실패 트랙:', result.failedTrackIds);
   }
+  const failedClipIds = result.clipResults.flatMap((clipResult) =>
+    clipResult.failedClipIds.map((clipId) => ({
+      trackId: clipResult.trackId,
+      clipId,
+    }))
+  );
   if (failedClipIds.length > 0) {
-    failedClipIds.forEach(({ trackId, clipId }) => {
-      docStore.getState().removeClip(trackId, clipId);
-    });
+    console.warn('[AudioRenderer] 동기화 실패 클립:', failedClipIds);
   }
 }

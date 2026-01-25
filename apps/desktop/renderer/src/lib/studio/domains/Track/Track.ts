@@ -1,6 +1,6 @@
 import type { IAudioTrack, IGraphicTrack, ITrack, TrackType } from './types';
 import type { IClip } from '../Clip/types';
-import type { TickContext } from '@/lib/studio/engine/types';
+import type { TickContext, ClipSyncResult } from '@/lib/studio/engine/types';
 import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
 import type { AudioRenderer } from '@/lib/studio/engine/AudioRenderer';
 import type { AssetType } from '@/lib/studio/domains/Asset/types';
@@ -32,48 +32,55 @@ export abstract class Track<
     this.id = data.id;
   }
 
-  abstract sync(data: ITrack): Promise<{ failedClipIds: string[] }>;
+  abstract sync(data: ITrack): Promise<ClipSyncResult>;
   abstract destroy(): void;
   protected abstract addClip(data: TClipData): Promise<void>;
   protected abstract removeClip(clipId: string): void;
 
   /** 트랙 내의 클립들을 동기화합니다. */
-  protected async syncClips(
-    clipsData: TClipData[]
-  ): Promise<{ failedClipIds: string[] }> {
-    const newClipIds = new Set(clipsData.map((c) => c.id));
+  protected async syncClips(newClips: TClipData[]): Promise<ClipSyncResult> {
+    const newClipIds = new Set(newClips.map((c) => c.id));
+    const addedClipIds: string[] = [];
+    const updatedClipIds: string[] = [];
+    const removedClipIds: string[] = [];
     const failedClipIds: string[] = [];
 
     // 1. 제거된 클립 처리
     for (const [clipId, _clip] of this.clips) {
       if (!newClipIds.has(clipId)) {
         this.removeClip(clipId);
+        removedClipIds.push(clipId);
       }
     }
 
     // 2. 추가되거나 업데이트된 클립 처리
-    const tasks = clipsData.map(async (clipData) => {
+    const tasks = newClips.map(async (clipData) => {
       if (this.clips.has(clipData.id)) {
         try {
           const clip = this.clips.get(clipData.id);
           clip?.update(clipData);
+          updatedClipIds.push(clipData.id);
         } catch (error) {
           failedClipIds.push(clipData.id);
-          this.removeClip(clipData.id);
         }
         return;
       }
 
       try {
         await this.addClip(clipData);
+        addedClipIds.push(clipData.id);
       } catch (error) {
         failedClipIds.push(clipData.id);
-        this.removeClip(clipData.id);
       }
     });
     await Promise.all(tasks);
 
-    return { failedClipIds };
+    return {
+      addedClipIds,
+      updatedClipIds,
+      removedClipIds,
+      failedClipIds,
+    };
   }
 
   /** 렌더링 루프: 소속 클립들의 tick 실행 */
@@ -83,11 +90,7 @@ export abstract class Track<
     }
   }
 
-  // --------------------------------------------------------------------------
-  // Static Utility Methods
-  // --------------------------------------------------------------------------
-
-  /** 해당 타읩의 가장 높은 z-order 를 가진 트랙을 반환 */
+  /** 해당 타읍의 가장 높은 z-order 를 가진 트랙을 반환 */
   static findFirstTrack(tracks: ITrack[], type: TrackType): ITrack | undefined {
     return tracks
       .filter((t) => t.type == type)
@@ -110,7 +113,7 @@ export abstract class Track<
 
   static create(type: TrackType) {
     if (type === 'graphic') {
-      return {
+      const track: IGraphicTrack = {
         id: uid(8),
         name: 'New Graphic Track',
         zIndex: DEFAULT_TRACK_Z_INDEX,
@@ -119,9 +122,10 @@ export abstract class Track<
         locked: false,
         clips: [],
         opacity: 1,
-      } as IGraphicTrack;
+      };
+      return track;
     } else {
-      return {
+      const track: IAudioTrack = {
         id: uid(8),
         name: 'New Audio Track',
         zIndex: DEFAULT_TRACK_Z_INDEX,
@@ -130,7 +134,8 @@ export abstract class Track<
         locked: false,
         clips: [],
         volume: 1,
-      } as IAudioTrack;
+      };
+      return track;
     }
   }
 }

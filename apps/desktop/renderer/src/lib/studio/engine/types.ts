@@ -9,6 +9,25 @@ export interface Dirtyable {
   dirtySessionId: number | null;
 }
 
+export interface ClipSyncResult {
+  addedClipIds: string[];
+  updatedClipIds: string[];
+  removedClipIds: string[];
+  failedClipIds: string[];
+}
+
+export interface TrackSyncResult extends ClipSyncResult {
+  trackId: string;
+}
+
+export interface RendererSyncResult {
+  addedTrackIds: string[];
+  updatedTrackIds: string[];
+  removedTrackIds: string[];
+  failedTrackIds: string[];
+  clipResults: TrackSyncResult[];
+}
+
 export interface TickContext {
   currentTime: number;
   isPlaying: boolean;

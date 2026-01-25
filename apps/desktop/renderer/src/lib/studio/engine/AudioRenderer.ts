@@ -1,6 +1,11 @@
 import type { IAudioTrack } from '@/lib/studio/domains/Track/types';
 import type { Timer } from './Timer';
-import type { DocGetter } from './types';
+import type {
+  DocGetter,
+  ClipSyncResult,
+  TrackSyncResult,
+  RendererSyncResult,
+} from './types';
 import { AudioTrack } from '@/lib/studio/domains/Track/AudioTrack';
 
 export class AudioRenderer {
@@ -87,73 +92,69 @@ export class AudioRenderer {
   }
 
   // 데이터 동기화
-  async syncTracks(tracksData: IAudioTrack[]): Promise<{
-    syncedTrackIds: string[];
-    syncedClipIds: string[];
-    failedTrackIds: string[];
-    failedClipIds: Array<{ trackId: string; clipId: string }>;
-  }> {
+  async syncTracks(tracksData: IAudioTrack[]): Promise<RendererSyncResult> {
     const trackIds = new Set(tracksData.map((t) => t.id));
+
+    const addedTrackIds: string[] = [];
+    const updatedTrackIds: string[] = [];
+    const removedTrackIds: string[] = [];
+    const failedTrackIds: string[] = [];
+    const clipResults: TrackSyncResult[] = [];
 
     // 제거
     for (const trackId of this.tracks.keys()) {
       if (!trackIds.has(trackId)) {
-        this.tracks.get(trackId)?.destroy();
+        const track = this.tracks.get(trackId);
+        const removedClipIds = track ? Array.from(track.clips.keys()) : [];
+        removedTrackIds.push(trackId);
+        clipResults.push({
+          trackId,
+          addedClipIds: [],
+          updatedClipIds: [],
+          removedClipIds,
+          failedClipIds: [],
+        });
+        track?.destroy();
         this.tracks.delete(trackId);
       }
     }
 
     // 추가/업데이트
-    const failedTrackIds: string[] = [];
-    const failedClipIds: Array<{ trackId: string; clipId: string }> = [];
-
     const tasks = tracksData.map(async (trackData) => {
-      if (this.tracks.has(trackData.id)) {
-        const { failedClipIds } = await this.tracks
-          .get(trackData.id)!
-          .sync(trackData);
-        return { trackId: trackData.id, failedClipIds };
-      }
+      const isExisting = this.tracks.has(trackData.id);
+      try {
+        let result: ClipSyncResult;
+        if (isExisting) {
+          result = await this.tracks.get(trackData.id)!.sync(trackData);
+          updatedTrackIds.push(trackData.id);
+        } else {
+          const track = new AudioTrack(this, trackData);
+          this.tracks.set(trackData.id, track);
+          result = await track.sync(trackData);
+          addedTrackIds.push(trackData.id);
+        }
 
-      const track = new AudioTrack(this, trackData);
-      this.tracks.set(trackData.id, track);
-      const { failedClipIds } = await track.sync(trackData);
-      return { trackId: trackData.id, failedClipIds };
-    });
-
-    const results = await Promise.allSettled(tasks);
-    results.forEach((result, index) => {
-      const trackData = tracksData[index];
-      if (result.status === 'fulfilled') {
-        result.value.failedClipIds.forEach((clipId) => {
-          failedClipIds.push({ trackId: result.value.trackId, clipId });
+        clipResults.push({ trackId: trackData.id, ...result });
+      } catch (error) {
+        failedTrackIds.push(trackData.id);
+        clipResults.push({
+          trackId: trackData.id,
+          addedClipIds: [],
+          updatedClipIds: [],
+          removedClipIds: [],
+          failedClipIds: trackData.clips.map((clip) => clip.id),
         });
-        return;
-      }
-
-      failedTrackIds.push(trackData.id);
-      trackData.clips.forEach((clip) => {
-        failedClipIds.push({ trackId: trackData.id, clipId: clip.id });
-      });
-      if (this.tracks.has(trackData.id)) {
-        this.tracks.get(trackData.id)?.destroy();
-        this.tracks.delete(trackData.id);
       }
     });
 
-    // 동기화 결과 반환 준비
-    const syncedClipIds: string[] = [];
-    for (const track of this.tracks.values()) {
-      for (const clipId of track.clips.keys()) {
-        syncedClipIds.push(clipId);
-      }
-    }
+    await Promise.all(tasks);
 
     return {
-      syncedTrackIds: Array.from(this.tracks.keys()),
-      syncedClipIds: syncedClipIds,
+      addedTrackIds,
+      updatedTrackIds,
+      removedTrackIds,
       failedTrackIds,
-      failedClipIds,
+      clipResults,
     };
   }
 

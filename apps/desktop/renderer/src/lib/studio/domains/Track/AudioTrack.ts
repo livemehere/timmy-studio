@@ -3,6 +3,7 @@ import type { AudioRenderer } from '@/lib/studio/engine/AudioRenderer';
 import { AudioClip } from '../Clip/AudioClip';
 import type { IAudioClip } from '../Clip/types';
 import { Track } from './Track';
+import type { ClipSyncResult } from '@/lib/studio/engine/types';
 
 export class AudioTrack extends Track<IAudioClip, AudioRenderer, AudioClip> {
   // Audio Graph
@@ -24,15 +25,12 @@ export class AudioTrack extends Track<IAudioClip, AudioRenderer, AudioClip> {
     this.inputNode.connect(this.outputNode);
     // Output -> Master 연결
     this.outputNode.connect(renderer.masterNode);
-
-    this.updateProps(data);
   }
 
-  async sync(data: IAudioTrack): Promise<{ failedClipIds: string[] }> {
+  async sync(data: IAudioTrack): Promise<ClipSyncResult> {
     this.data = data;
     this.updateProps(data);
-    const { failedClipIds } = await this.syncClips(data.clips);
-    return { failedClipIds };
+    return this.syncClips(data.clips);
   }
 
   private updateProps(data: IAudioTrack) {
@@ -60,10 +58,11 @@ export class AudioTrack extends Track<IAudioClip, AudioRenderer, AudioClip> {
    * Override syncClips to inject trackId into clip data.
    * Or we can just let addClip handle new clips, and update existing ones.
    */
-  protected async syncClips(
-    clipsData: IAudioClip[]
-  ): Promise<{ failedClipIds: string[] }> {
+  protected async syncClips(clipsData: IAudioClip[]): Promise<ClipSyncResult> {
     const newClipIds = new Set(clipsData.map((c) => c.id));
+    const addedClipIds: string[] = [];
+    const updatedClipIds: string[] = [];
+    const removedClipIds: string[] = [];
     const failedClipIds: string[] = [];
 
     // 1. 제거된 클립 처리
@@ -71,6 +70,7 @@ export class AudioTrack extends Track<IAudioClip, AudioRenderer, AudioClip> {
       if (!newClipIds.has(clipId)) {
         clip.destroy();
         this.clips.delete(clipId);
+        removedClipIds.push(clipId);
       }
     }
 
@@ -82,23 +82,28 @@ export class AudioTrack extends Track<IAudioClip, AudioRenderer, AudioClip> {
       if (this.clips.has(clipData.id)) {
         try {
           this.clips.get(clipData.id)?.update(dataWithTrackId);
+          updatedClipIds.push(clipData.id);
         } catch (error) {
           failedClipIds.push(clipData.id);
-          this.removeClip(clipData.id);
         }
         return;
       }
 
       try {
         await this.addClip(clipData);
+        addedClipIds.push(clipData.id);
       } catch (error) {
         failedClipIds.push(clipData.id);
-        this.removeClip(clipData.id);
       }
     });
     await Promise.all(tasks);
 
-    return { failedClipIds };
+    return {
+      addedClipIds,
+      updatedClipIds,
+      removedClipIds,
+      failedClipIds,
+    };
   }
 
   destroy(): void {

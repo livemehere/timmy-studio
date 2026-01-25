@@ -7,6 +7,9 @@ import type {
   SeekingRenderMode,
   DocGetter,
   Dirtyable,
+  ClipSyncResult,
+  TrackSyncResult,
+  RendererSyncResult,
 } from './types';
 import { GraphicTrack } from '@/lib/studio/domains/Track/GraphicTrack';
 
@@ -46,10 +49,42 @@ export class GraphicRenderer {
     console.log('[GraphicRenderer] 인스턴스 생성됨');
   }
 
+  get isInitialized(): boolean {
+    return this._isInitialized;
+  }
+
+  get currentSeekSessionId(): number {
+    return this._seekSessionId;
+  }
+
+  set background(color: string) {
+    if (!this._isInitialized) return;
+    if (this._app.renderer.background.color.value === color) return;
+    this._app.renderer.background.color = color;
+  }
+
+  set frameRate(frameRate: number) {
+    if (!this._isInitialized) return;
+    if (this._app.ticker.maxFPS === frameRate) return;
+    this._app.ticker.maxFPS = frameRate;
+  }
+
+  resize(width: number, height: number): void {
+    if (!this._isInitialized) return;
+    if (
+      width === this._app.renderer.width &&
+      height === this._app.renderer.height
+    )
+      return;
+    this._app.renderer.resize(width, height);
+    this.applyCanvasStyle(width, height);
+  }
+
   async init() {
     this._app = new Application();
     this._sceneContainer = new Container();
     this._sceneContainer.label = GraphicRenderer.LABELS.SCENE_CONTAINER;
+    this._sceneContainer.sortableChildren = true; // 트랙 단위로 정렬 가능하도록 설정
     this._app.stage.addChild(this._sceneContainer);
 
     const { settings } = this.getDoc();
@@ -104,39 +139,13 @@ export class GraphicRenderer {
       textureSource: true,
     });
 
-    // this.frameExporter = null as any; // REMOVED
+    // 내부 상태 초기화
+    this._activeSeekWait = null;
+    this._seekSessionId = 0;
+    this._lastIsPlaying = false;
+    this._lastCurrentMs = 0;
+
     this._isInitialized = false;
-  }
-
-  get isInitialized(): boolean {
-    return this._isInitialized;
-  }
-
-  get currentSeekSessionId(): number {
-    return this._seekSessionId;
-  }
-
-  resize(width: number, height: number): void {
-    if (!this._isInitialized) return;
-    if (
-      width === this._app.renderer.width &&
-      height === this._app.renderer.height
-    )
-      return;
-    this._app.renderer.resize(width, height);
-    this.applyCanvasStyle(width, height);
-  }
-
-  set background(color: string) {
-    if (!this._isInitialized) return;
-    if (this._app.renderer.background.color.value === color) return;
-    this._app.renderer.background.color = color;
-  }
-
-  set frameRate(frameRate: number) {
-    if (!this._isInitialized) return;
-    if (this._app.ticker.maxFPS === frameRate) return;
-    this._app.ticker.maxFPS = frameRate;
   }
 
   syncSettings(settings: {
@@ -166,102 +175,114 @@ export class GraphicRenderer {
     }
   }
 
-  async syncTracks(tracksData: IGraphicTrack[]) {
-    console.log(`[Renderer] 트랙 ${tracksData.length}개 동기화 시작`);
+  async syncTracks(newTracks: IGraphicTrack[]): Promise<RendererSyncResult> {
+    console.log(`[Renderer] 트랙 ${newTracks.length}개 동기화 시작`);
+
+    const newTrackIds = new Set(newTracks.map((track) => track.id));
+
+    const addedTrackIds: string[] = [];
+    const updatedTrackIds: string[] = [];
+    const removedTrackIds: string[] = [];
+    const failedTrackIds: string[] = [];
+    const clipResults: TrackSyncResult[] = [];
 
     // 1. 존재하지 않는 트랙 제거
     for (const trackId of this.tracks.keys()) {
-      if (!tracksData.some((t) => t.id === trackId)) {
+      if (!newTrackIds.has(trackId)) {
+        const track = this.tracks.get(trackId);
+        const removedClipIds = track ? Array.from(track.clips.keys()) : [];
+        removedTrackIds.push(trackId);
+        clipResults.push({
+          trackId,
+          addedClipIds: [],
+          updatedClipIds: [],
+          removedClipIds,
+          failedClipIds: [],
+        });
         this.removeTrack(trackId);
       }
     }
 
     // 2. 트랙 추가 또는 업데이트
-    const failedTrackIds: string[] = [];
-    const failedClipIds: Array<{ trackId: string; clipId: string }> = [];
+    const tasks = newTracks.map(async (trackData) => {
+      const isExisting = this.tracks.has(trackData.id);
+      try {
+        const result = isExisting
+          ? await this.updateTrack(trackData)
+          : await this.addTrack(trackData);
 
-    const tasks = tracksData.map(async (trackData) => {
-      if (this.tracks.has(trackData.id)) {
-        const { failedClipIds } = await this.updateTrack(trackData);
-        return { trackId: trackData.id, failedClipIds };
-      }
+        if (isExisting) {
+          updatedTrackIds.push(trackData.id);
+        } else {
+          addedTrackIds.push(trackData.id);
+        }
 
-      const { failedClipIds } = await this.addTrack(trackData);
-      return { trackId: trackData.id, failedClipIds };
-    });
-
-    const results = await Promise.allSettled(tasks);
-    results.forEach((result, index) => {
-      const trackData = tracksData[index];
-      if (result.status === 'fulfilled') {
-        result.value.failedClipIds.forEach((clipId) => {
-          failedClipIds.push({ trackId: result.value.trackId, clipId });
+        clipResults.push({ trackId: trackData.id, ...result });
+      } catch (error) {
+        failedTrackIds.push(trackData.id);
+        clipResults.push({
+          trackId: trackData.id,
+          addedClipIds: [],
+          updatedClipIds: [],
+          removedClipIds: [],
+          failedClipIds: trackData.clips.map((clip) => clip.id),
         });
-        return;
-      }
-
-      failedTrackIds.push(trackData.id);
-      trackData.clips.forEach((clip) => {
-        failedClipIds.push({ trackId: trackData.id, clipId: clip.id });
-      });
-      if (this.tracks.has(trackData.id)) {
-        this.removeTrack(trackData.id);
       }
     });
+
+    await Promise.all(tasks);
 
     // z-index 정렬 적용 (컨테이너 레벨)
     this._sceneContainer.sortChildren();
 
-    // 동기화 결과 반환
-    const syncedClipIds: string[] = [];
-    for (const track of this.tracks.values()) {
-      for (const clipId of track.clips.keys()) {
-        syncedClipIds.push(clipId);
-      }
-    }
-
     return {
-      syncedTrackIds: Array.from(this.tracks.keys()),
-      syncedClipIds: syncedClipIds,
+      addedTrackIds,
+      updatedTrackIds,
+      removedTrackIds,
       failedTrackIds,
-      failedClipIds,
+      clipResults,
     };
   }
 
-  private async addTrack(
-    data: IGraphicTrack
-  ): Promise<{ failedClipIds: string[] }> {
+  private async addTrack(data: IGraphicTrack): Promise<ClipSyncResult> {
     const track = new GraphicTrack(this, data);
-
     this._sceneContainer.addChild(track.container);
     this.tracks.set(data.id, track);
-    console.log(`[Renderer] 트랙(${data.id}) 추가됨`);
-
-    const { failedClipIds } = await track.sync(data);
-    return { failedClipIds };
+    console.log(`[GraphicRenderer] 트랙(${data.id}) 추가됨`);
+    return track.sync(data);
   }
 
-  private async updateTrack(
-    data: IGraphicTrack
-  ): Promise<{ failedClipIds: string[] }> {
+  private async updateTrack(data: IGraphicTrack): Promise<ClipSyncResult> {
     const track = this.tracks.get(data.id);
-    if (!track) return { failedClipIds: data.clips.map((clip) => clip.id) };
+    if (!track) {
+      return {
+        addedClipIds: [],
+        updatedClipIds: [],
+        removedClipIds: [],
+        failedClipIds: data.clips.map((clip) => clip.id),
+      };
+    }
 
     return track.sync(data);
   }
 
   private removeTrack(trackId: string): void {
     const track = this.tracks.get(trackId);
-    if (!track) return;
+    if (!track) {
+      throw new Error(
+        `[Renderer] removeTrack: 트랙(${trackId})을 찾을 수 없습니다.`
+      );
+    }
 
     this._sceneContainer.removeChild(track.container);
+    // recursive destroy inside (clips and container)
     track.destroy();
     this.tracks.delete(trackId);
-    console.log(`[Renderer] 트랙(${trackId}) 제거됨`);
+    console.log(`[GraphicRenderer] 트랙(${trackId}) 제거됨`);
   }
 
   private startLoop(): void {
-    console.log('[Renderer] 렌더 루프 시작');
+    console.log('[GraphicRenderer] 렌더 루프 시작');
     this._app.ticker.add(() => {
       const ctx = this.captureTickContext();
 

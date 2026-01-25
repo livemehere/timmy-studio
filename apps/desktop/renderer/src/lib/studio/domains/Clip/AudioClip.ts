@@ -28,11 +28,8 @@ export class AudioClip extends Clip {
   private isPlaying = false;
   private filePath: string | null = null;
 
-  constructor(
-    public readonly renderer: AudioRenderer,
-    data: IAudioClip
-  ) {
-    super(renderer as any, data);
+  constructor(renderer: AudioRenderer, data: IAudioClip) {
+    super(renderer, data);
     this.data = data;
   }
 

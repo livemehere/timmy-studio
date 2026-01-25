@@ -1,7 +1,7 @@
 import { Container } from 'pixi.js';
 import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
 import type { IGraphicTrack } from './types';
-import type { TickContext } from '@/lib/studio/engine/types';
+import type { TickContext, ClipSyncResult } from '@/lib/studio/engine/types';
 import type {
   IGraphicClip,
   IVideoClip,
@@ -33,18 +33,13 @@ export class GraphicTrack extends Track<
     super(renderer, data);
     this.container = new Container();
     this.container.label = `${GraphicTrack.LABELS.TRACK_PREFIX}${this.id}`;
-    this.container.sortableChildren = true;
-
-    // 초기 속성 설정
-    this.updateContainerProps(data);
   }
 
   /** 트랙 속성 및 내부 클립들을 동기화합니다. */
-  async sync(data: IGraphicTrack): Promise<{ failedClipIds: string[] }> {
+  sync(data: IGraphicTrack): Promise<ClipSyncResult> {
+    // GraphicTrack 은 data 를 저장할 필요 없음. this.container 가 곧 데이터
     this.updateContainerProps(data);
-    const { failedClipIds } = await this.syncClips(data.clips);
-    this.container.sortChildren();
-    return { failedClipIds };
+    return this.syncClips(data.clips);
   }
 
   private updateContainerProps(data: IGraphicTrack) {
@@ -93,9 +88,6 @@ export class GraphicTrack extends Track<
     this.container.destroy({ children: true });
   }
 
-  // --------------------------------------------------------------------------
-  // Factory Method (Moved from SceneManager)
-  // --------------------------------------------------------------------------
   private createClipInstance(data: IGraphicClip): GraphicClip {
     switch (data.type) {
       case 'video':
@@ -110,8 +102,4 @@ export class GraphicTrack extends Track<
         throw new Error(`Unsupported clip type: ${(data as any).type}`);
     }
   }
-
-  // --------------------------------------------------------------------------
-  // Static Utility Methods (Moved from TrackUtils)
-  // --------------------------------------------------------------------------
 }

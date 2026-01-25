@@ -32,11 +32,16 @@ export abstract class Clip {
   public dirty: boolean = false;
   public dirtySessionId: number | null = null;
 
+  readonly renderer: GraphicRenderer | AudioRenderer;
+  data: IClip;
+
   protected constructor(
-    public readonly renderer: GraphicRenderer | AudioRenderer,
-    public data: IClip
+    renderer: GraphicRenderer | AudioRenderer,
+    data: IClip
   ) {
     this.id = data.id;
+    this.renderer = renderer;
+    this.data = data;
   }
 
   abstract init(): Promise<void>;
