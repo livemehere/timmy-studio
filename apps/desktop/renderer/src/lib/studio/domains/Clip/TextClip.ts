@@ -42,8 +42,8 @@ export class TextClip extends GraphicClip {
     this.sprite.destroy(true);
   }
 
-  tick(_ctx: TickContext): void {
-    this.applyTransform(this._data.transforms);
+  override onTick(ctx: TickContext): void {
+    super.onTick(ctx);
   }
 
   protected onUpdateData(prevData: ITextClip, nextData: ITextClip): void {

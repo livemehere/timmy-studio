@@ -155,7 +155,7 @@ export class AudioRenderer extends RendererBase {
     }
 
     for (const track of this.tracks.values()) {
-      track.tick(ctx);
+      track.onTick(ctx);
     }
   }
 

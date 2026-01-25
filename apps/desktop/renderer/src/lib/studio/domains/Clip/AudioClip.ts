@@ -56,8 +56,49 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
     }
   }
 
-  shouldTick(_ctx: TickContext): boolean {
-    return this._data.enabled || this.isPlaying;
+  onBecameVisible(_ctx: TickContext): void {
+    // No-op
+  }
+
+  onBecameHidden(_ctx: TickContext): void {
+    // No-op
+  }
+
+  onUpdateBeforeTick(_ctx: TickContext): void {
+    // No-op
+  }
+
+  // 오디오는 매 프레임 tick보다는 상태 변화(재생/정지/탐색) 시점에 반응하는 것이 중요함.
+  onTick(ctx: TickContext): void {
+    if (!this.filePath) return;
+
+    if (!this._data.enabled) {
+      if (this.isPlaying) {
+        this.stop();
+      }
+      return;
+    }
+
+    const { isPlaying, currentTime, playStateChanged, isSeeking } = ctx;
+
+    // 1. 재생 상태 변경 or 탐색 시
+    if (playStateChanged || isSeeking) {
+      if (isPlaying) {
+        // 재생 시작
+        this.play(currentTime);
+      } else {
+        // 정지
+        this.stop();
+      }
+      return;
+    }
+
+    if (isPlaying && !this.isPlaying) {
+      this.play(currentTime);
+    }
+    if (!isPlaying && this.isPlaying) {
+      this.stop();
+    }
   }
 
   destroy(): void {
@@ -82,43 +123,6 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
     }
 
     this.filePath = null;
-  }
-
-  // 오디오는 매 프레임 tick보다는 상태 변화(재생/정지/탐색) 시점에 반응하는 것이 중요함.
-  tick(ctx: TickContext): void {
-    if (!this.filePath) return;
-
-    if (!this._data.enabled) {
-      if (this.isPlaying) {
-        this.stop();
-      }
-      return;
-    }
-
-    const { isPlaying, currentTime, playStateChanged, isSeeking } = ctx;
-    const isVisible = this.getTickVisibility();
-
-    // 1. 재생 상태 변경 or 탐색 시
-    if (playStateChanged || isSeeking) {
-      if (isPlaying && isVisible) {
-        // 재생 시작
-        this.play(currentTime);
-      } else {
-        // 정지
-        this.stop();
-      }
-      return;
-    }
-
-    // 2. 재생 중인데 구간을 벗어남 -> 정지
-    if (isPlaying && !isVisible && this.isPlaying) {
-      this.stop();
-    }
-
-    // 3. 재생 중인데 구간에 진입 -> 재생
-    if (isPlaying && isVisible && !this.isPlaying) {
-      this.play(currentTime);
-    }
   }
 
   private async play(currentTime: number) {

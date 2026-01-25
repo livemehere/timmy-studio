@@ -45,20 +45,17 @@ export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
     this.sprite.label = `Clip-${this.id}`;
   }
 
-  protected onUpdateData(
-    _prevData: IGraphicClip,
-    _nextData: IGraphicClip
-  ): void {
-    // Optional hook for subclasses
+  mount(container: Container) {
+    container.addChild(this.sprite);
   }
 
-  protected onUpdateVisible(_currentTime: number): void {
-    this.applyTransform(this._data.transforms);
+  unmount() {
+    this.sprite.parent?.removeChild(this.sprite);
+  }
+
+  sync(newData: IGraphicClip): void {
+    this._data = newData;
     this.applyEffects();
-  }
-
-  protected onUpdateHidden(_currentTime: number): void {
-    // Optional hook for subclasses
   }
 
   onBecameVisible(_ctx: TickContext): void {
@@ -69,46 +66,10 @@ export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
     this.sprite.visible = false;
   }
 
-  sync(newData: IGraphicClip): void {
-    const prevData = this._data;
-    this._data = newData;
+  onUpdateBeforeTick(_ctx: TickContext): void {}
 
-    this.onUpdateData(prevData, newData);
-
-    const currentTime = this.renderer.timer.currentMs;
-    const isVisible = this.shouldRenderAt(currentTime);
-
-    if (isVisible) {
-      this.onUpdateVisible(currentTime);
-      return;
-    }
-
-    this.onUpdateHidden(currentTime);
-  }
-
-  shouldTick(_ctx: TickContext): boolean {
-    return this.getTickVisibility();
-  }
-
-  protected onHiddenTick(_ctx: TickContext): void {
-    // Optional hook for subclasses
-  }
-
-  tick(_ctx: TickContext): void {
-    // Optional hook for subclasses
-  }
-
-  onHidden(ctx: TickContext): void {
-    this.onUpdateHidden(ctx.currentTime);
-    this.onHiddenTick(ctx);
-  }
-
-  mount(container: Container) {
-    container.addChild(this.sprite);
-  }
-
-  unmount() {
-    this.sprite.parent?.removeChild(this.sprite);
+  onTick(_ctx: TickContext): void {
+    this.applyTransform(this._data.transforms);
   }
 
   /**

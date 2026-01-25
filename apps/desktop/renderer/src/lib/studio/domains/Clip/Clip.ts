@@ -55,14 +55,12 @@ export abstract class Clip<
 
   abstract init(): Promise<void>;
   abstract destroy(): void;
-
-  // Track 에서 흐름을 제어하기 위한 hook
-  abstract shouldTick(ctx: TickContext): boolean;
-
-  // GraphicClip, AudioClip 1단계 상속 레벨에서 구현
-  abstract tick(ctx: TickContext): void;
-  // 2단계 상속 클래스들에서 구현 (ShapeClip, TextClip, VideoClip, ImageClip...)
   abstract sync(newData: TClipData): void;
+
+  abstract onBecameVisible(_ctx: TickContext): void;
+  abstract onBecameHidden(_ctx: TickContext): void;
+  abstract onUpdateBeforeTick(_ctx: TickContext): void;
+  abstract onTick(ctx: TickContext): void;
 
   protected isInRangeAt(timeMs: number): boolean {
     const trimStart =
@@ -77,23 +75,6 @@ export abstract class Clip<
 
   shouldRenderAt(timeMs: number): boolean {
     return this._data.enabled && this.isInRangeAt(timeMs);
-  }
-
-  // --- Tick lifecycle hooks (Track.tick에서 호출됨) ---
-  onBecameVisible(_ctx: TickContext): void {
-    // Optional hook for subclasses
-  }
-
-  onBecameHidden(_ctx: TickContext): void {
-    // Optional hook for subclasses
-  }
-
-  onHidden(_ctx: TickContext): void {
-    // Optional hook for subclasses
-  }
-
-  getTickVisibility(): boolean {
-    return this.lastTickVisible;
   }
 
   prepareTick(ctx: TickContext): {

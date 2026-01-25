@@ -105,8 +105,8 @@ export abstract class Track<
     };
   }
 
-  /** 렌더링 루프: 소속 클립들의 tick 실행 */
-  tick(ctx: TickContext): void {
+  /** 렌더링 루프: 소속 클립들의 onTick 실행 */
+  onTick(ctx: TickContext): void {
     if (!this.handleTrackVisible()) return;
     for (const clip of this.clips.values()) {
       const visibility = clip.prepareTick(ctx);
@@ -118,13 +118,9 @@ export abstract class Track<
         clip.onBecameHidden(ctx);
       }
 
-      if (!visibility.isVisible) {
-        clip.onHidden(ctx);
-      }
-
-      const shouldTick = clip.shouldTick(ctx);
-      if (shouldTick) {
-        clip.tick(ctx);
+      if (visibility.isVisible) {
+        clip.onUpdateBeforeTick(ctx);
+        clip.onTick(ctx);
       }
     }
   }

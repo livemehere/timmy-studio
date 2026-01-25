@@ -281,7 +281,7 @@ export class GraphicRenderer extends RendererBase {
 
       // 각 트랙의 클립들에게 틱 위임
       for (const track of this.tracks.values()) {
-        track.tick(ctx);
+        track.onTick(ctx);
       }
 
       // timer.seekAndWait(ms) -> waitForSeekSettled(ms) 호출되면, promise 가 채워지고, 매틱마다 체크

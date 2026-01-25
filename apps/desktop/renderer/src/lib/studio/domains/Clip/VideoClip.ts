@@ -84,14 +84,12 @@ export class VideoClip extends GraphicClip {
     console.log(`[VideoClip] Clip(${this.id}) destroyed`);
   }
 
-  tick(ctx: TickContext): void {
+  override onTick(ctx: TickContext): void {
+    super.onTick(ctx);
     const { currentTime, isPlaying, playStateChanged, isSeeking } = ctx;
 
     // 전 tick 에서 보이지 않았었다면, 이번 프레임이 보이게 된 시점
     const clipBecameVisible = !this.wasVisible;
-
-    this.applyTransform(this._data.transforms);
-    this.applyEffects();
 
     this.handleVideoClip(
       this._data,
@@ -105,7 +103,8 @@ export class VideoClip extends GraphicClip {
     this.wasVisible = true;
   }
 
-  protected onHiddenTick(_ctx: TickContext): void {
+  override onBecameHidden(ctx: TickContext): void {
+    super.onBecameHidden(ctx);
     this.pauseVideoClip();
     this.wasVisible = false;
   }

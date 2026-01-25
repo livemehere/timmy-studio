@@ -46,9 +46,8 @@ export class ImageClip extends GraphicClip {
     console.log(`[ImageClip] Clip(${this.id}) destroyed`);
   }
 
-  tick(_ctx: TickContext): void {
-    this.applyTransform(this._data.transforms);
-    this.applyEffects();
+  override onTick(ctx: TickContext): void {
+    super.onTick(ctx);
   }
 
   private createImageElement(asset: IImageAsset): Promise<HTMLImageElement> {
