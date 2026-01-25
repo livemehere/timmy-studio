@@ -13,10 +13,14 @@ export interface EngineState {
   // Renderer sync state (Pixi 객체 접근용)
   syncedGraphicTrackIds: string[];
   syncedGraphicClipIds: string[];
+  failedGraphicTrackIds: string[];
+  failedGraphicClipIds: string[];
 
   // AudioRenderer sync state (Audio 객체 접근용)
   syncedAudioTrackIds: string[];
   syncedAudioClipIds: string[];
+  failedAudioTrackIds: string[];
+  failedAudioClipIds: string[];
   isRendererReady: boolean;
   isAudioReady: boolean;
 }
@@ -27,10 +31,14 @@ export interface EngineActions {
   applyRendererSyncResult: (payload: {
     trackIds: string[];
     clipIds: string[];
+    failedTrackIds: string[];
+    failedClipIds: string[];
   }) => void;
   applyAudioSyncResult: (payload: {
     trackIds: string[];
     clipIds: string[];
+    failedTrackIds: string[];
+    failedClipIds: string[];
   }) => void;
   setAudioReady: (ready: boolean) => void;
   setRendererReady: (ready: boolean) => void;
@@ -64,10 +72,14 @@ export const createEngineStore = (docGetter: DocGetter) => {
     // Renderer sync state
     syncedGraphicTrackIds: [],
     syncedGraphicClipIds: [],
+    failedGraphicTrackIds: [],
+    failedGraphicClipIds: [],
 
     // AudioRenderer sync state
     syncedAudioTrackIds: [],
     syncedAudioClipIds: [],
+    failedAudioTrackIds: [],
+    failedAudioClipIds: [],
     isAudioReady: false,
     isRendererReady: false,
 
@@ -99,23 +111,41 @@ export const createEngineStore = (docGetter: DocGetter) => {
         audioRenderer: null,
         syncedGraphicTrackIds: [],
         syncedGraphicClipIds: [],
+        failedGraphicTrackIds: [],
+        failedGraphicClipIds: [],
         syncedAudioTrackIds: [],
         syncedAudioClipIds: [],
+        failedAudioTrackIds: [],
+        failedAudioClipIds: [],
         isAudioReady: false,
         isRendererReady: false,
       });
     },
-    applyRendererSyncResult: ({ trackIds, clipIds }) => {
+    applyRendererSyncResult: ({
+      trackIds,
+      clipIds,
+      failedTrackIds,
+      failedClipIds,
+    }) => {
       set({
         syncedGraphicTrackIds: trackIds,
         syncedGraphicClipIds: clipIds,
+        failedGraphicTrackIds: failedTrackIds,
+        failedGraphicClipIds: failedClipIds,
       });
     },
 
-    applyAudioSyncResult: ({ trackIds, clipIds }) => {
+    applyAudioSyncResult: ({
+      trackIds,
+      clipIds,
+      failedTrackIds,
+      failedClipIds,
+    }) => {
       set({
         syncedAudioTrackIds: trackIds,
         syncedAudioClipIds: clipIds,
+        failedAudioTrackIds: failedTrackIds,
+        failedAudioClipIds: failedClipIds,
       });
     },
 

@@ -122,6 +122,10 @@ export class AudioRenderer extends RendererBase {
 
         clipResults.push({ trackId: trackData.id, ...result });
       } catch (error) {
+        console.error(
+          `[AudioRenderer] 트랙(${trackData.id}) 동기화 중 오류 발생:`,
+          error
+        );
         failedTrackIds.push(trackData.id);
         clipResults.push({
           trackId: trackData.id,

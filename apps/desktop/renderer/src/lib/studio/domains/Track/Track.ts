@@ -84,6 +84,10 @@ export abstract class Track<
           clip?.sync(clipData);
           updatedClipIds.push(clipData.id);
         } catch (error) {
+          console.error(
+            `[Track] clip(${clipData.id}) sync failed on track(${this.id})`,
+            error
+          );
           failedClipIds.push(clipData.id);
         }
         return;
@@ -93,6 +97,10 @@ export abstract class Track<
         await this.addClip(clipData);
         addedClipIds.push(clipData.id);
       } catch (error) {
+        console.error(
+          `[Track] clip(${clipData.id}) add failed on track(${this.id})`,
+          error
+        );
         failedClipIds.push(clipData.id);
       }
     });

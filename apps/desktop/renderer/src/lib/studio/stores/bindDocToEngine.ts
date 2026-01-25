@@ -2,7 +2,6 @@ import type { StoreApi } from 'zustand/vanilla';
 import type { DocStore } from './docStore';
 import type { EngineStore } from './engineStore';
 import isEqual from 'fast-deep-equal';
-import { toast } from 'sonner';
 import type {
   IAudioTrack,
   IGraphicTrack,
@@ -59,21 +58,11 @@ export async function bindDocToEngine(
       syncGraphicTracks(
         engine,
         state.tracks.filter((track) => track.type === 'graphic')
-      ).catch((e) => {
-        console.error('[GraphicRenderer] 트랙 동기화 실패', e);
-        toast.error('Graphic sync failed', {
-          description: 'Renderer sync error occurred',
-        });
-      });
+      );
       syncAudioTracks(
         engine,
         state.tracks.filter((track) => track.type === 'audio')
-      ).catch((e) => {
-        console.error('[AudioRenderer] 트랙 동기화 실패', e);
-        toast.error('Audio sync failed', {
-          description: 'Audio renderer sync error occurred',
-        });
-      });
+      );
     }
   });
 
@@ -90,6 +79,7 @@ export async function bindDocToEngine(
  * - 의도적으로 기다리지 않음
  * - sync 는 내부에서 track/clip 단위로 처리하고 결과(added/updated/removed/failed)를 반환
  * - 실패 처리 정책은 외부에서 결정 (재시도/유지/제거 등)
+ * - ⚠️ 아래는 코드는 실패하지 않습니다. (never throw error)
  */
 
 async function syncGraphicTracks(
@@ -98,17 +88,28 @@ async function syncGraphicTracks(
 ): Promise<void> {
   const result = await engine.renderer!.syncTracks(tracks);
 
-  const syncedTrackIds = Array.from(engine.renderer!.tracks.keys());
-  const syncedClipIds: string[] = [];
-  for (const track of engine.renderer!.tracks.values()) {
-    for (const clipId of track.clips.keys()) {
-      syncedClipIds.push(clipId);
-    }
-  }
+  const syncedTrackIds = [
+    ...result.addedTrackIds,
+    ...result.updatedTrackIds,
+  ];
+
+  const syncedClipIds = result.clipResults.flatMap((clipResult) => [
+    ...clipResult.addedClipIds,
+    ...clipResult.updatedClipIds,
+  ]);
+
+  const failedClipIds = result.clipResults.flatMap((clipResult) =>
+    clipResult.failedClipIds.map((clipId) => ({
+      trackId: clipResult.trackId,
+      clipId,
+    }))
+  );
 
   engine.applyRendererSyncResult({
     trackIds: syncedTrackIds,
     clipIds: syncedClipIds,
+    failedTrackIds: result.failedTrackIds,
+    failedClipIds: failedClipIds.map((item) => item.clipId),
   });
 
   console.log(
@@ -118,12 +119,6 @@ async function syncGraphicTracks(
   if (result.failedTrackIds.length > 0) {
     console.warn('[Renderer] 동기화 실패 트랙:', result.failedTrackIds);
   }
-  const failedClipIds = result.clipResults.flatMap((clipResult) =>
-    clipResult.failedClipIds.map((clipId) => ({
-      trackId: clipResult.trackId,
-      clipId,
-    }))
-  );
   if (failedClipIds.length > 0) {
     console.warn('[Renderer] 동기화 실패 클립:', failedClipIds);
   }
@@ -134,17 +129,28 @@ async function syncAudioTracks(
 ): Promise<void> {
   const result = await engine.audioRenderer!.syncTracks(tracks);
 
-  const syncedTrackIds = Array.from(engine.audioRenderer!.tracks.keys());
-  const syncedClipIds: string[] = [];
-  for (const track of engine.audioRenderer!.tracks.values()) {
-    for (const clipId of track.clips.keys()) {
-      syncedClipIds.push(clipId);
-    }
-  }
+  const syncedTrackIds = [
+    ...result.addedTrackIds,
+    ...result.updatedTrackIds,
+  ];
+
+  const syncedClipIds = result.clipResults.flatMap((clipResult) => [
+    ...clipResult.addedClipIds,
+    ...clipResult.updatedClipIds,
+  ]);
+
+  const failedClipIds = result.clipResults.flatMap((clipResult) =>
+    clipResult.failedClipIds.map((clipId) => ({
+      trackId: clipResult.trackId,
+      clipId,
+    }))
+  );
 
   engine.applyAudioSyncResult({
     trackIds: syncedTrackIds,
     clipIds: syncedClipIds,
+    failedTrackIds: result.failedTrackIds,
+    failedClipIds: failedClipIds.map((item) => item.clipId),
   });
 
   console.log(
@@ -154,12 +160,6 @@ async function syncAudioTracks(
   if (result.failedTrackIds.length > 0) {
     console.warn('[AudioRenderer] 동기화 실패 트랙:', result.failedTrackIds);
   }
-  const failedClipIds = result.clipResults.flatMap((clipResult) =>
-    clipResult.failedClipIds.map((clipId) => ({
-      trackId: clipResult.trackId,
-      clipId,
-    }))
-  );
   if (failedClipIds.length > 0) {
     console.warn('[AudioRenderer] 동기화 실패 클립:', failedClipIds);
   }

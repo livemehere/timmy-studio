@@ -34,6 +34,7 @@ export function TimelineClip({
   trackHeight: number;
 }) {
   const getClipById = useDocStore((state) => state.getClipById);
+  const getTrackById = useDocStore((state) => state.getTrackById);
   const updateClip = useDocStore((state) => state.updateClip);
   const moveClipToTrack = useDocStore((state) => state.moveClipToTrack);
   const cloneClipToTrack = useDocStore((state) => state.cloneClipToTrack);
@@ -43,10 +44,27 @@ export function TimelineClip({
   const setActiveTrackId = useDocStore((state) => state.setActiveTrackId);
   const clip = getClipById<IGraphicClip>(trackId, clipId)!;
 
-  const syncedClipIds = useEngineStore(
+  const track = getTrackById(trackId);
+  const syncedGraphicClipIds = useEngineStore(
     (state) => state.syncedGraphicClipIds || []
   );
+  const failedGraphicClipIds = useEngineStore(
+    (state) => state.failedGraphicClipIds || []
+  );
+  const syncedAudioClipIds = useEngineStore(
+    (state) => state.syncedAudioClipIds || []
+  );
+  const failedAudioClipIds = useEngineStore(
+    (state) => state.failedAudioClipIds || []
+  );
+
+  const syncedClipIds =
+    track?.type === 'audio' ? syncedAudioClipIds : syncedGraphicClipIds;
+  const failedClipIds =
+    track?.type === 'audio' ? failedAudioClipIds : failedGraphicClipIds;
+
   const isLoaded = syncedClipIds.includes(clipId);
+  const isFailed = failedClipIds.includes(clipId);
 
   const width = msToSec(clip.endTime - clip.startTime) * pxPerSec;
   const left = msToSec(clip.startTime) * pxPerSec;
@@ -383,7 +401,7 @@ export function TimelineClip({
           className={cn(
             'absolute h-full bg-cyan-700 px-2 py-1 rounded overflow-hidden z-5',
             {
-              'border-1 border-white': isSelected,
+              'border border-white': isSelected,
               'ring-2 ring-yellow-400': isCloneMode,
             }
           )}
@@ -544,8 +562,11 @@ export function TimelineClip({
           }}
         >
           {clip.name}
-          {isLoaded && (
-            <span className="ml-1 text-xs opacity-70">(loaded)</span>
+          {isLoaded && !isFailed && (
+            <span className="ml-1 text-xs opacity-70">(synced)</span>
+          )}
+          {isFailed && (
+            <span className="ml-1 text-xs text-red-400">(failed)</span>
           )}
         </motion.div>
       </ContextMenu>

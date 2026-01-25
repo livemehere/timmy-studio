@@ -9,7 +9,11 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TimelineClip } from '@/lib/studio/components/Timeline/TimelineClip';
-import { useDocStore, useInteractionStore } from '../../hooks/useStudioStores';
+import {
+  useDocStore,
+  useEngineStore,
+  useInteractionStore,
+} from '../../hooks/useStudioStores';
 import { ContextMenu } from '@/components/ContextMenu';
 import { toast } from 'sonner';
 
@@ -58,6 +62,19 @@ export function TimelineTrack({
   const clipboard = useInteractionStore((state) => state.clipboard);
   const setLastClickedTime = useInteractionStore(
     (state) => state.setLastClickedTime
+  );
+
+  const syncedGraphicTrackIds = useEngineStore(
+    (state) => state.syncedGraphicTrackIds || []
+  );
+  const failedGraphicTrackIds = useEngineStore(
+    (state) => state.failedGraphicTrackIds || []
+  );
+  const syncedAudioTrackIds = useEngineStore(
+    (state) => state.syncedAudioTrackIds || []
+  );
+  const failedAudioTrackIds = useEngineStore(
+    (state) => state.failedAudioTrackIds || []
   );
 
   const [contextMenuPosition, setContextMenuPosition] = react.useState<
@@ -240,6 +257,12 @@ export function TimelineTrack({
   ];
 
   const isActive = activeTrackId === trackId;
+  const syncedTrackIds =
+    track.type === 'audio' ? syncedAudioTrackIds : syncedGraphicTrackIds;
+  const failedTrackIds =
+    track.type === 'audio' ? failedAudioTrackIds : failedGraphicTrackIds;
+  const isSynced = syncedTrackIds.includes(track.id);
+  const isFailed = failedTrackIds.includes(track.id);
 
   return (
     <div
@@ -271,6 +294,12 @@ export function TimelineTrack({
         <span className="text-xs text-neutral-400 font-mono pointer-events-none relative">
           z:{track.zIndex}
         </span>
+        {isSynced && !isFailed && (
+          <span className="text-[10px] text-emerald-400 font-mono">synced</span>
+        )}
+        {isFailed && (
+          <span className="text-[10px] text-red-400 font-mono">failed</span>
+        )}
       </div>
 
       <ContextMenu sections={contextMenuSections}>
