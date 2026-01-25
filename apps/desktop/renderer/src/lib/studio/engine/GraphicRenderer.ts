@@ -62,20 +62,7 @@ export class GraphicRenderer {
     });
     this._app.ticker.maxFPS = settings.frameRate;
 
-    // Canvas 스타일 적용
-    const canvas = this._app.canvas;
-    canvas.style.display = 'block';
-    canvas.style.maxWidth = '100%';
-    canvas.style.maxHeight = '100%';
-
-    const aspectRatio = settings.width / settings.height;
-    if (aspectRatio > 1) {
-      canvas.style.width = '100%';
-      canvas.style.height = 'auto';
-    } else {
-      canvas.style.width = 'auto';
-      canvas.style.height = '100%';
-    }
+    this.applyCanvasStyle(settings.width, settings.height);
 
     if (import.meta.env.DEV) {
       initDevtools({ app: this._app });
@@ -121,9 +108,6 @@ export class GraphicRenderer {
     this._isInitialized = false;
   }
 
-  // --------------------------------------------------------------------------
-  // 설정 및 Getter/Setter
-  // --------------------------------------------------------------------------
   get isInitialized(): boolean {
     return this._isInitialized;
   }
@@ -140,6 +124,7 @@ export class GraphicRenderer {
     )
       return;
     this._app.renderer.resize(width, height);
+    this.applyCanvasStyle(width, height);
   }
 
   set background(color: string) {
@@ -163,6 +148,22 @@ export class GraphicRenderer {
     this.resize(settings.width, settings.height);
     this.background = settings.background;
     this.frameRate = settings.frameRate;
+  }
+
+  private applyCanvasStyle(width: number, height: number): void {
+    const canvas = this._app.canvas;
+    canvas.style.display = 'block';
+    canvas.style.maxWidth = '100%';
+    canvas.style.maxHeight = '100%';
+
+    const aspectRatio = width / height;
+    if (aspectRatio > 1) {
+      canvas.style.width = '100%';
+      canvas.style.height = 'auto';
+    } else {
+      canvas.style.width = 'auto';
+      canvas.style.height = '100%';
+    }
   }
 
   async syncTracks(tracksData: IGraphicTrack[]) {
@@ -299,13 +300,10 @@ export class GraphicRenderer {
     this._lastCurrentMs = ctx.currentTime;
   }
 
-  // --------------------------------------------------------------------------
-  // 탐색 대기 및 Dirty 관리 (Seek & Dirty Management)
-  // --------------------------------------------------------------------------
-
   /**
    * 특정 시점으로의 탐색(Seek)이 렌더링적으로 완료될 때까지 대기합니다.
    * 비디오 로딩이나 텍스처 업로드 등 비동기 작업이 완료되기를 기다립니다.
+   * timer의 seekAndWait(ms) 호출 시점에 함께 호출되도록 설계되었습니다
    */
   waitForSeekSettled(targetMs: number): Promise<void> {
     // 재생 중이 아니며 이미 해당 시간에 있다면 즉시 완료
@@ -385,10 +383,6 @@ export class GraphicRenderer {
       wait.resolve();
     }
   }
-
-  // --------------------------------------------------------------------------
-  // 내보내기 및 헬퍼 메서드 (Export & Helpers)
-  // --------------------------------------------------------------------------
 
   /** 현재 캔버스 화면을 HTMLCanvasElement로 추출합니다. */
   async exportCurrentFrame(): Promise<HTMLCanvasElement> {
