@@ -27,12 +27,11 @@ export abstract class Clip {
   };
 
   abstract readonly type: ClipType;
-  public id: string;
-
-  public dirty: boolean = false;
-  public dirtySessionId: number | null = null;
-
+  readonly id: string;
   readonly renderer: GraphicRenderer | AudioRenderer;
+
+  dirty: boolean = false;
+  dirtySessionId: number | null = null;
   data: IClip;
 
   protected constructor(
@@ -45,9 +44,12 @@ export abstract class Clip {
   }
 
   abstract init(): Promise<void>;
-  abstract update(data: IClip): void;
   abstract destroy(): void;
+
+  // GraphicClip, AudioClip 1단계 상속 레벨에서 구현
   abstract tick(ctx: TickContext): void;
+  // 2단계 상속 클래스들에서 구현 (ShapeClip, TextClip, VideoClip, ImageClip...)
+  abstract update(data: IClip): void;
 
   isVisibleAt(timeMs: number): boolean {
     const trimStart = 'trimStart' in this.data ? (this.data.trimStart ?? 0) : 0;

@@ -53,15 +53,9 @@ export class ShapeClip extends GraphicClip {
     console.log('ShapeClip destroy called', this.id);
   }
 
-  tick(ctx: TickContext): void {
-    const { currentTime } = ctx;
-    const isVisible = this.shouldRender(currentTime);
-    this.sprite.visible = isVisible;
-
-    if (isVisible) {
-      this.applyTransform((this.data as IShapeClip).transforms);
-      this.applyEffects();
-    }
+  protected updateOnTick(_ctx: TickContext): void {
+    this.applyTransform((this.data as IShapeClip).transforms);
+    this.applyEffects();
   }
 
   /**

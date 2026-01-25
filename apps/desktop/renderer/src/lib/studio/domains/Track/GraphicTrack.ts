@@ -1,7 +1,6 @@
 import { Container } from 'pixi.js';
 import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
 import type { IGraphicTrack } from './types';
-import type { TickContext, ClipSyncResult } from '@/lib/studio/engine/types';
 import type {
   IGraphicClip,
   IVideoClip,
@@ -19,6 +18,7 @@ import {
 import { Track } from './Track';
 
 export class GraphicTrack extends Track<
+  IGraphicTrack,
   IGraphicClip,
   GraphicRenderer,
   GraphicClip
@@ -35,14 +35,8 @@ export class GraphicTrack extends Track<
     this.container.label = `${GraphicTrack.LABELS.TRACK_PREFIX}${this.id}`;
   }
 
-  /** 트랙 속성 및 내부 클립들을 동기화합니다. */
-  sync(data: IGraphicTrack): Promise<ClipSyncResult> {
+  protected applyTrackProps(data: IGraphicTrack): void {
     // GraphicTrack 은 data 를 저장할 필요 없음. this.container 가 곧 데이터
-    this.updateContainerProps(data);
-    return this.syncClips(data.clips);
-  }
-
-  private updateContainerProps(data: IGraphicTrack) {
     if (this.container.visible !== data.enabled)
       this.container.visible = data.enabled;
     if (this.container.alpha !== data.opacity)
@@ -54,10 +48,7 @@ export class GraphicTrack extends Track<
   protected async addClip(data: IGraphicClip): Promise<void> {
     const clip = this.createClipInstance(data);
     this.clips.set(data.id, clip);
-
     await clip.init();
-
-    // 클립 마운트
     clip.mount(this.container);
   }
 
@@ -70,11 +61,9 @@ export class GraphicTrack extends Track<
     }
   }
 
-  /** 렌더링 루프: 소속 클립들의 tick 실행 */
-  tick(ctx: TickContext): void {
+  protected shouldTrackTick(): boolean {
     // 트랙이 비활성화 상태면 클립 업데이트 스킵 가능 (선택 사항)
-    if (!this.container.visible) return;
-    super.tick(ctx);
+    return this.container.visible;
   }
 
   destroy(): void {
@@ -88,7 +77,7 @@ export class GraphicTrack extends Track<
     this.container.destroy({ children: true });
   }
 
-  private createClipInstance(data: IGraphicClip): GraphicClip {
+  protected createClipInstance(data: IGraphicClip): GraphicClip {
     switch (data.type) {
       case 'video':
         return new VideoClip(this.renderer, data as IVideoClip);

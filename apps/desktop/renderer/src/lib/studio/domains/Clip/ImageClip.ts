@@ -57,15 +57,9 @@ export class ImageClip extends GraphicClip {
     console.log(`[ImageClip] Clip(${this.id}) destroyed`);
   }
 
-  tick(ctx: TickContext): void {
-    const { currentTime } = ctx;
-    const isVisible = this.shouldRender(currentTime);
-    this.sprite.visible = isVisible;
-
-    if (isVisible) {
-      this.applyTransform(this.data.transforms);
-      this.applyEffects();
-    }
+  protected updateOnTick(_ctx: TickContext): void {
+    this.applyTransform(this.data.transforms);
+    this.applyEffects();
   }
 
   private createImageElement(asset: IImageAsset): Promise<HTMLImageElement> {

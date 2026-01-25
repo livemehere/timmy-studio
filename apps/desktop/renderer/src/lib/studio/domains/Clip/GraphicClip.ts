@@ -2,6 +2,7 @@ import { Container, Sprite, BlurFilter, Graphics } from 'pixi.js';
 import { PixelateFilter } from 'pixi-filters/pixelate';
 import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
 import { Clip } from './Clip';
+import type { TickContext } from '@/lib/studio/engine/types';
 import type {
   IClip,
   ITransform,
@@ -14,6 +15,7 @@ import type { IEffectMask } from '@/lib/studio/types/effect';
 export abstract class GraphicClip extends Clip {
   public sprite: Sprite;
   declare public data: IClip;
+  declare public readonly renderer: GraphicRenderer;
 
   // For masked effects
   private effectContainers: Map<string, Container> = new Map();
@@ -43,6 +45,24 @@ export abstract class GraphicClip extends Clip {
     super(renderer, data);
     this.sprite = new Sprite();
     this.sprite.label = `Clip-${this.id}`;
+  }
+
+  protected abstract updateOnTick(ctx: TickContext): void;
+
+  protected onHidden(_ctx: TickContext): void {
+    // Optional hook for subclasses
+  }
+
+  tick(ctx: TickContext): void {
+    const isVisible = this.shouldRender(ctx.currentTime);
+    this.sprite.visible = isVisible;
+
+    if (!isVisible) {
+      this.onHidden(ctx);
+      return;
+    }
+
+    this.updateOnTick(ctx);
   }
 
   mount(container: Container) {

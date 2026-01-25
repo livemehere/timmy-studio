@@ -67,7 +67,6 @@ export interface IAudioClip extends IBaseClip {
   type: 'audio';
   assetId: string;
   volume: number; // 0-1
-  trackId?: string;
 }
 
 export interface ITransform {

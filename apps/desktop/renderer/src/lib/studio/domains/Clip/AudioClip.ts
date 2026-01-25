@@ -14,6 +14,7 @@ import type { TickContext } from '@/lib/studio/engine/types';
 export class AudioClip extends Clip {
   readonly type = 'audio';
   public data: IAudioClip;
+  declare public readonly renderer: AudioRenderer;
 
   // Audio Graph - MediaElement 방식 (대용량 파일 스트리밍 지원)
   private audioElement: HTMLAudioElement | null = null;
@@ -27,10 +28,12 @@ export class AudioClip extends Clip {
   // State
   private isPlaying = false;
   private filePath: string | null = null;
+  private trackId: string | null = null;
 
-  constructor(renderer: AudioRenderer, data: IAudioClip) {
+  constructor(renderer: AudioRenderer, data: IAudioClip, trackId: string) {
     super(renderer, data);
     this.data = data;
+    this.trackId = trackId;
   }
 
   async init(): Promise<void> {
@@ -82,6 +85,13 @@ export class AudioClip extends Clip {
   // 오디오는 매 프레임 tick보다는 상태 변화(재생/정지/탐색) 시점에 반응하는 것이 중요함.
   tick(ctx: TickContext): void {
     if (!this.filePath) return;
+
+    if (!this.data.enabled) {
+      if (this.isPlaying) {
+        this.stop();
+      }
+      return;
+    }
 
     const { isPlaying, currentTime, playStateChanged, isSeeking } = ctx;
     const isVisible = this.shouldRender(currentTime);
@@ -142,26 +152,24 @@ export class AudioClip extends Clip {
       this.mediaSourceNode = ctx.createMediaElementSource(this.audioElement);
     }
 
-    // Gain Node 생성
-    if (!this.gainNode) {
-      this.gainNode = ctx.createGain();
-      // 그래프 연결: MediaSource -> Gain -> Track Input
-      this.mediaSourceNode.connect(this.gainNode);
+    const gainNode = (this.gainNode ??= ctx.createGain());
 
-      // 부모 트랙 찾기
-      const track = this.data.trackId
-        ? this.renderer.getTrack(this.data.trackId)
-        : undefined;
-      if (track) {
-        this.gainNode.connect(track.inputNode);
-      } else {
-        // Fallback: Track을 못 찾으면 Master로 직결
-        this.gainNode.connect(this.renderer.masterNode);
-      }
+    // 그래프 연결: MediaSource -> Gain -> Track Input
+    this.mediaSourceNode.connect(gainNode);
+
+    // 부모 트랙 찾기
+    const track = this.trackId
+      ? this.renderer.getTrack(this.trackId)
+      : undefined;
+    if (track) {
+      gainNode.connect(track.inputNode);
+    } else {
+      // Fallback: Track을 못 찾으면 Master로 직결
+      gainNode.connect(this.renderer.masterNode);
     }
 
     // 볼륨 설정
-    this.gainNode.gain.value = this.data.volume ?? 1;
+    gainNode.gain.value = this.data.volume ?? 1;
 
     // 재생 위치 계산
     // Clip 시작 시간: this.data.startTime

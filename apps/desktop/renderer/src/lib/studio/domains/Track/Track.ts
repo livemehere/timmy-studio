@@ -10,6 +10,7 @@ import { uid } from 'uid';
 export const DEFAULT_TRACK_Z_INDEX = 50;
 
 export abstract class Track<
+  TTrackData extends ITrack = ITrack,
   TClipData extends IClip = IClip,
   TRenderer extends GraphicRenderer | AudioRenderer =
     | GraphicRenderer
@@ -22,22 +23,26 @@ export abstract class Track<
     id: string;
   } = any,
 > {
-  public id: string;
-  public clips = new Map<string, TClipInstance>();
+  readonly id: string;
+  readonly clips = new Map<string, TClipInstance>();
+  readonly renderer: TRenderer;
 
-  protected constructor(
-    protected renderer: TRenderer,
-    data: { id: string }
-  ) {
+  protected constructor(renderer: TRenderer, data: { id: string }) {
     this.id = data.id;
+    this.renderer = renderer;
   }
 
-  abstract sync(data: ITrack): Promise<ClipSyncResult>;
-  abstract destroy(): void;
+  protected abstract applyTrackProps(data: TTrackData): void;
   protected abstract addClip(data: TClipData): Promise<void>;
   protected abstract removeClip(clipId: string): void;
+  protected abstract shouldTrackTick(): boolean;
+  protected abstract createClipInstance(data: TClipData): TClipInstance;
+  abstract destroy(): void;
 
-  /** 트랙 내의 클립들을 동기화합니다. */
+  async sync(data: TTrackData): Promise<ClipSyncResult> {
+    this.applyTrackProps(data);
+    return this.syncClips(data.clips as TClipData[]);
+  }
   protected async syncClips(newClips: TClipData[]): Promise<ClipSyncResult> {
     const newClipIds = new Set(newClips.map((c) => c.id));
     const addedClipIds: string[] = [];
@@ -85,12 +90,13 @@ export abstract class Track<
 
   /** 렌더링 루프: 소속 클립들의 tick 실행 */
   tick(ctx: TickContext): void {
+    if (!this.shouldTrackTick()) return;
     for (const clip of this.clips.values()) {
       clip.tick(ctx);
     }
   }
 
-  /** 해당 타읍의 가장 높은 z-order 를 가진 트랙을 반환 */
+  /** 해당 타입의 가장 높은 z-order 를 가진 트랙을 반환 */
   static findFirstTrack(tracks: ITrack[], type: TrackType): ITrack | undefined {
     return tracks
       .filter((t) => t.type == type)

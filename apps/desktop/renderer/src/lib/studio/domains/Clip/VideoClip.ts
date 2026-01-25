@@ -113,21 +113,8 @@ export class VideoClip extends GraphicClip {
     console.log(`[VideoClip] Clip(${this.id}) destroyed`);
   }
 
-  tick(ctx: TickContext): void {
+  protected updateOnTick(ctx: TickContext): void {
     const { currentTime, isPlaying, playStateChanged, isSeeking } = ctx;
-
-    // 렌더링 해야되지 않으면, 비디오를 정지하고, 스프라이트를 숨김
-    if (!this.shouldRender(currentTime)) {
-      this.pauseVideoClip();
-      this.wasVisible = false;
-      this.sprite.visible = false;
-      return;
-    }
-
-    // 매 틱 마다 호출되는 함수이기 때문에, visible 상태가 false 일때만 true 로 처리
-    if (!this.sprite.visible) {
-      this.sprite.visible = true;
-    }
 
     // 전 tick 에서 보이지 않았었다면, 이번 프레임이 보이게 된 시점
     const clipBecameVisible = !this.wasVisible;
@@ -145,6 +132,11 @@ export class VideoClip extends GraphicClip {
     );
 
     this.wasVisible = true;
+  }
+
+  protected onHidden(): void {
+    this.pauseVideoClip();
+    this.wasVisible = false;
   }
 
   private handleVideoClip(

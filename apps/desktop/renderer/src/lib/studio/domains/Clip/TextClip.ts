@@ -64,14 +64,8 @@ export class TextClip extends GraphicClip {
     this.sprite.destroy(true);
   }
 
-  tick(ctx: TickContext): void {
-    const { currentTime } = ctx;
-    const isVisible = this.shouldRender(currentTime);
-    this.sprite.visible = isVisible;
-
-    if (isVisible) {
-      this.applyTransform(this.data.transforms);
-    }
+  protected updateOnTick(_ctx: TickContext): void {
+    this.applyTransform(this.data.transforms);
   }
 
   /**
