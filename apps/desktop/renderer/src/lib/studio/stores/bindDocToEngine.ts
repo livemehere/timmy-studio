@@ -88,10 +88,7 @@ async function syncGraphicTracks(
 ): Promise<void> {
   const result = await engine.renderer!.syncTracks(tracks);
 
-  const syncedTrackIds = [
-    ...result.addedTrackIds,
-    ...result.updatedTrackIds,
-  ];
+  const syncedTrackIds = [...result.addedTrackIds, ...result.updatedTrackIds];
 
   const syncedClipIds = result.clipResults.flatMap((clipResult) => [
     ...clipResult.addedClipIds,
@@ -129,10 +126,7 @@ async function syncAudioTracks(
 ): Promise<void> {
   const result = await engine.audioRenderer!.syncTracks(tracks);
 
-  const syncedTrackIds = [
-    ...result.addedTrackIds,
-    ...result.updatedTrackIds,
-  ];
+  const syncedTrackIds = [...result.addedTrackIds, ...result.updatedTrackIds];
 
   const syncedClipIds = result.clipResults.flatMap((clipResult) => [
     ...clipResult.addedClipIds,
