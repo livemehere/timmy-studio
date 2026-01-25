@@ -53,8 +53,7 @@ export async function bindDocToEngine(
     }
 
     /** 얕은 비교로 변경 감지
-     *
-     * TODO: 변경 빈도가 높은 속성(예: 트랙 속성 변경 등)에 대해서는 별도의 세분화된 구독 메커니즘 도입 고려
+     * enable to shallow compare, because graphicRenderer sync method handle, move, update, add internally not replace all.
      */
     if (state.tracks !== prevState.tracks) {
       console.log('[Binding] 트랙 변경이 감지되었습니다');
