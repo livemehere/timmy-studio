@@ -13,11 +13,11 @@ export class ShapeClip extends GraphicClip {
   }
 
   get shapeData() {
-    return (this.data as IShapeClip).shapeData;
+    return (this._data as IShapeClip).shapeData;
   }
 
   async init(): Promise<void> {
-    console.log('ShapeClip init called', this.data);
+    console.log('ShapeClip init called', this._data);
 
     // Graphics 객체 생성
     this.graphics = new Graphics();
@@ -27,7 +27,7 @@ export class ShapeClip extends GraphicClip {
     this.sprite.addChild(this.graphics);
 
     this.renderShape();
-    this.applyTransform((this.data as IShapeClip).transforms);
+    this.applyTransform((this._data as IShapeClip).transforms);
   }
 
   destroy(): void {
@@ -40,7 +40,7 @@ export class ShapeClip extends GraphicClip {
   }
 
   updateOnTick(_ctx: TickContext): void {
-    this.applyTransform((this.data as IShapeClip).transforms);
+    this.applyTransform((this._data as IShapeClip).transforms);
     this.applyEffects();
   }
 
@@ -53,7 +53,7 @@ export class ShapeClip extends GraphicClip {
   }
 
   protected onUpdateVisible(_currentTime: number): void {
-    this.applyTransform((this.data as IShapeClip).transforms);
+    this.applyTransform((this._data as IShapeClip).transforms);
   }
 
   /**
@@ -82,8 +82,8 @@ export class ShapeClip extends GraphicClip {
     }
 
     // Update zIndex for sorting in container
-    if ((this.data as IShapeClip).zIndex !== undefined) {
-      sprite.zIndex = (this.data as IShapeClip).zIndex;
+    if ((this._data as IShapeClip).zIndex !== undefined) {
+      sprite.zIndex = (this._data as IShapeClip).zIndex;
     }
 
     // 3) base scale (size -> scale)

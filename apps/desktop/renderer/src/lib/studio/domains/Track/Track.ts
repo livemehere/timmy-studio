@@ -5,6 +5,7 @@ import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
 import type { AudioRenderer } from '@/lib/studio/engine/AudioRenderer';
 import type { AssetType } from '@/lib/studio/domains/Asset/types';
 import { uid } from 'uid';
+import type { Clip } from '../Clip';
 
 // 기본 트랙의 zIndex (위/아래로 최대 50개씩 트랙 추가 가능)
 export const DEFAULT_TRACK_Z_INDEX = 50;
@@ -15,20 +16,13 @@ export abstract class Track<
   TRenderer extends GraphicRenderer | AudioRenderer =
     | GraphicRenderer
     | AudioRenderer,
-  TClipInstance extends {
-    sync: (data: TClipData) => void;
-    destroy: () => void;
-    tick: (ctx: TickContext) => void;
-    shouldUpdateOnTick: (ctx: TickContext) => boolean;
-    updateOnTick: (ctx: TickContext) => void;
-    shouldClipTick: (ctx: TickContext) => boolean;
-    init: () => Promise<void>;
-    id: string;
-  } = any,
+  TClipInstance extends Clip<TClipData, TRenderer> = Clip<TClipData, TRenderer>,
 > {
   readonly id: string;
   readonly clips = new Map<string, TClipInstance>();
   readonly renderer: TRenderer;
+  private lastVisible = false;
+  private hasVisibilityState = false;
 
   protected constructor(renderer: TRenderer, data: { id: string }) {
     this.id = data.id;
@@ -38,9 +32,29 @@ export abstract class Track<
   protected abstract applyTrackProps(data: TTrackData): void;
   protected abstract addClip(data: TClipData): Promise<void>;
   protected abstract removeClip(clipId: string): void;
-  protected abstract shouldTrackTick(): boolean;
+  protected abstract isTrackVisible(): boolean;
   protected abstract createClipInstance(data: TClipData): TClipInstance;
   abstract destroy(): void;
+  protected abstract onTrackBecameVisible(): void;
+  protected abstract onTrackBecameHidden(): void;
+
+  private getTrackVisibility(): boolean {
+    const isVisible = this.isTrackVisible();
+    if (!this.hasVisibilityState) {
+      this.hasVisibilityState = true;
+      this.lastVisible = isVisible;
+      return isVisible;
+    }
+
+    if (isVisible && !this.lastVisible) {
+      this.onTrackBecameVisible();
+    }
+    if (!isVisible && this.lastVisible) {
+      this.onTrackBecameHidden();
+    }
+    this.lastVisible = isVisible;
+    return isVisible;
+  }
 
   async sync(data: TTrackData): Promise<ClipSyncResult> {
     this.applyTrackProps(data);
@@ -93,8 +107,9 @@ export abstract class Track<
 
   /** 렌더링 루프: 소속 클립들의 tick 실행 */
   tick(ctx: TickContext): void {
-    if (!this.shouldTrackTick()) return;
+    if (!this.getTrackVisibility()) return;
     for (const clip of this.clips.values()) {
+      if (!clip.shouldShowAt(ctx.currentTime)) continue;
       if (clip.shouldUpdateOnTick(ctx)) {
         clip.updateOnTick(ctx);
       }

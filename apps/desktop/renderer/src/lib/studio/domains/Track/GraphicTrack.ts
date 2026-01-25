@@ -61,9 +61,17 @@ export class GraphicTrack extends Track<
     }
   }
 
-  protected shouldTrackTick(): boolean {
+  protected isTrackVisible(): boolean {
     // 트랙이 비활성화 상태면 클립 업데이트 스킵 가능 (선택 사항)
     return this.container.visible;
+  }
+
+  protected onTrackBecameVisible(): void {
+    this.container.visible = true;
+  }
+
+  protected onTrackBecameHidden(): void {
+    this.container.visible = false;
   }
 
   destroy(): void {
@@ -73,7 +81,6 @@ export class GraphicTrack extends Track<
     }
     this.clips.clear();
 
-    // 컨테이너 제거
     this.container.destroy({ children: true });
   }
 

@@ -53,7 +53,7 @@ export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
   }
 
   protected onUpdateVisible(_currentTime: number): void {
-    this.applyTransform(this.data.transforms);
+    this.applyTransform(this._data.transforms);
     this.applyEffects();
   }
 
@@ -61,15 +61,22 @@ export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
     // Optional hook for subclasses
   }
 
+  protected onBecameVisible(_ctx: TickContext): void {
+    this.sprite.visible = true;
+  }
+
+  protected onBecameHidden(_ctx: TickContext): void {
+    this.sprite.visible = false;
+  }
+
   sync(newData: IGraphicClip): void {
-    const prevData = this.data;
-    this.data = newData;
+    const prevData = this._data;
+    this._data = newData;
 
     this.onUpdateData(prevData, newData);
 
     const currentTime = this.renderer.timer.currentMs;
-    const isVisible = this.shouldRender(currentTime);
-    this.sprite.visible = isVisible;
+    const isVisible = this.shouldShowAt(currentTime);
 
     if (isVisible) {
       this.onUpdateVisible(currentTime);
@@ -80,8 +87,7 @@ export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
   }
 
   shouldUpdateOnTick(ctx: TickContext): boolean {
-    const isVisible = this.shouldRender(ctx.currentTime);
-    this.sprite.visible = isVisible;
+    const isVisible = this.getTickVisibility(ctx);
 
     if (!isVisible) {
       this.onUpdateHidden(ctx.currentTime);
@@ -93,7 +99,7 @@ export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
   abstract updateOnTick(ctx: TickContext): void;
 
   shouldClipTick(ctx: TickContext): boolean {
-    const isVisible = this.shouldRender(ctx.currentTime);
+    const isVisible = this.getTickVisibility(ctx);
     if (!isVisible) {
       this.onHidden(ctx);
       return false;
@@ -122,7 +128,7 @@ export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
    * mask가 있으면 특정 영역만 적용
    */
   protected applyEffects(): void {
-    const effects = this.data.effects || [];
+    const effects = this._data.effects || [];
 
     // Clean up old effect containers and masks
     this.cleanupEffectContainers();

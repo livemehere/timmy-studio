@@ -3,7 +3,6 @@ import { Application, Container, Rectangle } from 'pixi.js';
 import type { IGraphicTrack } from '@/lib/studio/domains/Track/types';
 import type { Timer } from '@/lib/studio/engine/Timer';
 import type {
-  TickContext,
   SeekingRenderMode,
   DocGetter,
   Dirtyable,
@@ -12,12 +11,12 @@ import type {
   RendererSyncResult,
 } from './types';
 import { GraphicTrack } from '@/lib/studio/domains/Track/GraphicTrack';
+import { RendererBase } from './RendererBase';
 
-export class GraphicRenderer {
+export class GraphicRenderer extends RendererBase {
   private _isInitialized = false;
 
   /** 외부 의존성 */
-  timer: Timer;
   readonly getDoc: DocGetter;
 
   /** PIXI */
@@ -39,12 +38,8 @@ export class GraphicRenderer {
     started: boolean;
     resolve: () => void;
   } | null = null;
-  /** 직전 렌더 틱 상태 */
-  private _lastIsPlaying = false;
-  private _lastCurrentMs = 0;
-
   constructor(timer: Timer, docGetter: DocGetter) {
-    this.timer = timer;
+    super(timer);
     this.getDoc = docGetter;
     console.log('[GraphicRenderer] 인스턴스 생성됨');
   }
@@ -142,8 +137,7 @@ export class GraphicRenderer {
     // 내부 상태 초기화
     this._activeSeekWait = null;
     this._seekSessionId = 0;
-    this._lastIsPlaying = false;
-    this._lastCurrentMs = 0;
+    this.resetTickState();
 
     this._isInitialized = false;
   }
@@ -275,7 +269,6 @@ export class GraphicRenderer {
     }
 
     this._sceneContainer.removeChild(track.container);
-    // recursive destroy inside (clips and container)
     track.destroy();
     this.tracks.delete(trackId);
     console.log(`[GraphicRenderer] 트랙(${trackId}) 제거됨`);
@@ -298,27 +291,6 @@ export class GraphicRenderer {
       // 다음 프레임에 사용될, 현재 틱 상태 저장
       this.commitFrameContext(ctx);
     });
-  }
-
-  private captureTickContext(): TickContext {
-    const currentTime = this.timer.currentMs;
-    const isPlaying = this.timer.isPlaying;
-    const wasPlaying = this._lastIsPlaying;
-    const lastTime = this._lastCurrentMs;
-
-    return {
-      currentTime,
-      isPlaying,
-      wasPlaying,
-      lastTime,
-      playStateChanged: isPlaying !== wasPlaying,
-      isSeeking: !isPlaying && currentTime !== lastTime,
-    };
-  }
-
-  private commitFrameContext(ctx: TickContext): void {
-    this._lastIsPlaying = ctx.isPlaying;
-    this._lastCurrentMs = ctx.currentTime;
   }
 
   /**

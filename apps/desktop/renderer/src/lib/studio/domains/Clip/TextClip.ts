@@ -6,7 +6,7 @@ import type { TickContext } from '@/lib/studio/engine/types';
 
 export class TextClip extends GraphicClip {
   readonly type = 'text';
-  public data: ITextClip;
+  public _data: ITextClip;
   private text: Text | null = null;
   private background: Graphics | null = null;
   private selectionBounds: Graphics | null = null; // 선택 영역 표시용
@@ -14,12 +14,12 @@ export class TextClip extends GraphicClip {
 
   constructor(renderer: GraphicRenderer, data: ITextClip) {
     super(renderer, data);
-    this.data = data;
+    this._data = data;
   }
 
   async init(): Promise<void> {
     this.createContent();
-    this.applyTransform(this.data.transforms);
+    this.applyTransform(this._data.transforms);
   }
 
   destroy(): void {
@@ -43,7 +43,7 @@ export class TextClip extends GraphicClip {
   }
 
   updateOnTick(_ctx: TickContext): void {
-    this.applyTransform(this.data.transforms);
+    this.applyTransform(this._data.transforms);
   }
 
   protected onUpdateData(prevData: ITextClip, nextData: ITextClip): void {
@@ -57,7 +57,7 @@ export class TextClip extends GraphicClip {
   }
 
   protected onUpdateVisible(_currentTime: number): void {
-    this.applyTransform(this.data.transforms);
+    this.applyTransform(this._data.transforms);
   }
 
   /**
@@ -83,8 +83,8 @@ export class TextClip extends GraphicClip {
     }
 
     // Update zIndex for sorting in container
-    if (this.data.zIndex !== undefined) {
-      sprite.zIndex = this.data.zIndex;
+    if (this._data.zIndex !== undefined) {
+      sprite.zIndex = this._data.zIndex;
     }
 
     // 3) Scale
@@ -115,21 +115,21 @@ export class TextClip extends GraphicClip {
     }
 
     // 1. Create Text
-    const shadow = this.data.textData.shadow;
-    const fontSize = this.data.textData.fontSize;
+    const shadow = this._data.textData.shadow;
+    const fontSize = this._data.textData.fontSize;
     const style = new TextStyle({
-      fontFamily: this.data.textData.fontFamily,
+      fontFamily: this._data.textData.fontFamily,
       fontSize: fontSize,
-      fill: this.data.textData.color,
-      align: this.data.textData.align ?? 'left',
-      fontWeight: this.data.textData.bold ? 'bold' : 'normal',
-      fontStyle: this.data.textData.italic ? 'italic' : 'normal',
-      letterSpacing: this.data.textData.letterSpacing ?? 0,
-      lineHeight: (this.data.textData.lineHeight ?? 1) * fontSize,
-      stroke: this.data.textData.border?.color
+      fill: this._data.textData.color,
+      align: this._data.textData.align ?? 'left',
+      fontWeight: this._data.textData.bold ? 'bold' : 'normal',
+      fontStyle: this._data.textData.italic ? 'italic' : 'normal',
+      letterSpacing: this._data.textData.letterSpacing ?? 0,
+      lineHeight: (this._data.textData.lineHeight ?? 1) * fontSize,
+      stroke: this._data.textData.border?.color
         ? {
-            color: this.data.textData.border.color,
-            width: this.data.textData.border.width,
+            color: this._data.textData.border.color,
+            width: this._data.textData.border.width,
           }
         : undefined,
       dropShadow: shadow
@@ -145,7 +145,7 @@ export class TextClip extends GraphicClip {
         : undefined,
     });
 
-    this.text = new Text(this.data.textData.content, style);
+    this.text = new Text(this._data.textData.content, style);
     // Anchor defaults to 0 (top-left) now as requested
     this.text.anchor.set(0);
 
@@ -170,30 +170,32 @@ export class TextClip extends GraphicClip {
     if (!this.text) return;
 
     // Update Text Style
-    const fontSize = this.data.textData.fontSize;
-    this.text.text = this.data.textData.content;
-    this.text.style.fontFamily = this.data.textData.fontFamily;
+    const fontSize = this._data.textData.fontSize;
+    this.text.text = this._data.textData.content;
+    this.text.style.fontFamily = this._data.textData.fontFamily;
     this.text.style.fontSize = fontSize;
-    this.text.style.fill = this.data.textData.color;
-    this.text.style.align = this.data.textData.align ?? 'left';
-    this.text.style.fontWeight = this.data.textData.bold ? 'bold' : 'normal';
-    this.text.style.fontStyle = this.data.textData.italic ? 'italic' : 'normal';
-    this.text.style.letterSpacing = this.data.textData.letterSpacing ?? 0;
+    this.text.style.fill = this._data.textData.color;
+    this.text.style.align = this._data.textData.align ?? 'left';
+    this.text.style.fontWeight = this._data.textData.bold ? 'bold' : 'normal';
+    this.text.style.fontStyle = this._data.textData.italic
+      ? 'italic'
+      : 'normal';
+    this.text.style.letterSpacing = this._data.textData.letterSpacing ?? 0;
     this.text.style.lineHeight =
-      (this.data.textData.lineHeight ?? 1) * fontSize;
+      (this._data.textData.lineHeight ?? 1) * fontSize;
 
-    if (this.data.textData.border) {
+    if (this._data.textData.border) {
       this.text.style.stroke = {
-        color: this.data.textData.border.color,
-        width: this.data.textData.border.width,
+        color: this._data.textData.border.color,
+        width: this._data.textData.border.width,
       };
     } else {
       // @ts-ignore - stroke type issue workaround
       this.text.style.stroke = undefined;
     }
 
-    if (this.data.textData.shadow) {
-      const shadow = this.data.textData.shadow;
+    if (this._data.textData.shadow) {
+      const shadow = this._data.textData.shadow;
       this.text.style.dropShadow = {
         color: shadow.color,
         blur: shadow.blur,
@@ -218,7 +220,7 @@ export class TextClip extends GraphicClip {
   }
 
   private updateBackground(): void {
-    const bgData = this.data.textData.background;
+    const bgData = this._data.textData.background;
 
     if (bgData && typeof bgData === 'object') {
       if (!this.background) {
@@ -277,7 +279,7 @@ export class TextClip extends GraphicClip {
   }
 
   private updateUnderline(): void {
-    const underlineEnabled = this.data.textData.underline ?? false;
+    const underlineEnabled = this._data.textData.underline ?? false;
 
     if (underlineEnabled) {
       if (!this.underline) {
@@ -291,7 +293,7 @@ export class TextClip extends GraphicClip {
 
       const textWidth = this.text.width;
       const textHeight = this.text.height;
-      const fontSize = this.data.textData.fontSize;
+      const fontSize = this._data.textData.fontSize;
       const anchorX = this.text.anchor.x;
       const anchorY = this.text.anchor.y;
 
@@ -309,7 +311,7 @@ export class TextClip extends GraphicClip {
       );
       this.underline.stroke({
         width: underlineHeight,
-        color: this.data.textData.color,
+        color: this._data.textData.color,
       });
     } else {
       if (this.underline) {

@@ -1,6 +1,6 @@
 import { uid } from 'uid';
 import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
-import type { TickContext } from '@/lib/studio/engine/types';
+import type { Dirtyable, TickContext } from '@/lib/studio/engine/types';
 import type { IAsset } from '../Asset/types';
 import type { IShapeData } from '@/lib/studio/types/shape';
 import type { ITextData } from '@/lib/studio/types/text';
@@ -24,7 +24,8 @@ export abstract class Clip<
   TRenderer extends GraphicRenderer | AudioRenderer =
     | GraphicRenderer
     | AudioRenderer,
-> {
+> implements Dirtyable
+{
   static readonly DEFAULT_CLIP_DURATION_MS = 3000; //ms
   static readonly DEFAULT_TRANSFORM_SIZE = {
     width: 150,
@@ -37,12 +38,19 @@ export abstract class Clip<
 
   dirty: boolean = false;
   dirtySessionId: number | null = null;
-  data: TClipData;
+  protected _data: TClipData;
+  private lastTickTime: number | null = null;
+  private lastTickData: TClipData | null = null;
+  private lastTickVisible = false;
+
+  get data(): TClipData {
+    return this._data;
+  }
 
   protected constructor(renderer: TRenderer, data: TClipData) {
     this.id = data.id;
     this.renderer = renderer;
-    this.data = data;
+    this._data = data;
   }
 
   abstract init(): Promise<void>;
@@ -58,18 +66,52 @@ export abstract class Clip<
   // 2단계 상속 클래스들에서 구현 (ShapeClip, TextClip, VideoClip, ImageClip...)
   abstract sync(newData: TClipData): void;
 
-  protected isVisibleAt(timeMs: number): boolean {
-    const trimStart = 'trimStart' in this.data ? (this.data.trimStart ?? 0) : 0;
-    const trimEnd = 'trimEnd' in this.data ? (this.data.trimEnd ?? 0) : 0;
+  protected isInRangeAt(timeMs: number): boolean {
+    const trimStart =
+      'trimStart' in this._data ? (this._data.trimStart ?? 0) : 0;
+    const trimEnd = 'trimEnd' in this._data ? (this._data.trimEnd ?? 0) : 0;
 
-    const visibleStart = this.data.startTime + trimStart;
-    const visibleEnd = this.data.endTime - trimEnd;
+    const visibleStart = this._data.startTime + trimStart;
+    const visibleEnd = this._data.endTime - trimEnd;
 
     return timeMs >= visibleStart && timeMs < visibleEnd;
   }
 
-  protected shouldRender(timeMs: number): boolean {
-    return this.data.enabled && this.isVisibleAt(timeMs);
+  shouldShowAt(timeMs: number): boolean {
+    return this._data.enabled && this.isInRangeAt(timeMs);
+  }
+
+  protected onBecameVisible(_ctx: TickContext): void {
+    // Optional hook for subclasses
+  }
+
+  protected onBecameHidden(_ctx: TickContext): void {
+    // Optional hook for subclasses
+  }
+
+  protected getTickVisibility(ctx: TickContext): boolean {
+    if (
+      this.lastTickTime === ctx.currentTime &&
+      this.lastTickData === this._data
+    ) {
+      return this.lastTickVisible;
+    }
+
+    const isVisible = this.shouldShowAt(ctx.currentTime);
+    const wasVisible = this.lastTickVisible;
+
+    this.lastTickTime = ctx.currentTime;
+    this.lastTickData = this._data;
+    this.lastTickVisible = isVisible;
+
+    if (isVisible && !wasVisible) {
+      this.onBecameVisible(ctx);
+    }
+    if (!isVisible && wasVisible) {
+      this.onBecameHidden(ctx);
+    }
+
+    return isVisible;
   }
 
   private static createBaseClipFromAsset(asset: IAsset): IBaseClip {

@@ -48,8 +48,17 @@ export class AudioTrack extends Track<
     }
   }
 
-  protected shouldTrackTick(): boolean {
+  protected isTrackVisible(): boolean {
     return this.data.enabled;
+  }
+
+  // 오디오는 굳이 처리할 거 없음.
+  protected onTrackBecameVisible(): void {
+    // No-op: audio nodes are already connected
+  }
+
+  protected onTrackBecameHidden(): void {
+    // When hidden, output is already silenced via applyTrackProps
   }
 
   destroy(): void {

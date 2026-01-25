@@ -8,7 +8,8 @@ import type { IVideoAsset } from '../Asset/types';
 
 export class VideoClip extends GraphicClip {
   readonly type = 'video';
-  public data: IVideoClip;
+
+  declare protected _data: IVideoClip;
 
   // State
   private element: HTMLVideoElement | null = null;
@@ -22,19 +23,19 @@ export class VideoClip extends GraphicClip {
 
   constructor(renderer: GraphicRenderer, data: IVideoClip) {
     super(renderer, data);
-    this.data = data;
+    this._data = data;
   }
 
   async init(): Promise<void> {
     const asset = this.renderer
       .getDoc()
-      .assets.find((a) => a.id === this.data.assetId) as
+      .assets.find((a) => a.id === this._data.assetId) as
       | IVideoAsset
       | undefined;
 
     if (!asset || asset.type !== 'video') {
       throw new Error(
-        `[VideoClip] Asset not found or invalid: ${this.data.assetId}`
+        `[VideoClip] Asset not found or invalid: ${this._data.assetId}`
       );
     }
 
@@ -65,7 +66,7 @@ export class VideoClip extends GraphicClip {
       });
     }
 
-    this.applyTransform(this.data.transforms);
+    this.applyTransform(this._data.transforms);
 
     console.log(`[VideoClip] VideoClip(${this.id}) initialized`);
   }
@@ -89,11 +90,11 @@ export class VideoClip extends GraphicClip {
     // 전 tick 에서 보이지 않았었다면, 이번 프레임이 보이게 된 시점
     const clipBecameVisible = !this.wasVisible;
 
-    this.applyTransform(this.data.transforms);
+    this.applyTransform(this._data.transforms);
     this.applyEffects();
 
     this.handleVideoClip(
-      this.data,
+      this._data,
       currentTime,
       isPlaying,
       playStateChanged,
@@ -110,12 +111,12 @@ export class VideoClip extends GraphicClip {
   }
 
   protected onUpdateVisible(currentTime: number): void {
-    this.applyTransform(this.data.transforms);
+    this.applyTransform(this._data.transforms);
     this.applyEffects();
 
     const origin = this.element;
     const proxy = this.proxyElement ?? null;
-    const clipRelativeTime = this.calcClipRelativeTime(this.data, currentTime);
+    const clipRelativeTime = this.calcClipRelativeTime(this._data, currentTime);
 
     if (origin) {
       origin.currentTime = clipRelativeTime;

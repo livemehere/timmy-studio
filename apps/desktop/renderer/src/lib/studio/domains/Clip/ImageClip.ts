@@ -8,30 +8,30 @@ import type { IImageAsset } from '../Asset/types';
 
 export class ImageClip extends GraphicClip {
   readonly type = 'image';
-  public data: IImageClip;
+  public _data: IImageClip;
 
   // State
   private element: HTMLImageElement | null = null;
 
   constructor(renderer: GraphicRenderer, data: IImageClip) {
     super(renderer, data);
-    this.data = data;
+    this._data = data;
   }
 
   async init(): Promise<void> {
     const asset = this.renderer
       .getDoc()
-      .assets.find((a: any) => a.id === this.data.assetId) as IImageAsset;
+      .assets.find((a: any) => a.id === this._data.assetId) as IImageAsset;
     if (!asset || asset.type !== 'image') {
       throw new Error(
-        `[ImageClip] Asset not found or invalid: ${this.data.assetId}`
+        `[ImageClip] Asset not found or invalid: ${this._data.assetId}`
       );
     }
 
     this.element = await this.createImageElement(asset);
     this.sprite.texture = Texture.from(this.element);
 
-    this.applyTransform(this.data.transforms);
+    this.applyTransform(this._data.transforms);
 
     console.log(`[ImageClip] ImageClip(${this.id}) initialized`);
   }
@@ -47,7 +47,7 @@ export class ImageClip extends GraphicClip {
   }
 
   updateOnTick(_ctx: TickContext): void {
-    this.applyTransform(this.data.transforms);
+    this.applyTransform(this._data.transforms);
     this.applyEffects();
   }
 

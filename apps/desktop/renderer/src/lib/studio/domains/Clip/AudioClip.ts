@@ -30,17 +30,17 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
 
   constructor(renderer: AudioRenderer, data: IAudioClip, trackId: string) {
     super(renderer, data);
-    this.data = data;
+    this._data = data;
     this.trackId = trackId;
   }
 
   async init(): Promise<void> {
     const asset = this.renderer
       .getDoc()
-      .assets.find((a: any) => a.id === this.data.assetId);
+      .assets.find((a: any) => a.id === this._data.assetId);
     if (!asset || asset.type !== 'audio') {
       throw new Error(
-        `[AudioClip] Asset not found or invalid: ${this.data.assetId}`
+        `[AudioClip] Asset not found or invalid: ${this._data.assetId}`
       );
     }
 
@@ -49,7 +49,7 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
   }
 
   sync(data: IAudioClip): void {
-    this.data = data;
+    this._data = data;
     // 볼륨 등 업데이트
     if (this.gainNode) {
       this.gainNode.gain.value = data.volume ?? 1;
@@ -57,7 +57,7 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
   }
 
   shouldUpdateOnTick(ctx: TickContext): boolean {
-    return this.shouldRender(ctx.currentTime);
+    return this.getTickVisibility(ctx);
   }
 
   updateOnTick(_ctx: TickContext): void {
@@ -65,7 +65,7 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
   }
 
   shouldClipTick(_ctx: TickContext): boolean {
-    return this.data.enabled || this.isPlaying;
+    return this._data.enabled || this.isPlaying;
   }
 
   destroy(): void {
@@ -96,7 +96,7 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
   tick(ctx: TickContext): void {
     if (!this.filePath) return;
 
-    if (!this.data.enabled) {
+    if (!this._data.enabled) {
       if (this.isPlaying) {
         this.stop();
       }
@@ -104,7 +104,7 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
     }
 
     const { isPlaying, currentTime, playStateChanged, isSeeking } = ctx;
-    const isVisible = this.shouldRender(currentTime);
+    const isVisible = this.getTickVisibility(ctx);
 
     // 1. 재생 상태 변경 or 탐색 시
     if (playStateChanged || isSeeking) {
@@ -179,15 +179,15 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
     }
 
     // 볼륨 설정
-    gainNode.gain.value = this.data.volume ?? 1;
+    gainNode.gain.value = this._data.volume ?? 1;
 
     // 재생 위치 계산
     // Clip 시작 시간: this.data.startTime
     // 오디오 파일 내 시작점: this.data.trimStart (없으면 0)
     // 현재 커서 위치: currentTime
-    const trimStart = (this.data.trimStart ?? 0) / 1000; // ms -> s
+    const trimStart = (this._data.trimStart ?? 0) / 1000; // ms -> s
     const offset =
-      Math.max(0, (currentTime - this.data.startTime) / 1000) + trimStart;
+      Math.max(0, (currentTime - this._data.startTime) / 1000) + trimStart;
 
     // Audio Element의 currentTime 설정 및 재생
     this.audioElement.currentTime = offset;

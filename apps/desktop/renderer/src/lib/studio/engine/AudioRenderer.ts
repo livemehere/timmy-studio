@@ -7,8 +7,10 @@ import type {
   RendererSyncResult,
 } from './types';
 import { AudioTrack } from '@/lib/studio/domains/Track/AudioTrack';
+import { RendererBase } from './RendererBase';
+import type { TickContext } from './types';
 
-export class AudioRenderer {
+export class AudioRenderer extends RendererBase {
   public sampleRate: number = 44100;
 
   // Audio Context
@@ -21,9 +23,10 @@ export class AudioRenderer {
   private isInitialized = false;
 
   constructor(
-    public timer: Timer,
+    timer: Timer,
     public getDoc: DocGetter
   ) {
+    super(timer);
     this.audioContext = new AudioContext();
 
     // Master Node 생성
@@ -50,34 +53,17 @@ export class AudioRenderer {
     });
   }
 
-  private lastState = { isPlaying: false, currentMs: 0 };
-
   private handleTimerUpdate(state: { currentMs: number; isPlaying: boolean }) {
     if (!this.isInitialized) return;
-
-    const { currentMs, isPlaying } = state;
-    const { lastState } = this;
-
-    // playStateChanged: 재생 상태가 변했는지
-    const playStateChanged = isPlaying !== lastState.isPlaying;
-
-    // isSeeking: 정지 상태에서 시간이 변했는지 (혹은 재생 중 점프 등)
-    // Timer가 isPlaying일 때도 currentMs는 계속 변하므로,
-    // isSeeking 판별은 'isPlaying이 false이면서 시간이 변했을 때' 혹은 '갑작스런 시간 변화'를 감지해야 함.
-    // 여기서는 단순화하여 '정지 상태 + 시간 변화'를 seek로 간주
-    const isSeeking = !isPlaying && currentMs !== lastState.currentMs;
-
-    const ctx = {
-      currentTime: currentMs,
-      isPlaying,
-      playStateChanged,
-      isSeeking,
-    };
+    const ctx = this.captureTickContextFromState(
+      state.currentMs,
+      state.isPlaying
+    );
 
     // 항상 틱을 수행하여 Clip 상태 업데이트 (특히 play/stop 전환 시 중요)
     this.tick(ctx);
 
-    this.lastState = { isPlaying, currentMs };
+    this.commitFrameContext(ctx);
   }
 
   async init() {
@@ -160,8 +146,7 @@ export class AudioRenderer {
 
   // 메인 루프 (Renderer와 함께 호출되어야 함)
   // Renderer.ts의 startLoop에서 audioRenderer.tick(ctx)를 호출해주는 것이 가장 깔끔함.
-  tick(ctx: any): void {
-    // 타입 순환 참조 방지를 위해 any 사용 혹은 공통 타입 분리 필요
+  tick(ctx: TickContext): void {
     if (!this.isInitialized) return;
 
     // 브라우저 정책상 오디오 컨텍스트가 suspended 상태면 resume 시도
@@ -185,6 +170,7 @@ export class AudioRenderer {
     this.tracks.clear();
     this.audioContext.close();
     this.isInitialized = false;
+    this.resetTickState();
   }
 
   /**
