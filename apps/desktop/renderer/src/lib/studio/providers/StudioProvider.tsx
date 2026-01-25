@@ -38,6 +38,7 @@ export function StudioProvider({
   }
 
   const safeCleanup = () => {
+    /** 중복 클린업 방지 */
     if (cleanedRef.current) return;
     cleanedRef.current = true;
 
@@ -50,7 +51,9 @@ export function StudioProvider({
 
   useEffect(() => {
     (async () => {
-      if (!storesRef.current) return;
+      if (!storesRef.current) {
+        throw new Error('Stores not initialized');
+      }
       const { docStore, engineStore } = storesRef.current;
       try {
         const unbind = await bindDocToEngine(docStore, engineStore);

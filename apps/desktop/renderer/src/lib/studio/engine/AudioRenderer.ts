@@ -82,6 +82,10 @@ export class AudioRenderer {
     this.isInitialized = true;
   }
 
+  syncSettings(settings: { sampleRate: number }): void {
+    this.sampleRate = settings.sampleRate;
+  }
+
   // 데이터 동기화
   async syncTracks(tracksData: IAudioTrack[]): Promise<{
     syncedTrackIds: string[];

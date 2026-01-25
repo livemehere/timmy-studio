@@ -39,6 +39,10 @@ export class Timer {
     this.durationMs$.next(ms);
   }
 
+  syncSettings(settings: { durationMs: number }): void {
+    this.durationMs = settings.durationMs;
+  }
+
   subscribe(listener: (state: TimerState) => void): () => void {
     // 즉시 현재 상태 전달
     listener(this.getState());

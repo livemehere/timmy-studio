@@ -2,7 +2,7 @@ import { StudioProvider } from '@/lib/studio/providers/StudioProvider';
 import { StudioApp } from '@/lib/studio/components';
 import type { IProject } from '@/lib/studio/types/project';
 
-const mock: IProject = {
+const DEFAULT_PROJECT: IProject = {
   id: '0',
   name: 'sample project',
   settings: {
@@ -30,7 +30,7 @@ try {
   autoSaved = null;
 }
 
-const initialProject = autoSaved || mock;
+const initialProject = autoSaved || DEFAULT_PROJECT;
 
 export default function VideoEditorPage() {
   return (

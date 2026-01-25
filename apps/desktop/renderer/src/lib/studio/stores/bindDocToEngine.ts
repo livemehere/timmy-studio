@@ -8,9 +8,6 @@ import type {
   IGraphicTrack,
 } from '@/lib/studio/domains/Track/types';
 
-/**
- * docStore의 변경사항을 engineStore에 자동으로 반영하는 바인딩 로직
- */
 export async function bindDocToEngine(
   docStore: StoreApi<DocStore>,
   engineStore: StoreApi<EngineStore>
@@ -41,14 +38,24 @@ export async function bindDocToEngine(
 
   const unsubscribe = docStore.subscribe((state, prevState) => {
     if (!isEqual(state.settings, prevState.settings)) {
-      engine.renderer!.resize(state.settings.width, state.settings.height);
-      engine.renderer!.background = state.settings.background;
-      engine.renderer!.frameRate = state.settings.frameRate;
-      engine.timer!.durationMs = state.settings.duration;
-      engine.audioRenderer!.sampleRate = state.settings.sampleRate;
+      engine.renderer!.syncSettings({
+        width: state.settings.width,
+        height: state.settings.height,
+        background: state.settings.background,
+        frameRate: state.settings.frameRate,
+      });
+      engine.timer!.syncSettings({
+        durationMs: state.settings.duration,
+      });
+      engine.audioRenderer!.syncSettings({
+        sampleRate: state.settings.sampleRate,
+      });
     }
 
-    // 얕은 비교로 변경 감지
+    /** 얕은 비교로 변경 감지
+     *
+     * TODO: 변경 빈도가 높은 속성(예: 트랙 속성 변경 등)에 대해서는 별도의 세분화된 구독 메커니즘 도입 고려
+     */
     if (state.tracks !== prevState.tracks) {
       console.log('[Binding] 트랙 변경이 감지되었습니다');
 

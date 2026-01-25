@@ -110,11 +110,6 @@ export class GraphicRenderer {
     }
     this.tracks.clear();
 
-    // 씬 컨테이너 정리
-    if (this._sceneContainer) {
-      this._sceneContainer.destroy({ children: true });
-    }
-
     // Pixi App 정리
     this._app.destroy(true, {
       children: true,
@@ -157,6 +152,17 @@ export class GraphicRenderer {
     if (!this._isInitialized) return;
     if (this._app.ticker.maxFPS === frameRate) return;
     this._app.ticker.maxFPS = frameRate;
+  }
+
+  syncSettings(settings: {
+    width: number;
+    height: number;
+    background: string;
+    frameRate: number;
+  }): void {
+    this.resize(settings.width, settings.height);
+    this.background = settings.background;
+    this.frameRate = settings.frameRate;
   }
 
   async syncTracks(tracksData: IGraphicTrack[]) {

@@ -7,6 +7,7 @@ import { useAssetUpdateSubscription } from '@/lib/studio/domains/Asset/hooks/use
 import { useDocStore } from '../hooks/useStudioStores';
 import { useEffect } from 'react';
 import { runtimeDebugObj } from '@/utils/gui';
+import { toast } from 'sonner';
 
 export function StudioApp() {
   useAssetUpdateSubscription();
@@ -16,8 +17,8 @@ export function StudioApp() {
   useEffect(() => {
     if (runtimeDebugObj.autoSave) {
       localStorage.setItem('autosave-doc', JSON.stringify(doc.getProject()));
+      toast.info('Auto-saved');
     }
-    console.log('doc changed');
   }, [doc]);
 
   return (
