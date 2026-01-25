@@ -43,8 +43,8 @@ export function useAsset(asset: IAsset) {
   }, [asset]);
 
   const firstTrackId = useMemo(() => {
-    const trackType = GraphicTrack.AssetTypeToTrackType(asset.type);
-    const existTrack = GraphicTrack.findFirstTrack(tracks, trackType);
+    const trackType = GraphicTrack.convertAssetTypeToTrackType(asset.type);
+    const existTrack = GraphicTrack.findTopOrderTrack(tracks, trackType);
     return existTrack?.id;
   }, [asset.type, tracks]);
 
@@ -104,7 +104,7 @@ export function useAsset(asset: IAsset) {
         }
       );
 
-      const trackType = GraphicTrack.AssetTypeToTrackType(asset.type);
+      const trackType = GraphicTrack.convertAssetTypeToTrackType(asset.type);
       const sameTypeTracks = tracks.filter((t) => t.type === trackType);
 
       // 활성 트랙이 있고 같은 타입이면 우선 시도
@@ -183,7 +183,7 @@ export function useAsset(asset: IAsset) {
         }
       );
 
-      targetTrack = Track.create(Track.AssetTypeToTrackType(asset.type));
+      targetTrack = Track.create(Track.convertAssetTypeToTrackType(asset.type));
       createdNewTrack = true;
       if (tracks.length > 0) {
         const minZIndex = Math.min(...tracks.map((t) => t.zIndex));

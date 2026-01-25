@@ -10,7 +10,7 @@ export function TextAssets() {
 
   const handleAddDefaultText = () => {
     // 1. 그래픽 트랙 찾기 또는 생성
-    let targetTrack = Track.findFirstTrack(tracks, 'graphic');
+    let targetTrack = Track.findTopOrderTrack(tracks, 'graphic');
 
     if (!targetTrack) {
       const newTrack = Track.create('graphic');

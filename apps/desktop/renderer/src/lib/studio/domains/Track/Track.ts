@@ -96,8 +96,10 @@ export abstract class Track<
     }
   }
 
-  /** 해당 타입의 가장 높은 z-order 를 가진 트랙을 반환 */
-  static findFirstTrack(tracks: ITrack[], type: TrackType): ITrack | undefined {
+  static findTopOrderTrack(
+    tracks: ITrack[],
+    type: TrackType
+  ): ITrack | undefined {
     return tracks
       .filter((t) => t.type == type)
       .sort((a, b) => b.zIndex - a.zIndex)[0];
@@ -111,8 +113,7 @@ export abstract class Track<
     return Math.max(...clips.map((clip) => clip.endTime));
   }
 
-  /** AssetType 을 TrackType 으로 좁힘 */
-  static AssetTypeToTrackType(type: AssetType): TrackType {
+  static convertAssetTypeToTrackType(type: AssetType): TrackType {
     if (type === 'audio') return 'audio';
     return 'graphic';
   }
@@ -121,7 +122,7 @@ export abstract class Track<
     if (type === 'graphic') {
       const track: IGraphicTrack = {
         id: uid(8),
-        name: 'New Graphic Track',
+        name: 'G-Track',
         zIndex: DEFAULT_TRACK_Z_INDEX,
         type: 'graphic',
         enabled: true,
@@ -133,7 +134,7 @@ export abstract class Track<
     } else {
       const track: IAudioTrack = {
         id: uid(8),
-        name: 'New Audio Track',
+        name: 'A-Track',
         zIndex: DEFAULT_TRACK_Z_INDEX,
         type: 'audio',
         enabled: true,
