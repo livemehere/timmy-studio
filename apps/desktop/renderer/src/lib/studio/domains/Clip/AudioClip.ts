@@ -70,7 +70,6 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
 
   // 오디오는 매 프레임 tick보다는 상태 변화(재생/정지/탐색) 시점에 반응하는 것이 중요함.
   onTick(ctx: TickContext): void {
-    console.log(`[AudioClip] onTick called for clip ${this.id}`);
     if (!this.filePath) return;
 
     if (!this._data.enabled) {
@@ -87,7 +86,6 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
       if (isPlaying) {
         // 재생 시작
         this.play(currentTime);
-        console.log(`[AudioClip] Playing clip ${this.id} at ${currentTime}ms`);
       } else {
         // 정지
         this.stop();

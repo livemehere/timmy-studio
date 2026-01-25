@@ -121,14 +121,18 @@ export abstract class Track<
       const visibility = clip.prepareTick(ctx);
 
       if (visibility.becameVisible) {
+        clip.debugLifecycle('onBecameVisible', ctx);
         clip.onBecameVisible(ctx);
       }
       if (visibility.becameHidden) {
+        clip.debugLifecycle('onBecameHidden', ctx);
         clip.onBecameHidden(ctx);
       }
 
       if (visibility.isVisible) {
+        clip.debugLifecycle('onUpdateBeforeTick', ctx);
         clip.onUpdateBeforeTick(ctx);
+        clip.debugLifecycle('onTick', ctx);
         clip.onTick(ctx);
       }
     }

@@ -26,6 +26,7 @@ export abstract class Clip<
     | AudioRenderer,
 > implements Dirtyable
 {
+  static DEBUG_LIFECYCLE = false;
   static readonly DEFAULT_CLIP_DURATION_MS = 3000; //ms
   static readonly DEFAULT_TRANSFORM_SIZE = {
     width: 150,
@@ -42,6 +43,7 @@ export abstract class Clip<
   private lastTickTime: number | null = null;
   private lastTickData: TClipData | null = null;
   private lastTickVisible = false;
+  private lifecycleCounts = new Map<string, number>();
 
   get data(): TClipData {
     return this._data;
@@ -61,6 +63,15 @@ export abstract class Clip<
   abstract onBecameHidden(_ctx: TickContext): void;
   abstract onUpdateBeforeTick(_ctx: TickContext): void;
   abstract onTick(ctx: TickContext): void;
+
+  debugLifecycle(hook: string, ctx: TickContext): void {
+    if (!Clip.DEBUG_LIFECYCLE) return;
+    const next = (this.lifecycleCounts.get(hook) ?? 0) + 1;
+    this.lifecycleCounts.set(hook, next);
+    console.log(
+      `[Lifecycle] clip(${this.id}) type(${this.type}) ${hook} #${next} @${ctx.currentTime}ms`
+    );
+  }
 
   protected isInRangeAt(timeMs: number): boolean {
     const trimStart =
