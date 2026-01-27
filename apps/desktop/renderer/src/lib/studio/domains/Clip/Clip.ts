@@ -114,8 +114,8 @@ export abstract class Clip<
 
     return {
       isVisible,
-      becameVisible: isFirstTick ? isVisible : isVisible && !wasVisible,
-      becameHidden: isFirstTick ? !isVisible : !isVisible && wasVisible,
+      becameVisible: isFirstTick ? false : isVisible && !wasVisible,
+      becameHidden: isFirstTick ? false : !isVisible && wasVisible,
     };
   }
 
