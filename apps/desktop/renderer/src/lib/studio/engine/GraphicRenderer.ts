@@ -116,7 +116,6 @@ export class GraphicRenderer extends RendererBase {
   /** 렌더러를 정리하고 메모리를 해제합니다. */
   destroy(): void {
     if (!this._isInitialized) return;
-    // if (!this._app || !this._app.stage) return;
 
     // 부모 요소에서 canvas 제거
     this._app.canvas.remove();

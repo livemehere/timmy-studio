@@ -12,9 +12,9 @@ export class VideoClip extends SpriteClip {
   declare protected _data: IVideoClip;
 
   // State
-  private element: HTMLVideoElement | null = null;
-  private proxyElement: HTMLVideoElement | undefined;
-  private videoSource: VideoSource | undefined;
+  private originEl: HTMLVideoElement | null = null;
+  private proxyEl: HTMLVideoElement | undefined;
+  private originVideoSource: VideoSource | undefined;
   private proxyVideoSource: VideoSource | undefined;
   private isUsingProxy = false;
   private pendingProxySwap = false;
@@ -39,29 +39,29 @@ export class VideoClip extends SpriteClip {
       );
     }
 
-    this.element = await this.createVideoElement(asset);
-    this.element.pause();
-    this.element.currentTime = 0;
+    this.originEl = await this.createVideoElement(asset);
+    this.originEl.pause();
+    this.originEl.currentTime = 0;
 
     try {
-      this.proxyElement = await this.createProxyVideoElement(asset);
-      if (this.proxyElement) {
-        this.proxyElement.pause();
-        this.proxyElement.currentTime = 0;
+      this.proxyEl = await this.createProxyVideoElement(asset);
+      if (this.proxyEl) {
+        this.proxyEl.pause();
+        this.proxyEl.currentTime = 0;
       }
     } catch (error) {
       console.warn(`[VideoClip] Proxy init failed for ${this.id}`, error);
     }
 
-    this.videoSource = new VideoSource({
-      resource: this.element,
+    this.originVideoSource = new VideoSource({
+      resource: this.originEl,
       autoPlay: false,
     });
-    this.sprite.texture = Texture.from(this.videoSource);
+    this.sprite.texture = Texture.from(this.originVideoSource);
 
-    if (this.proxyElement) {
+    if (this.proxyEl) {
       this.proxyVideoSource = new VideoSource({
-        resource: this.proxyElement,
+        resource: this.proxyEl,
         autoPlay: false,
       });
     }
@@ -74,11 +74,11 @@ export class VideoClip extends SpriteClip {
   destroy(): void {
     this.container.destroy({ children: true });
 
-    if (this.element) {
-      this.cleanupVideoElement(this.element);
+    if (this.originEl) {
+      this.cleanupVideoElement(this.originEl);
     }
-    if (this.proxyElement) {
-      this.cleanupVideoElement(this.proxyElement);
+    if (this.proxyEl) {
+      this.cleanupVideoElement(this.proxyEl);
     }
 
     console.log(`[VideoClip] Clip(${this.id}) destroyed`);
@@ -113,8 +113,8 @@ export class VideoClip extends SpriteClip {
     this.applyTransform(this._data.transforms);
     this.applyEffects();
 
-    const origin = this.element;
-    const proxy = this.proxyElement ?? null;
+    const origin = this.originEl;
+    const proxy = this.proxyEl ?? null;
     const clipRelativeTime = this.calcClipRelativeTime(this._data, currentTime);
 
     if (origin) {
@@ -137,8 +137,8 @@ export class VideoClip extends SpriteClip {
     isSeeking: boolean,
     clipBecameVisible: boolean
   ): void {
-    const origin = this.element!;
-    const proxy = this.proxyElement ?? null;
+    const origin = this.originEl!;
+    const proxy = this.proxyEl ?? null;
 
     const clipRelativeTime = this.calcClipRelativeTime(clip, currentTime);
 
@@ -199,7 +199,7 @@ export class VideoClip extends SpriteClip {
   ): void {
     // 재생 -> 일시정지 전환 시 origin 시간을 proxy 에 동기화 후 모두 일시정지
     if (playStateChanged) {
-      this.syncOnPause(clip, origin, proxy);
+      this.copyCurrentTime(clip, origin, proxy);
     }
 
     // seeking 중이라면 currentTime 및 seek 완료 이벤트 처리
@@ -222,15 +222,15 @@ export class VideoClip extends SpriteClip {
     if (mode === 'proxy') {
       // proxy 가 사용가능하면
       if (this.isUsingProxy && proxy) {
-        this.updateVideoCurrentTimeIfNeeded(proxy, clipRelativeTime);
+        this.seekWithDirty(proxy, clipRelativeTime);
       } else {
         // proxy 가 없다면 origin 으로 처리 (fallback)
-        this.updateVideoCurrentTimeIfNeeded(origin, clipRelativeTime);
+        this.seekWithDirty(origin, clipRelativeTime);
       }
 
       // proxy 로 전환이 필요하다면, 전환 요청 (1회)
       if (proxy && !this.isUsingProxy && !this.pendingProxySwap) {
-        this.requestSwapToProxy(clip, origin, proxy);
+        this.requestSwapToProxyWithDirty(clip, origin, proxy);
       }
       return;
     }
@@ -245,7 +245,7 @@ export class VideoClip extends SpriteClip {
     }
 
     // texture 를 origin 으로 사용중인 경우, 시간 동기화만 처리
-    this.updateVideoCurrentTimeIfNeeded(origin, clipRelativeTime);
+    this.seekWithDirty(origin, clipRelativeTime);
   }
 
   // proxy -> origin 으로 스왑이 필요할 떄 호출
@@ -309,7 +309,7 @@ export class VideoClip extends SpriteClip {
   }
 
   // proxy 로 스왑 요청 + dirty 처리 + 시간동기화
-  private requestSwapToProxy(
+  private requestSwapToProxyWithDirty(
     _clip: IVideoClip,
     origin: HTMLVideoElement,
     proxy: HTMLVideoElement
@@ -339,9 +339,9 @@ export class VideoClip extends SpriteClip {
     if (oldTexture) {
       oldTexture.destroy(false);
     }
-    const isSwappingToOrigin = videoElement === this.element;
+    const isSwappingToOrigin = videoElement === this.originEl;
     const videoSource = isSwappingToOrigin
-      ? this.videoSource
+      ? this.originVideoSource
       : this.proxyVideoSource;
 
     // 만들어져있는 videoSource 를 가지고 texture 생성 및 교체
@@ -353,10 +353,7 @@ export class VideoClip extends SpriteClip {
   }
 
   // currentTime 업데이트 및 dirty 처리
-  private updateVideoCurrentTimeIfNeeded(
-    video: HTMLVideoElement,
-    targetTime: number
-  ): void {
+  private seekWithDirty(video: HTMLVideoElement, targetTime: number): void {
     const EPSILON = 0.001;
     const isTimeClose = Math.abs(video.currentTime - targetTime) < EPSILON;
 
@@ -381,22 +378,22 @@ export class VideoClip extends SpriteClip {
   }
 
   // 일시정지 시, proxy 시간을 origin 시간으로 동기화
-  private syncOnPause(
+  private copyCurrentTime(
     _clip: IVideoClip,
-    origin: HTMLVideoElement,
-    proxy: HTMLVideoElement | null
+    from: HTMLVideoElement,
+    target: HTMLVideoElement | null
   ): void {
-    const actualOriginTime = origin.currentTime;
-    origin.pause();
-    if (proxy) {
-      proxy.currentTime = actualOriginTime;
-      proxy.pause();
+    const actualOriginTime = from.currentTime;
+    from.pause();
+    if (target) {
+      target.currentTime = actualOriginTime;
+      target.pause();
     }
   }
 
   private pauseVideoClip(): void {
-    const origin = this.element;
-    const proxy = this.proxyElement ?? null;
+    const origin = this.originEl;
+    const proxy = this.proxyEl ?? null;
     if (origin && !origin.paused) origin.pause();
     if (proxy && !proxy.paused) proxy.pause();
   }
