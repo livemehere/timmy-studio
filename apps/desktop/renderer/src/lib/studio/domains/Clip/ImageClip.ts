@@ -10,7 +10,6 @@ export class ImageClip extends SpriteClip {
   readonly type = 'image';
   public _data: IImageClip;
 
-  // State
   private element: HTMLImageElement | null = null;
 
   constructor(renderer: GraphicRenderer, data: IImageClip) {
