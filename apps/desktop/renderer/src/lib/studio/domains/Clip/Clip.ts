@@ -89,15 +89,13 @@ export abstract class Clip<
     return this._data.enabled && this.isInRangeAt(timeMs);
   }
 
+  // ⚠️ track 에서 호출해주고, 직접 호출 절대 하면 안됨
   prepareTick(ctx: TickContext): {
     isVisible: boolean;
     becameVisible: boolean;
     becameHidden: boolean;
   } {
-    if (
-      this.lastTickTime === ctx.currentTime &&
-      this.lastTickData === this._data
-    ) {
+    if (this.lastTickTime === ctx.currentTime) {
       return {
         isVisible: this.lastTickVisible,
         becameVisible: false,

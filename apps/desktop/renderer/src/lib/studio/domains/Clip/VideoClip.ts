@@ -20,6 +20,8 @@ export class VideoClip extends SpriteClip {
   private pendingProxySwap = false;
   private pendingOriginSwap = false;
 
+  private _wasVisible = false;
+
   constructor(renderer: GraphicRenderer, data: IVideoClip) {
     super(renderer, data);
     this._data = data;
@@ -83,234 +85,148 @@ export class VideoClip extends SpriteClip {
     super.destroy();
   }
 
+  override onBecameVisible(_ctx: TickContext): void {
+    super.onBecameVisible(_ctx);
+    this._wasVisible = true;
+  }
+
+  override onBecameHidden(_ctx: TickContext): void {
+    super.onBecameHidden(_ctx);
+    this._wasVisible = false;
+    this.cancelPendingSwaps('all');
+  }
+
   override onTick(ctx: TickContext): void {
     super.onTick(ctx);
     const { currentTime, isPlaying, playStateChanged, isSeeking } = ctx;
-    const { becameVisible } = this.prepareTick(ctx);
 
-    // 전 tick 에서 보이지 않았었다면, 이번 프레임이 보이게 된 시점
-
-    this.handleVideoClip(
-      this._data,
-      currentTime,
-      isPlaying,
-      playStateChanged,
-      isSeeking,
-      becameVisible
-    );
-  }
-
-  private handleVideoClip(
-    clip: IVideoClip,
-    currentTime: number,
-    isPlaying: boolean,
-    playStateChanged: boolean,
-    isSeeking: boolean,
-    becameVisible: boolean
-  ): void {
-    const origin = this.originEl!;
-    const proxy = this.proxyEl ?? null;
-
-    const clipRelativeTime = this.calcClipRelativeTime(clip, currentTime);
+    const relTime = this.calcRelTime(currentTime);
 
     if (isPlaying) {
-      // 비디오가 재생중이지 않다면, 재생하도록 만들어야한다.
-      this.handleVideoPlaying(
-        clip,
-        origin,
-        proxy,
-        clipRelativeTime,
-        playStateChanged,
-        becameVisible
-      );
-    } else {
-      // 일시 정지를 유지하며, 시간 동기화
-      this.handleVideoPaused(
-        clip,
-        origin,
-        proxy,
-        clipRelativeTime,
-        playStateChanged,
-        isSeeking
-      );
+      this.cancelPendingSwaps('proxy');
+
+      if (this.isUsingProxy && this.proxyEl && !this.pendingOriginSwap) {
+        this.debugCall('swapping proxy -> origin (during playback)');
+        this.requestSwapToOrigin({ resumePlayback: true });
+      }
+
+      if (
+        this.originEl!.paused &&
+        !this.pendingOriginSwap &&
+        !this.isUsingProxy
+      ) {
+        this.debugCall(
+          `starting playback at ${relTime.toFixed(2)}s (became: ${this._wasVisible})`
+        );
+        this.originEl!.currentTime = relTime;
+        this.startVideoPlayback();
+      }
+      return;
+    }
+
+    if (playStateChanged) {
+      this.debugCall('paused (playStateChanged)');
+      this.originEl!.pause();
+      this.proxyEl?.pause();
+      this.requestSwapToProxyWithDirty();
+    }
+
+    if (isSeeking) {
+      this.handleSeeking(relTime);
     }
   }
 
-  private handleVideoPlaying(
-    clip: IVideoClip,
-    origin: HTMLVideoElement,
-    proxy: HTMLVideoElement | null,
-    clipRelativeTime: number,
-    playStateChanged: boolean,
-    becameVisible: boolean
-  ): void {
-    // proxy 로 스왑중이라면 취소
+  private handleSeeking(clipRelativeTime: number): void {
+    const mode: SeekingRenderMode =
+      this.proxyEl && this.renderer.seekingRenderMode === 'proxy'
+        ? 'proxy'
+        : 'origin';
+
+    if (mode === 'proxy') {
+      if (this.isUsingProxy && this.proxyEl) {
+        this.seekWithDirty(this.proxyEl, clipRelativeTime);
+      } else {
+        this.seekWithDirty(this.originEl!, clipRelativeTime);
+        this.requestSwapToProxyWithDirty();
+      }
+
+      return;
+    }
+
     this.cancelPendingSwaps('proxy');
 
-    // proxy 를 이미 사용중이라면, origin 으로 스왑 요청
-    if (this.isUsingProxy && proxy && !this.pendingOriginSwap) {
-      this.requestSwapToOriginWhilePlaying(clip, origin, proxy);
-    }
-
-    const shouldStartPlayback = playStateChanged || becameVisible;
-
-    if (shouldStartPlayback && !this.pendingOriginSwap && !this.isUsingProxy) {
-      origin.currentTime = clipRelativeTime;
-      this.startVideoPlayback(clip, origin);
-    }
-  }
-
-  private handleVideoPaused(
-    clip: IVideoClip,
-    origin: HTMLVideoElement,
-    proxy: HTMLVideoElement | null,
-    clipRelativeTime: number,
-    playStateChanged: boolean,
-    isSeeking: boolean
-  ): void {
-    // 재생 -> 일시정지 전환 시 origin 시간을 proxy 에 동기화 후 모두 일시정지
-    if (playStateChanged) {
-      this.copyCurrentTime(clip, origin, proxy);
-    }
-
-    // seeking 중이라면 currentTime 및 seek 완료 이벤트 처리
-    if (isSeeking) {
-      this.handleSeeking(clip, origin, proxy, clipRelativeTime);
-    }
-  }
-
-  private handleSeeking(
-    clip: IVideoClip,
-    origin: HTMLVideoElement,
-    proxy: HTMLVideoElement | null,
-    clipRelativeTime: number
-  ): void {
-    // seeking 은 proxy 로도가능하고, origin 으로도 가능
-    const mode: SeekingRenderMode =
-      proxy && this.renderer.seekingRenderMode === 'proxy' ? 'proxy' : 'origin';
-
-    // === proxy 모드인 경우 ===
-    if (mode === 'proxy') {
-      // proxy 가 사용가능하면
-      if (this.isUsingProxy && proxy) {
-        this.seekWithDirty(proxy, clipRelativeTime);
-      } else {
-        // proxy 가 없다면 origin 으로 처리 (fallback)
-        this.seekWithDirty(origin, clipRelativeTime);
-      }
-
-      // proxy 로 전환이 필요하다면, 전환 요청 (1회)
-      if (proxy && !this.isUsingProxy && !this.pendingProxySwap) {
-        this.requestSwapToProxyWithDirty(clip, origin, proxy);
-      }
+    if (this.proxyEl && this.isUsingProxy && !this.pendingOriginSwap) {
+      this.requestSwapToOrigin({ targetTime: clipRelativeTime });
       return;
     }
 
-    // === origin 모드인 경우 === (프레임별로 최종 추출할떄 사용)
-    this.cancelPendingSwaps('proxy'); // proxy 스왑 요청 취소
-
-    // proxy 를 사용중이라면 origin 으로 스왑 요청
-    if (proxy && this.isUsingProxy && !this.pendingOriginSwap) {
-      this.requestSwapToOriginAtTime(clip, origin, proxy, clipRelativeTime);
-      return;
-    }
-
-    // texture 를 origin 으로 사용중인 경우, 시간 동기화만 처리
-    this.seekWithDirty(origin, clipRelativeTime);
+    this.seekWithDirty(this.originEl!, clipRelativeTime);
   }
 
-  // proxy -> origin 으로 스왑이 필요할 떄 호출
-  private requestSwapToOriginWhilePlaying(
-    clip: IVideoClip,
-    origin: HTMLVideoElement,
-    proxy: HTMLVideoElement
+  private requestSwapToOrigin(
+    options: {
+      targetTime?: number;
+      resumePlayback?: boolean;
+    } = {}
   ): void {
+    const { targetTime, resumePlayback = false } = options;
     this.pendingOriginSwap = true;
     const sessionId = this.renderer.currentSeekSessionId;
     this.renderer.markClipDirty(this, sessionId);
 
     const onSeeked = () => {
-      origin.removeEventListener('seeked', onSeeked);
-
-      if (this.pendingOriginSwap && this.isUsingProxy) {
-        // texture 스왑
-        this.swapVideoTexture(origin);
-        this.isUsingProxy = false;
-        proxy.pause();
-
-        // 타이머가 재생중이라면, 재생 처리
-        if (this.renderer.timer.isPlaying) {
-          this.startVideoPlayback(clip, origin);
-        }
-      }
-      this.pendingOriginSwap = false;
-      this.renderer.clearClipDirty(this, sessionId);
-    };
-    origin.addEventListener('seeked', onSeeked, { once: true });
-    origin.currentTime = proxy.currentTime;
-  }
-
-  private requestSwapToOriginAtTime(
-    _clip: IVideoClip,
-    origin: HTMLVideoElement,
-    proxy: HTMLVideoElement,
-    targetTime: number
-  ): void {
-    this.pendingOriginSwap = true;
-    const sessionId = this.renderer.currentSeekSessionId;
-    this.renderer.markClipDirty(this, sessionId);
-
-    const onSeeked = () => {
-      origin.removeEventListener('seeked', onSeeked);
+      this.originEl!.removeEventListener('seeked', onSeeked);
 
       if (!this.pendingOriginSwap) return;
 
       if (this.isUsingProxy) {
-        this.swapVideoTexture(origin);
+        this.swapVideoTexture(this.originEl!);
         this.isUsingProxy = false;
       }
       this.pendingOriginSwap = false;
-      proxy.pause();
-      proxy.currentTime = origin.currentTime;
+      this.proxyEl!.pause();
+      this.proxyEl!.currentTime = this.originEl!.currentTime;
+      if (resumePlayback && this.renderer.timer.isPlaying) {
+        this.startVideoPlayback();
+      }
       this.renderer.clearClipDirty(this, sessionId);
     };
-    origin.addEventListener('seeked', onSeeked, { once: true });
-
-    origin.currentTime = targetTime;
+    this.originEl!.addEventListener('seeked', onSeeked, { once: true });
+    this.originEl!.currentTime = targetTime ?? this.proxyEl!.currentTime;
   }
 
-  // proxy 로 스왑 요청 + dirty 처리 + 시간동기화
-  private requestSwapToProxyWithDirty(
-    _clip: IVideoClip,
-    origin: HTMLVideoElement,
-    proxy: HTMLVideoElement
-  ): void {
-    this.pendingProxySwap = true; // 스왑 요청 플래그 ON
+  private requestSwapToProxyWithDirty(): void {
+    if (!this.proxyEl || this.isUsingProxy || this.pendingProxySwap) return;
+    this.debugCall('(video) requestSwapToProxyWithDirty');
+    this.pendingProxySwap = true;
     const sessionId = this.renderer.currentSeekSessionId;
     this.renderer.markClipDirty(this, sessionId);
 
     const onSeeked = () => {
-      proxy.removeEventListener('seeked', onSeeked);
+      this.proxyEl!.removeEventListener('seeked', onSeeked);
       if (!this.renderer.timer.isPlaying && this.pendingProxySwap) {
-        // 중복 스왑되지 않게, pending 플래그 확인
-        this.swapVideoTexture(proxy); // texture 스왑
-        this.isUsingProxy = true; // proxy 사용중으로 상태 변경
+        this.swapVideoTexture(this.proxyEl!);
+        this.isUsingProxy = true;
       }
-      this.pendingProxySwap = false; // 스왑 요청 플래그 해제
-      this.renderer.clearClipDirty(this, sessionId); // dirty 해제
+      this.pendingProxySwap = false;
+      this.renderer.clearClipDirty(this, sessionId);
     };
-    proxy.addEventListener('seeked', onSeeked, { once: true });
-    proxy.currentTime = origin.currentTime; // 시간 동기화 및 seek 시작
+    this.proxyEl!.addEventListener('seeked', onSeeked, { once: true });
+    this.proxyEl!.currentTime = this.originEl!.currentTime;
   }
 
   // origin/proxy 로 texture 스왑 처리
-  private swapVideoTexture(videoElement: HTMLVideoElement): void {
+  private swapVideoTexture(targetEl: HTMLVideoElement): void {
+    const isSwappingToOrigin = targetEl === this.originEl;
+    this.debugCall(
+      `swapVideoTexture -> ${isSwappingToOrigin ? 'origin' : 'proxy'}`
+    );
+
     const oldTexture = this.sprite.texture;
     // texture 를 제거하되, VideoSource 는 유지
     if (oldTexture) {
       oldTexture.destroy(false);
     }
-    const isSwappingToOrigin = videoElement === this.originEl;
     const videoSource = isSwappingToOrigin
       ? this.originVideoSource
       : this.proxyVideoSource;
@@ -319,7 +235,7 @@ export class VideoClip extends SpriteClip {
     this.sprite.texture = Texture.from(videoSource!);
     // 일시정지 상태라면 비디오도 일시정지
     if (!this.renderer.timer.isPlaying) {
-      videoElement.pause();
+      targetEl.pause();
     }
   }
 
@@ -331,6 +247,9 @@ export class VideoClip extends SpriteClip {
     // 미미한 시간 차이는 무시
     if (isTimeClose) return;
 
+    this.debugCall(
+      `seekWithDirty from ${video.currentTime.toFixed(2)}s to ${targetTime.toFixed(2)}s`
+    );
     const sessionId = this.renderer.currentSeekSessionId;
     this.renderer.markClipDirty(this, sessionId);
 
@@ -342,34 +261,22 @@ export class VideoClip extends SpriteClip {
     video.currentTime = targetTime;
   }
 
-  private startVideoPlayback(clip: IVideoClip, origin: HTMLVideoElement): void {
-    origin.play().catch((e) => {
-      console.warn(`[VideoClip] Video play failed: ${clip.id}`, e);
+  private startVideoPlayback(): void {
+    this.originEl!.play().catch((e) => {
+      console.warn(`[VideoClip] Video play failed: ${this._data.id}`, e);
+      this.debugCall(`play() error: ${e.message}`);
     });
   }
 
-  // 일시정지 시, proxy 시간을 origin 시간으로 동기화
-  private copyCurrentTime(
-    _clip: IVideoClip,
-    from: HTMLVideoElement,
-    target: HTMLVideoElement | null
-  ): void {
-    const actualOriginTime = from.currentTime;
-    from.pause();
-    if (target) {
-      target.currentTime = actualOriginTime;
-      target.pause();
-    }
-  }
-
-  private cancelPendingSwaps(type: 'proxy' | 'origin' | 'all' = 'all'): void {
+  private cancelPendingSwaps(type: 'proxy' | 'origin' | 'all'): void {
+    // this.debugCall(`cancelPendingSwaps (${type})`);
     if (type === 'proxy' || type === 'all') this.pendingProxySwap = false;
     if (type === 'origin' || type === 'all') this.pendingOriginSwap = false;
   }
 
-  private calcClipRelativeTime(clip: IVideoClip, currentTime: number): number {
-    const trimStart = clip.trimStart ?? 0;
-    return (currentTime - clip.startTime + trimStart) / 1000;
+  private calcRelTime(globalTime: number): number {
+    const trimStart = this._data.trimStart ?? 0;
+    return Math.max(0, (globalTime - this._data.startTime + trimStart) / 1000);
   }
 
   private async createVideoElement(
