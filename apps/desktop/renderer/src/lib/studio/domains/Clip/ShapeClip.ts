@@ -26,8 +26,12 @@ export class ShapeClip extends GraphicClip {
     // container에 graphics를 자식으로 추가
     this.container.addChild(this.graphics);
 
-    this.renderShape();
+    this.applyEffects();
     this.applyTransform((this._data as IShapeClip).transforms);
+  }
+
+  protected applyEffects(): void {
+    this.renderShape();
   }
 
   destroy(): void {
@@ -36,19 +40,11 @@ export class ShapeClip extends GraphicClip {
       this.graphics = null;
     }
     this.container.destroy({ children: true });
-    console.log('ShapeClip destroy called', this.id);
+    this.debugCall('destroy');
   }
 
   override onTick(ctx: TickContext): void {
     super.onTick(ctx);
-  }
-
-  protected onUpdateData(
-    _prevData: IGraphicClip,
-    _nextData: IGraphicClip
-  ): void {
-    this.renderShape();
-    this.applyEffects();
   }
 
   protected onUpdateVisible(_currentTime: number): void {

@@ -18,7 +18,7 @@ export class TextClip extends GraphicClip {
   }
 
   async init(): Promise<void> {
-    this.createContent();
+    this.applyEffects();
     this.applyTransform(this._data.transforms);
   }
 
@@ -46,18 +46,21 @@ export class TextClip extends GraphicClip {
     super.onTick(ctx);
   }
 
-  protected onUpdateData(prevData: ITextClip, nextData: ITextClip): void {
-    if (this.shouldRecreateText(prevData, nextData)) {
-      this.createContent();
+  protected onUpdateVisible(_currentTime: number): void {
+    this.applyTransform(this._data.transforms);
+  }
+
+  protected applyEffects(): void {
+    this.debugCall('applyEffects');
+
+    // 텍스트 객체가 없으면 생성, 있으면 업데이트
+    if (!this.text) {
+      this.createTextContent();
     } else {
       this.updateContent();
     }
 
     this.updateSelectionBounds();
-  }
-
-  protected onUpdateVisible(_currentTime: number): void {
-    this.applyTransform(this._data.transforms);
   }
 
   /**
@@ -112,7 +115,7 @@ export class TextClip extends GraphicClip {
     }
   }
 
-  private createContent(): void {
+  protected createTextContent(): void {
     if (this.text) {
       this.text.destroy();
     }
@@ -326,12 +329,5 @@ export class TextClip extends GraphicClip {
         this.underline = null;
       }
     }
-  }
-
-  private shouldRecreateText(prev: ITextClip, next: ITextClip): boolean {
-    // Optimization: Only recreate if necessary properties change.
-    // For now, return false and rely on updateTextStyle which covers most cases.
-    if (!prev || !next) return false;
-    return false;
   }
 }

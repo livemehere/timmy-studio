@@ -39,23 +39,28 @@ export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
   }
 
   mount(parent: Container) {
+    this.debugCall('(Graphic) mount');
     parent.addChild(this.container);
   }
 
   unmount() {
+    this.debugCall('(Graphic) unmount');
     this.container.parent?.removeChild(this.container);
   }
 
   sync(newData: IGraphicClip): void {
+    this.debugCall('(Graphic) sync');
     this._data = newData;
     this.applyEffects();
   }
 
   onBecameVisible(_ctx: TickContext): void {
+    this.debugCall('(Graphic) onBecameVisible');
     this.container.visible = true;
   }
 
   onBecameHidden(_ctx: TickContext): void {
+    this.debugCall('(Graphic) onBecameHidden');
     this.container.visible = false;
   }
 
@@ -63,10 +68,6 @@ export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
 
   onTick(_ctx: TickContext): void {
     this.applyTransform(this._data.transforms);
-  }
-
-  protected applyEffects(): void {
-    // No-op by default (SpriteClip overrides)
   }
 
   protected abstract applyTransform(transforms: ITransform): void;

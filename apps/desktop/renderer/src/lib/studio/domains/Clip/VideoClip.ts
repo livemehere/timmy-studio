@@ -19,14 +19,15 @@ export class VideoClip extends SpriteClip {
   private isUsingProxy = false;
   private pendingProxySwap = false;
   private pendingOriginSwap = false;
-  private wasVisible = false;
 
   constructor(renderer: GraphicRenderer, data: IVideoClip) {
     super(renderer, data);
     this._data = data;
+    this.debugCall('(Video) constructor');
   }
 
   async init(): Promise<void> {
+    this.debugCall('(Video) init start');
     const asset = this.renderer
       .getDoc()
       .assets.find((a) => a.id === this._data.assetId) as
@@ -67,8 +68,8 @@ export class VideoClip extends SpriteClip {
     }
 
     this.applyTransform(this._data.transforms);
-
-    console.log(`[VideoClip] VideoClip(${this.id}) initialized`);
+    this.applyEffects();
+    this.debugCall('(Video) init complete');
   }
 
   destroy(): void {
@@ -80,16 +81,15 @@ export class VideoClip extends SpriteClip {
     if (this.proxyEl) {
       this.cleanupVideoElement(this.proxyEl);
     }
-
-    console.log(`[VideoClip] Clip(${this.id}) destroyed`);
+    this.debugCall('(Video) destroy');
   }
 
   override onTick(ctx: TickContext): void {
     super.onTick(ctx);
     const { currentTime, isPlaying, playStateChanged, isSeeking } = ctx;
+    const { becameVisible } = this.prepareTick(ctx);
 
     // 전 tick 에서 보이지 않았었다면, 이번 프레임이 보이게 된 시점
-    const clipBecameVisible = !this.wasVisible;
 
     this.handleVideoClip(
       this._data,
@@ -97,36 +97,16 @@ export class VideoClip extends SpriteClip {
       isPlaying,
       playStateChanged,
       isSeeking,
-      clipBecameVisible
+      becameVisible
     );
-
-    this.wasVisible = true;
+  }
+  override onBecameVisible(ctx: TickContext): void {
+    super.onBecameVisible(ctx);
   }
 
   override onBecameHidden(ctx: TickContext): void {
     super.onBecameHidden(ctx);
-    this.pauseVideoClip();
-    this.wasVisible = false;
-  }
-
-  protected onUpdateVisible(currentTime: number): void {
-    this.applyTransform(this._data.transforms);
-    this.applyEffects();
-
-    const origin = this.originEl;
-    const proxy = this.proxyEl ?? null;
-    const clipRelativeTime = this.calcClipRelativeTime(this._data, currentTime);
-
-    if (origin) {
-      origin.currentTime = clipRelativeTime;
-      if (proxy) {
-        proxy.currentTime = clipRelativeTime;
-      }
-    }
-  }
-
-  protected onUpdateHidden(): void {
-    this.pauseVideoClip();
+    // this.pauseVideoClip();
   }
 
   private handleVideoClip(

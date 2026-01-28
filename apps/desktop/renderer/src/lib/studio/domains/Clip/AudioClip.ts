@@ -48,6 +48,8 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
     console.log(`[AudioClip] Initialized for ${this.id}`);
   }
 
+  protected applyEffects(): void {}
+
   sync(data: IAudioClip): void {
     this._data = data;
     // 볼륨 등 업데이트

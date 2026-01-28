@@ -19,15 +19,12 @@ export abstract class SpriteClip extends GraphicClip {
     this.container.addChild(this.sprite);
   }
 
-  /**
-   * Effects 적용 (blur, pixelate 등)
-   * mask가 있으면 특정 영역만 적용
-   */
   protected applyEffects(): void {
+    this.cleanupEffectContainers();
+    this.debugCall('(Sprite) applyEffects');
     const effects = this._data.effects || [];
 
     // Clean up old effect containers and masks
-    this.cleanupEffectContainers();
 
     // Separate effects into full and masked
     const fullEffects = effects.filter((e) => e.enabled && !e.mask?.enabled);
@@ -50,6 +47,8 @@ export abstract class SpriteClip extends GraphicClip {
   }
 
   protected applyTransform(transforms: ITransform): void {
+    this.debugCall('(Sprite) applyTransform');
+
     const root = this.container;
     const sprite = this.sprite;
     const texture = sprite.texture;
@@ -105,10 +104,8 @@ export abstract class SpriteClip extends GraphicClip {
     }
   }
 
-  /**
-   * Create filter from effect
-   */
   private createFilter(effect: any): any {
+    this.debugCall('(Sprite) createFilter');
     switch (effect.type) {
       case 'blur': {
         const strength = (effect.parameters.strength as number) ?? 8;
@@ -124,10 +121,8 @@ export abstract class SpriteClip extends GraphicClip {
     }
   }
 
-  /**
-   * Apply effect to masked area only
-   */
   private applyMaskedEffect(effect: any, mask: IEffectMask): void {
+    this.debugCall('(Sprite) applyMaskedEffect');
     // Create container for this masked effect
     const container = new Container();
     container.label = `MaskedEffect-${effect.id}`;
@@ -186,10 +181,8 @@ export abstract class SpriteClip extends GraphicClip {
     this.maskGraphics.set(effect.id, maskGraphics);
   }
 
-  /**
-   * Clean up effect containers and masks
-   */
   private cleanupEffectContainers(): void {
+    this.debugCall('(Sprite) cleanupEffectContainers');
     this.effectContainers.forEach((container) => {
       container.destroy({ children: true });
     });
