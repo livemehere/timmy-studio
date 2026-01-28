@@ -9,6 +9,7 @@ import type {
   PlacementResult,
   Size,
 } from './types';
+
 export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
   public container: Container;
 

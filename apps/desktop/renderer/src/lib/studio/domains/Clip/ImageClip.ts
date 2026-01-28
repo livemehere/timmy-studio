@@ -19,6 +19,7 @@ export class ImageClip extends SpriteClip {
   }
 
   async init(): Promise<void> {
+    this.debugCall('(image) init start');
     const asset = this.renderer
       .getDoc()
       .assets.find((a: any) => a.id === this._data.assetId) as IImageAsset;
@@ -30,20 +31,17 @@ export class ImageClip extends SpriteClip {
 
     this.element = await this.createImageElement(asset);
     this.sprite.texture = Texture.from(this.element);
-
-    this.applyTransform(this._data.transforms);
-
-    console.log(`[ImageClip] ImageClip(${this.id}) initialized`);
+    this.debugCall('(image) init complete');
   }
 
   destroy(): void {
-    this.container.destroy({ children: true });
-
+    this.debugCall('(image) destroy called');
     if (this.element) {
       this.cleanupImageElement(this.element);
+      this.element = null;
     }
 
-    console.log(`[ImageClip] Clip(${this.id}) destroyed`);
+    super.destroy();
   }
 
   override onTick(ctx: TickContext): void {

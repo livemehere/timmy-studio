@@ -78,9 +78,11 @@ export class VideoClip extends SpriteClip {
     this.debugCall('(Video) destroy');
     if (this.originEl) {
       this.cleanupVideoElement(this.originEl);
+      this.originEl = null;
     }
     if (this.proxyEl) {
       this.cleanupVideoElement(this.proxyEl);
+      this.proxyEl = undefined;
     }
     super.destroy();
   }
