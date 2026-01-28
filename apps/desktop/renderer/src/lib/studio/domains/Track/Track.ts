@@ -129,6 +129,11 @@ export abstract class Track<
       if (visibility.isVisible) {
         clip.onUpdateBeforeTick(ctx);
         clip.onTick(ctx);
+      } else {
+        if (visibility.isFirstTick) {
+          // 첫 틱에서 렌더링되지 않는 클립은 onBecameHidden 호출
+          clip.onBecameHidden(ctx);
+        }
       }
     }
   }

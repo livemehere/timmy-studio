@@ -137,30 +137,34 @@ export class VideoClip extends SpriteClip {
   }
 
   private handleSeeking(clipRelativeTime: number): void {
-    const mode: SeekingRenderMode =
-      this.proxyEl && this.renderer.seekingRenderMode === 'proxy'
-        ? 'proxy'
-        : 'origin';
+    const mode = this.decideSeekingMode();
 
     if (mode === 'proxy') {
-      if (this.isUsingProxy && this.proxyEl) {
-        this.seekWithDirty(this.proxyEl, clipRelativeTime);
+      if (this.isUsingProxy) {
+        this.seekWithDirty(this.proxyEl!, clipRelativeTime);
       } else {
+        // proxy 를 아직 사용하지 않으면 origin 으로 일단 맞추고 proxy 스왑 요청
         this.seekWithDirty(this.originEl!, clipRelativeTime);
         this.requestSwapToProxyWithDirty();
       }
-
-      return;
+    } else {
+      // === origin 모드 ===
+      this.cancelPendingSwaps('proxy');
+      // origin 을 사용 중이지 않으면 스왑 요청 & seek
+      if (this.isUsingProxy && !this.pendingOriginSwap) {
+        this.requestSwapToOrigin({ targetTime: clipRelativeTime });
+      } else {
+        // origin 을 사용 중이면 바로 seek
+        this.seekWithDirty(this.originEl!, clipRelativeTime);
+      }
     }
+  }
 
-    this.cancelPendingSwaps('proxy');
-
-    if (this.proxyEl && this.isUsingProxy && !this.pendingOriginSwap) {
-      this.requestSwapToOrigin({ targetTime: clipRelativeTime });
-      return;
-    }
-
-    this.seekWithDirty(this.originEl!, clipRelativeTime);
+  private decideSeekingMode(): SeekingRenderMode {
+    const canUseProxy = !!this.proxyEl;
+    return canUseProxy && this.renderer.seekingRenderMode === 'proxy'
+      ? 'proxy'
+      : 'origin';
   }
 
   private requestSwapToOrigin(

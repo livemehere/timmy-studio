@@ -41,7 +41,6 @@ export abstract class Clip<
   dirtySessionId: number | null = null;
   protected _data: TClipData;
   private lastTickTime: number | null = null;
-  private lastTickData: TClipData | null = null;
   private lastTickVisible = false;
   private lifecycleCounts = new Map<string, number>();
 
@@ -94,27 +93,29 @@ export abstract class Clip<
     isVisible: boolean;
     becameVisible: boolean;
     becameHidden: boolean;
+    isFirstTick: boolean;
   } {
+    const isFirstTick = this.lastTickTime === null;
     if (this.lastTickTime === ctx.currentTime) {
       return {
         isVisible: this.lastTickVisible,
         becameVisible: false,
         becameHidden: false,
+        isFirstTick,
       };
     }
 
     const wasVisible = this.lastTickVisible;
-    const isFirstTick = this.lastTickTime === null;
     const isVisible = this.shouldRenderAt(ctx.currentTime);
 
     this.lastTickTime = ctx.currentTime;
-    this.lastTickData = this._data;
     this.lastTickVisible = isVisible;
 
     return {
       isVisible,
       becameVisible: isFirstTick ? false : isVisible && !wasVisible,
       becameHidden: isFirstTick ? false : !isVisible && wasVisible,
+      isFirstTick,
     };
   }
 
