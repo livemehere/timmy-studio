@@ -18,7 +18,7 @@ export class TextClip extends GraphicClip {
   }
 
   async init(): Promise<void> {
-    this.applyEffects();
+    this.applyDataChange();
     this.applyTransform(this._data.transforms);
   }
 
@@ -50,7 +50,7 @@ export class TextClip extends GraphicClip {
     this.applyTransform(this._data.transforms);
   }
 
-  protected applyEffects(): void {
+  protected applyDataChange(): void {
     this.debugCall('applyEffects');
 
     // 텍스트 객체가 없으면 생성, 있으면 업데이트

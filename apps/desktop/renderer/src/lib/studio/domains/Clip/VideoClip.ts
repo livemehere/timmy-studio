@@ -70,7 +70,7 @@ export class VideoClip extends SpriteClip {
     }
 
     this.applyTransform(this._data.transforms);
-    this.applyEffects();
+    this.applyDataChange();
     this.debugCall('(Video) init complete');
   }
 

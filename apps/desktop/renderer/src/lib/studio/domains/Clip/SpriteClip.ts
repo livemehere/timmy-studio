@@ -19,7 +19,7 @@ export abstract class SpriteClip extends GraphicClip {
     this.container.addChild(this.sprite);
   }
 
-  protected applyEffects(): void {
+  protected applyDataChange(): void {
     this.cleanupEffectContainers();
     this.debugCall('(Sprite) applyEffects');
     const effects = this._data.effects || [];

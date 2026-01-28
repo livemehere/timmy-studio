@@ -48,7 +48,7 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
     console.log(`[AudioClip] Initialized for ${this.id}`);
   }
 
-  protected applyEffects(): void {}
+  protected applyDataChange(): void {}
 
   sync(data: IAudioClip): void {
     this._data = data;

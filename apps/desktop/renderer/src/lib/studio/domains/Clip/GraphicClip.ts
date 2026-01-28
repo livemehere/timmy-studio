@@ -51,7 +51,7 @@ export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
   sync(newData: IGraphicClip): void {
     this.debugCall('(Graphic) sync');
     this._data = newData;
-    this.applyEffects();
+    this.applyDataChange();
   }
 
   onBecameVisible(_ctx: TickContext): void {

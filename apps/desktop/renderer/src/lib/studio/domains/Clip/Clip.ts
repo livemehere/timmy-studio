@@ -58,7 +58,7 @@ export abstract class Clip<
   abstract destroy(): void;
   abstract sync(newData: TClipData): void;
 
-  protected abstract applyEffects(): void;
+  protected abstract applyDataChange(): void; // tick 과 다르게, sync 호출될 때 1번 실행해야할 로직
   abstract onBecameVisible(_ctx: TickContext): void;
   abstract onBecameHidden(_ctx: TickContext): void;
   abstract onUpdateBeforeTick(_ctx: TickContext): void;

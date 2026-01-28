@@ -26,11 +26,11 @@ export class ShapeClip extends GraphicClip {
     // container에 graphics를 자식으로 추가
     this.container.addChild(this.graphics);
 
-    this.applyEffects();
+    this.applyDataChange();
     this.applyTransform((this._data as IShapeClip).transforms);
   }
 
-  protected applyEffects(): void {
+  protected applyDataChange(): void {
     this.renderShape();
   }
 
