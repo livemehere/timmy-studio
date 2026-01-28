@@ -25,7 +25,7 @@ export class VideoClip extends SpriteClip {
   constructor(renderer: GraphicRenderer, data: IVideoClip) {
     super(renderer, data);
     this._data = data;
-    this.debugCall('(Video) constructor');
+    this.debugCall(`(Video) constructor`);
   }
 
   async init(): Promise<void> {

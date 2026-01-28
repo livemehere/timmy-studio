@@ -27,14 +27,17 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
   private isPlaying = false;
   private filePath: string | null = null;
   private trackId: string | null = null;
+  private lastTickWasPlaying: boolean | null = null;
 
   constructor(renderer: AudioRenderer, data: IAudioClip, trackId: string) {
     super(renderer, data);
     this._data = data;
     this.trackId = trackId;
+    this.debugCall(`(Audio) constructed`);
   }
 
   async init(): Promise<void> {
+    this.debugCall('(Audio) init start');
     const asset = this.renderer
       .getDoc()
       .assets.find((a: any) => a.id === this._data.assetId);
@@ -45,7 +48,11 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
     }
 
     this.filePath = asset.filePath;
-    console.log(`[AudioClip] Initialized for ${this.id}`);
+
+    // VideoClip init과 동일하게 미리 Audio Element 준비
+    this.audioElement = this.createAudioElement(this.filePath);
+
+    this.debugCall('(Audio) init complete');
   }
 
   protected applyDataChange(): void {}
@@ -56,6 +63,7 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
     if (this.gainNode) {
       this.gainNode.gain.value = data.volume ?? 1;
     }
+    this.debugCall('(Audio) sync');
   }
 
   onBecameVisible(_ctx: TickContext): void {
@@ -75,44 +83,35 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
     if (!this.filePath) return;
 
     if (!this._data.enabled) {
-      if (this.isPlaying) {
-        this.stop();
-      }
+      if (this.isPlaying) this.stop('disabled');
       return;
     }
 
     const { isPlaying, currentTime, playStateChanged, isSeeking } = ctx;
 
-    // 1. 재생 상태 변경 or 탐색 시
-    if (playStateChanged || isSeeking) {
-      if (isPlaying) {
-        // 재생 시작
-        this.play(currentTime);
-      } else {
-        // 정지
-        this.stop();
-      }
-      return;
+    if (this.lastTickWasPlaying !== isPlaying) {
+      this.lastTickWasPlaying = isPlaying;
     }
 
-    if (isPlaying && !this.isPlaying) {
-      this.play(currentTime);
-    }
-    if (!isPlaying && this.isPlaying) {
-      this.stop();
+    // 재생 상태 변경 or 탐색 시에만 처리
+    if (playStateChanged || isSeeking) {
+      if (isPlaying) {
+        if (!this.isPlaying) {
+          this.startAt(currentTime, isSeeking ? 'seeking' : 'playStateChanged');
+        }
+      } else {
+        if (this.isPlaying) {
+          this.stop(playStateChanged ? 'playStateChanged' : 'seeking');
+        }
+      }
     }
   }
 
   destroy(): void {
-    this.stop();
+    this.stop('destroy');
 
     // Audio Element 정리
-    if (this.audioElement) {
-      this.audioElement.pause();
-      this.audioElement.src = '';
-      this.audioElement.load(); // 메모리 해제
-      this.audioElement = null;
-    }
+    this.disposeAudioElement();
 
     // Audio Graph 정리
     if (this.mediaSourceNode) {
@@ -127,8 +126,8 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
     this.filePath = null;
   }
 
-  private async play(currentTime: number) {
-    if (this.isPlaying) this.stop(); // 이미 재생 중이면 일단 멈춤 (Seek 등 대응)
+  private async startAt(currentTime: number, reason: string) {
+    if (this.isPlaying) this.stop('restart');
     if (!this.filePath) return;
 
     const ctx = this.renderer.audioContext;
@@ -141,57 +140,25 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
       }
     }
 
-    // Audio Element 생성 (처음에만)
-    if (!this.audioElement) {
-      this.audioElement = new Audio();
-      this.audioElement.preload = 'metadata'; // 메타데이터만 로드 (메모리 절약)
-      this.audioElement.crossOrigin = 'anonymous'; // CORS 지원
-      this.audioElement.src = toFilePath(this.filePath);
-      this.audioElement.loop = false;
-
-      // 에러 핸들링
-      this.audioElement.onerror = (e) => {
-        console.error('[AudioClip] Audio element error:', e);
-      };
-    }
-
-    // MediaElementSourceNode 생성 (처음에만)
-    if (!this.mediaSourceNode) {
-      this.mediaSourceNode = ctx.createMediaElementSource(this.audioElement);
-    }
-
-    const gainNode = (this.gainNode ??= ctx.createGain());
-
-    // 그래프 연결: MediaSource -> Gain -> Track Input
-    this.mediaSourceNode.connect(gainNode);
-
-    // 부모 트랙 찾기
-    const track = this.trackId
-      ? this.renderer.getTrack(this.trackId)
-      : undefined;
-    if (track) {
-      gainNode.connect(track.inputNode);
-    } else {
-      // Fallback: Track을 못 찾으면 Master로 직결
-      gainNode.connect(this.renderer.masterNode);
-    }
-
-    // 볼륨 설정
-    gainNode.gain.value = this._data.volume ?? 1;
+    const audioEl = this.ensureAudioElement();
+    const mediaSource = this.ensureMediaSource(ctx, audioEl);
+    const gainNode = this.ensureGainNode(ctx);
+    this.connectGraph(mediaSource, gainNode);
+    this.applyVolume(gainNode);
 
     // 재생 위치 계산
     // Clip 시작 시간: this.data.startTime
     // 오디오 파일 내 시작점: this.data.trimStart (없으면 0)
     // 현재 커서 위치: currentTime
     const trimStart = (this._data.trimStart ?? 0) / 1000; // ms -> s
-    const offset =
-      Math.max(0, (currentTime - this._data.startTime) / 1000) + trimStart;
+    const offset = this.calcOffset(currentTime, trimStart);
+    this.debugCall(`starting playback at ${offset.toFixed(2)}s (${reason})`);
 
     // Audio Element의 currentTime 설정 및 재생
-    this.audioElement.currentTime = offset;
+    audioEl.currentTime = offset;
 
     // 재생 시작
-    const playPromise = this.audioElement.play();
+    const playPromise = audioEl.play();
     if (playPromise !== undefined) {
       playPromise
         .then(() => {
@@ -206,10 +173,79 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
     }
   }
 
-  private stop() {
+  private stop(reason: string) {
     if (this.audioElement) {
       this.audioElement.pause();
-      this.isPlaying = false;
     }
+    if (this.isPlaying) {
+      this.debugCall(`paused (${reason})`);
+    }
+    this.isPlaying = false;
+  }
+
+  private calcOffset(currentTime: number, trimStartSec: number): number {
+    const base = Math.max(0, (currentTime - this._data.startTime) / 1000);
+    return base + trimStartSec;
+  }
+
+  private createAudioElement(filePath: string): HTMLAudioElement {
+    const audio = new Audio();
+    audio.preload = 'metadata';
+    audio.crossOrigin = 'anonymous';
+    audio.src = toFilePath(filePath);
+    audio.loop = false;
+    audio.onerror = (e) => {
+      console.error('[AudioClip] Audio element error:', e);
+    };
+    return audio;
+  }
+
+  private ensureAudioElement(): HTMLAudioElement {
+    if (!this.audioElement) {
+      this.audioElement = this.createAudioElement(this.filePath!);
+    }
+    return this.audioElement;
+  }
+
+  private ensureMediaSource(
+    ctx: AudioContext,
+    audioEl: HTMLAudioElement
+  ): MediaElementAudioSourceNode {
+    if (!this.mediaSourceNode) {
+      this.mediaSourceNode = ctx.createMediaElementSource(audioEl);
+    }
+    return this.mediaSourceNode;
+  }
+
+  private ensureGainNode(ctx: AudioContext): GainNode {
+    return (this.gainNode ??= ctx.createGain());
+  }
+
+  private connectGraph(
+    mediaSource: MediaElementAudioSourceNode,
+    gainNode: GainNode
+  ): void {
+    mediaSource.connect(gainNode);
+
+    const track = this.trackId
+      ? this.renderer.getTrack(this.trackId)
+      : undefined;
+    if (track) {
+      gainNode.connect(track.inputNode);
+    } else {
+      gainNode.connect(this.renderer.masterNode);
+    }
+  }
+
+  private applyVolume(gainNode: GainNode): void {
+    gainNode.gain.value = this._data.volume ?? 1;
+  }
+
+  private disposeAudioElement(): void {
+    if (!this.audioElement) return;
+    this.audioElement.pause();
+    this.audioElement.src = '';
+    this.audioElement.load();
+    this.audioElement = null;
   }
 }
