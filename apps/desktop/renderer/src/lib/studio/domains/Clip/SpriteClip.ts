@@ -47,7 +47,7 @@ export abstract class SpriteClip extends GraphicClip {
   }
 
   protected applyTransform(transforms: ITransform): void {
-    this.debugCall('(Sprite) applyTransform');
+    // this.debugCall('(Sprite) applyTransform');
 
     const root = this.container;
     const sprite = this.sprite;

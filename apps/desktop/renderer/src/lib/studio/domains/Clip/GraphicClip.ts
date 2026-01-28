@@ -161,4 +161,9 @@ export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
       size: { width, height },
     };
   }
+
+  destroy(): void {
+    this.debugCall('(Graphic) destroy');
+    this.container.destroy(true);
+  }
 }

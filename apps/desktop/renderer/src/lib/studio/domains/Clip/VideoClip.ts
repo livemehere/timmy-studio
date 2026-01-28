@@ -73,15 +73,14 @@ export class VideoClip extends SpriteClip {
   }
 
   destroy(): void {
-    this.container.destroy({ children: true });
-
+    this.debugCall('(Video) destroy');
     if (this.originEl) {
       this.cleanupVideoElement(this.originEl);
     }
     if (this.proxyEl) {
       this.cleanupVideoElement(this.proxyEl);
     }
-    this.debugCall('(Video) destroy');
+    super.destroy();
   }
 
   override onTick(ctx: TickContext): void {
@@ -100,14 +99,6 @@ export class VideoClip extends SpriteClip {
       becameVisible
     );
   }
-  override onBecameVisible(ctx: TickContext): void {
-    super.onBecameVisible(ctx);
-  }
-
-  override onBecameHidden(ctx: TickContext): void {
-    super.onBecameHidden(ctx);
-    // this.pauseVideoClip();
-  }
 
   private handleVideoClip(
     clip: IVideoClip,
@@ -115,7 +106,7 @@ export class VideoClip extends SpriteClip {
     isPlaying: boolean,
     playStateChanged: boolean,
     isSeeking: boolean,
-    clipBecameVisible: boolean
+    becameVisible: boolean
   ): void {
     const origin = this.originEl!;
     const proxy = this.proxyEl ?? null;
@@ -130,7 +121,7 @@ export class VideoClip extends SpriteClip {
         proxy,
         clipRelativeTime,
         playStateChanged,
-        clipBecameVisible
+        becameVisible
       );
     } else {
       // 일시 정지를 유지하며, 시간 동기화
@@ -151,7 +142,7 @@ export class VideoClip extends SpriteClip {
     proxy: HTMLVideoElement | null,
     clipRelativeTime: number,
     playStateChanged: boolean,
-    clipBecameVisible: boolean
+    becameVisible: boolean
   ): void {
     // proxy 로 스왑중이라면 취소
     this.cancelPendingSwaps('proxy');
@@ -161,7 +152,7 @@ export class VideoClip extends SpriteClip {
       this.requestSwapToOriginWhilePlaying(clip, origin, proxy);
     }
 
-    const shouldStartPlayback = playStateChanged || clipBecameVisible;
+    const shouldStartPlayback = playStateChanged || becameVisible;
 
     if (shouldStartPlayback && !this.pendingOriginSwap && !this.isUsingProxy) {
       origin.currentTime = clipRelativeTime;
@@ -369,13 +360,6 @@ export class VideoClip extends SpriteClip {
       target.currentTime = actualOriginTime;
       target.pause();
     }
-  }
-
-  private pauseVideoClip(): void {
-    const origin = this.originEl;
-    const proxy = this.proxyEl ?? null;
-    if (origin && !origin.paused) origin.pause();
-    if (proxy && !proxy.paused) proxy.pause();
   }
 
   private cancelPendingSwaps(type: 'proxy' | 'origin' | 'all' = 'all'): void {
