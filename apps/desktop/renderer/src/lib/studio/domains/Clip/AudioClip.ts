@@ -67,15 +67,15 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
   }
 
   onBecameVisible(_ctx: TickContext): void {
-    // No-op
+    this.debugCall('(Audio) became visible');
   }
 
   onBecameHidden(_ctx: TickContext): void {
-    // No-op
+    this.debugCall('(Audio) became hidden');
   }
 
   onUpdateBeforeTick(_ctx: TickContext): void {
-    // No-op
+    this.debugCall('(Audio) update before tick');
   }
 
   // 오디오는 매 프레임 tick보다는 상태 변화(재생/정지/탐색) 시점에 반응하는 것이 중요함.
@@ -90,6 +90,9 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
     const { isPlaying, currentTime, playStateChanged, isSeeking } = ctx;
 
     if (this.lastTickWasPlaying !== isPlaying) {
+      this.debugCall(
+        `(Audio) play state changed (playing: ${isPlaying}, seeking: ${isSeeking})`
+      );
       this.lastTickWasPlaying = isPlaying;
     }
 
@@ -97,10 +100,16 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
     if (playStateChanged || isSeeking) {
       if (isPlaying) {
         if (!this.isPlaying) {
+          this.debugCall(
+            `(Audio) start requested (${isSeeking ? 'seeking' : 'playStateChanged'})`
+          );
           this.startAt(currentTime, isSeeking ? 'seeking' : 'playStateChanged');
         }
       } else {
         if (this.isPlaying) {
+          this.debugCall(
+            `(Audio) stop requested (${playStateChanged ? 'playStateChanged' : 'seeking'})`
+          );
           this.stop(playStateChanged ? 'playStateChanged' : 'seeking');
         }
       }
@@ -108,6 +117,7 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
   }
 
   destroy(): void {
+    this.debugCall('(Audio) destroy');
     this.stop('destroy');
 
     // Audio Element 정리
@@ -127,6 +137,7 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
   }
 
   private async startAt(currentTime: number, reason: string) {
+    this.debugCall(`(Audio) startAt(${currentTime}) reason=${reason}`);
     if (this.isPlaying) this.stop('restart');
     if (!this.filePath) return;
 
@@ -134,8 +145,10 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
     if (ctx.state !== 'running') {
       try {
         await ctx.resume();
+        this.debugCall('(Audio) audio context resumed');
       } catch (e) {
         console.warn('[AudioClip] Failed to resume audio context', e);
+        this.debugCall('(Audio) audio context resume failed');
         return;
       }
     }
@@ -163,13 +176,16 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
       playPromise
         .then(() => {
           this.isPlaying = true;
+          this.debugCall('(Audio) play started');
         })
         .catch((e) => {
           console.warn('[AudioClip] Play failed:', e);
+          this.debugCall(`(Audio) play failed: ${e?.message ?? e}`);
           this.isPlaying = false;
         });
     } else {
       this.isPlaying = true;
+      this.debugCall('(Audio) play started (no promise)');
     }
   }
 
@@ -243,6 +259,7 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
 
   private disposeAudioElement(): void {
     if (!this.audioElement) return;
+    this.debugCall('(Audio) dispose audio element');
     this.audioElement.pause();
     this.audioElement.src = '';
     this.audioElement.load();
