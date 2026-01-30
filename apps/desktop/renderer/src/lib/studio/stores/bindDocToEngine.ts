@@ -102,10 +102,22 @@ async function syncGraphicTracks(
     }))
   );
 
+  const failedTrackIdsFromClips = new Set(
+    result.clipResults
+      .filter((clipResult) => clipResult.failedClipIds.length > 0)
+      .map((clipResult) => clipResult.trackId)
+  );
+  const failedTrackIds = Array.from(
+    new Set([...result.failedTrackIds, ...failedTrackIdsFromClips])
+  );
+  const syncedTrackIdsWithoutFailed = syncedTrackIds.filter(
+    (id) => !failedTrackIdsFromClips.has(id)
+  );
+
   engine.applyRendererSyncResult({
-    trackIds: syncedTrackIds,
+    trackIds: syncedTrackIdsWithoutFailed,
     clipIds: syncedClipIds,
-    failedTrackIds: result.failedTrackIds,
+    failedTrackIds,
     failedClipIds: failedClipIds.map((item) => item.clipId),
   });
 
@@ -140,10 +152,22 @@ async function syncAudioTracks(
     }))
   );
 
+  const failedTrackIdsFromClips = new Set(
+    result.clipResults
+      .filter((clipResult) => clipResult.failedClipIds.length > 0)
+      .map((clipResult) => clipResult.trackId)
+  );
+  const failedTrackIds = Array.from(
+    new Set([...result.failedTrackIds, ...failedTrackIdsFromClips])
+  );
+  const syncedTrackIdsWithoutFailed = syncedTrackIds.filter(
+    (id) => !failedTrackIdsFromClips.has(id)
+  );
+
   engine.applyAudioSyncResult({
-    trackIds: syncedTrackIds,
+    trackIds: syncedTrackIdsWithoutFailed,
     clipIds: syncedClipIds,
-    failedTrackIds: result.failedTrackIds,
+    failedTrackIds,
     failedClipIds: failedClipIds.map((item) => item.clipId),
   });
 
