@@ -408,6 +408,8 @@ export function TimelineClip({
           onClick={(e) => {
             // Set the parent track as active when clicking a clip
             setActiveTrackId(trackId);
+            navigator.clipboard.writeText(clip.id);
+            toast('id copied!');
 
             if (e.shiftKey) {
               addSelectedClipId(clip.id);
