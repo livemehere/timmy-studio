@@ -87,13 +87,13 @@ export class VideoClip extends SpriteClip {
     super.destroy();
   }
 
-  override onBecameVisible(_ctx: TickContext): void {
-    super.onBecameVisible(_ctx);
+  override onBecameVisible(ctx: TickContext): void {
+    super.onBecameVisible(ctx);
     this._wasVisible = true;
   }
 
-  override onBecameHidden(_ctx: TickContext): void {
-    super.onBecameHidden(_ctx);
+  override onBecameHidden(ctx: TickContext): void {
+    super.onBecameHidden(ctx);
     this._wasVisible = false;
     this.cancelPendingSwaps('all');
   }
