@@ -77,9 +77,6 @@ export class VideoClip extends SpriteClip {
       });
     }
 
-    console.log('originSource', this.originVideoSource);
-    console.log('proxySource', this.proxyVideoSource);
-
     this.sync(this.data);
     this.debugCall('(Video) === init-end ===');
   }

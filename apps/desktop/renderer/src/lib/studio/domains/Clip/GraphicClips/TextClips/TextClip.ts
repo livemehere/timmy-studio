@@ -52,7 +52,7 @@ export class TextClip extends GraphicClip {
   }
 
   protected applyData(): void {
-    this.debugCall('applyEffects');
+    this.debugCall('applyData');
     this.updateContent();
     this.updateSelectionBounds();
   }
