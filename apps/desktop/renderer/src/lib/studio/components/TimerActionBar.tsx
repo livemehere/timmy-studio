@@ -446,26 +446,43 @@ export function TimerActionBar() {
 
   return (
     <>
-      <div className={'grid grid-cols-3 items-center p-2'}>
-        <div className="tabular-nums text-xs">
-          {formatTime(timerState.currentMs)} /{' '}
-          {formatTime(timerState.durationMs)}
+      <div className="grid grid-cols-3 items-center px-4 py-2">
+        {/* Timecode Display */}
+        <div className="flex items-center gap-2">
+          <span className="tabular-nums text-xs font-mono text-neutral-300 bg-neutral-800/50 px-2 py-1 rounded">
+            {formatTime(timerState.currentMs)}
+          </span>
+          <span className="text-neutral-600 text-xs">/</span>
+          <span className="tabular-nums text-xs font-mono text-neutral-500">
+            {formatTime(timerState.durationMs)}
+          </span>
         </div>
-        <div className="flex justify-center">
-          <Button variant={'ghost'} size={'icon-sm'} onClick={handlePlay}>
+
+        {/* Playback Controls */}
+        <div className="flex justify-center items-center gap-1">
+          <Button
+            variant={timerState.isPlaying ? 'default' : 'ghost'}
+            size="icon-sm"
+            onClick={handlePlay}
+            className="rounded-full w-9 h-9 transition-all"
+          >
             {timerState.isPlaying ? (
-              <PauseIcon size={16} />
+              <PauseIcon size={18} />
             ) : (
-              <PlayIcon size={16} />
+              <PlayIcon size={18} className="ml-0.5" />
             )}
           </Button>
         </div>
+
+        {/* Export Button */}
         <div className="flex justify-end gap-2">
           <Button
-            variant={'outline'}
+            variant="outline"
+            size="sm"
             onClick={() => setShowExportSettings((prev) => !prev)}
+            className="text-xs gap-1.5"
           >
-            <HardDriveUploadIcon size={16} />
+            <HardDriveUploadIcon size={14} />
             <span>내보내기</span>
           </Button>
         </div>

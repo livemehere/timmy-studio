@@ -6,11 +6,11 @@ export function PreviewRenderer() {
   useMountRenderer(parentRef);
 
   return (
-    <div className="relative w-full h-[calc(100%-40px)] flex items-center justify-center">
+    <div className="relative w-full h-full flex items-center justify-center">
       <div
         ref={parentRef}
-        className="w-full h-full flex items-center justify-center"
-      ></div>
+        className="w-full h-full flex items-center justify-center rounded-sm overflow-hidden shadow-2xl"
+      />
     </div>
   );
 }
