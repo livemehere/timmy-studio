@@ -68,12 +68,21 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
     this.applyData();
   }
 
-  onBecameVisible(_ctx: TickContext): void {
+  onBecameVisible(ctx: TickContext): void {
     this.debugCall('(Audio) became visible');
+    // 클립 구간에 진입했을 때, 이미 재생 중이면 오디오 시작
+    if (ctx.isPlaying && this._data.enabled && !this.isPlaying) {
+      this.debugCall('(Audio) starting because became visible while playing');
+      this.startAt(ctx.currentTime, 'becameVisible');
+    }
   }
 
-  onBecameHidden(_ctx: TickContext): void {
+  onBecameHidden(ctx: TickContext): void {
     this.debugCall('(Audio) became hidden');
+    // 클립 구간을 벗어났을 때 오디오 정지
+    if (this.isPlaying) {
+      this.stop('becameHidden');
+    }
   }
 
   // 오디오는 매 프레임 tick보다는 상태 변화(재생/정지/탐색) 시점에 반응하는 것이 중요함.
@@ -86,6 +95,17 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
     }
 
     const { isPlaying, currentTime, playStateChanged, isSeeking } = ctx;
+
+    // 🔥 현재 시간이 클립 범위 안에 있는지 체크
+    const isInRange = this.shouldRenderAt(currentTime);
+
+    // 범위 밖이면 재생 중지
+    if (!isInRange) {
+      if (this.isPlaying) {
+        this.stop('outOfRange');
+      }
+      return;
+    }
 
     if (this.lastTickWasPlaying !== isPlaying) {
       this.debugCall(
