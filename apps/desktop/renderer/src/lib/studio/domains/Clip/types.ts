@@ -31,11 +31,8 @@ export interface IBaseClip {
   locked?: boolean;
 }
 
-// Video Track Clips
-
 export interface IGraphicClipBase extends IBaseClip {
   transforms: ITransform;
-  zIndex: number;
 }
 
 export interface IVideoClip extends IGraphicClipBase {

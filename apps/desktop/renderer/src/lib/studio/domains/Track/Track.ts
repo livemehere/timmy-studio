@@ -127,7 +127,6 @@ export abstract class Track<
       }
 
       if (visibility.isVisible) {
-        clip.onUpdateBeforeTick(ctx);
         clip.onTick(ctx);
       } else {
         if (visibility.isFirstTick) {

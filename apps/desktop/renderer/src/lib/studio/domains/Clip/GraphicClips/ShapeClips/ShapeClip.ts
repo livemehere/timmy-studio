@@ -1,23 +1,21 @@
-import type { IGraphicClip, IShapeClip, ITransform } from '../../types';
+import type { IShapeClip } from '../../types';
 import { GraphicClip } from '../GraphicClip';
 import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
-import type { TickContext } from '@/lib/studio/engine/types';
 import { Graphics, FillGradient } from 'pixi.js';
 
 export class ShapeClip extends GraphicClip {
   readonly type = 'shape';
+  declare protected _data: IShapeClip;
+
   private graphics: Graphics | null = null;
 
   constructor(renderer: GraphicRenderer, data: IShapeClip) {
     super(renderer, data);
-  }
-
-  get shapeData() {
-    return (this._data as IShapeClip).shapeData;
+    this.debugCall('(Shape) constructor');
   }
 
   async init(): Promise<void> {
-    console.log('ShapeClip init called', this._data);
+    this.debugCall('(Shape) === init ===');
 
     // Graphics 객체 생성
     this.graphics = new Graphics();
@@ -26,98 +24,33 @@ export class ShapeClip extends GraphicClip {
     // container에 graphics를 자식으로 추가
     this.container.addChild(this.graphics);
 
-    this.applyDataChange();
-    this.applyTransform((this._data as IShapeClip).transforms);
-  }
-
-  protected applyDataChange(): void {
-    this.renderShape();
+    this.sync(this.data);
+    this.debugCall('(Shape) === init-end ===');
   }
 
   destroy(): void {
+    this.debugCall('(Shape) destroy');
     if (this.graphics) {
       this.graphics.destroy();
       this.graphics = null;
     }
-    this.container.destroy({ children: true });
-    this.debugCall('destroy');
+    super.destroy();
   }
 
-  override onTick(ctx: TickContext): void {
-    super.onTick(ctx);
+  protected getContentSize(): { width: number; height: number } {
+    const width = this._data.shapeData.width;
+    const height = this._data.shapeData.height;
+    return { width, height };
   }
 
-  protected onUpdateVisible(_currentTime: number): void {
-    this.applyTransform((this._data as IShapeClip).transforms);
+  protected shouldApplyBaseScale(): boolean {
+    return true;
   }
 
-  /**
-   * ShapeClip 전용 transform 적용
-   * shapeData의 width/height를 원본 크기로 간주하고,
-   * transform.size에 맞게 스케일 적용
-   */
-  protected applyTransform(transforms: ITransform): void {
-    const root = this.container;
-    const shape = this.shapeData;
-    const contentWidth = shape.width;
-    const contentHeight = shape.height;
-    const hasSize = contentWidth > 0 && contentHeight > 0;
-
-    // 1) base scale (size -> scale)
-    // shapeData의 width/height를 원본 크기로 간주
-    let baseScaleX = 1;
-    let baseScaleY = 1;
-
-    if (transforms.size && hasSize) {
-      baseScaleX = transforms.size.width / contentWidth;
-      baseScaleY = transforms.size.height / contentHeight;
-    }
-
-    // 2) user scale
-    const userScaleX = transforms.scaleX ?? 1;
-    const userScaleY = transforms.scaleY ?? 1;
-
-    const scaleX = baseScaleX * userScaleX;
-    const scaleY = baseScaleY * userScaleY;
-
-    root.scale.set(scaleX, scaleY);
-
-    // 3) pivot (center)
-    if (hasSize) {
-      root.pivot.set(contentWidth / 2, contentHeight / 2);
-    } else {
-      root.pivot.set(0, 0);
-    }
-
-    // 4) position (top-left -> center)
-    if (transforms.position) {
-      if (hasSize) {
-        root.x = transforms.position.x + (contentWidth * scaleX) / 2;
-        root.y = transforms.position.y + (contentHeight * scaleY) / 2;
-      } else {
-        root.x = transforms.position.x;
-        root.y = transforms.position.y;
-      }
-    }
-
-    // 5) zIndex
-    if ((this._data as IShapeClip).zIndex !== undefined) {
-      root.zIndex = (this._data as IShapeClip).zIndex;
-    }
-
-    // 6) rotation / alpha
-    if (transforms.rotation !== undefined) {
-      root.rotation = transforms.rotation;
-    }
-    if (transforms.opacity !== undefined) {
-      root.alpha = transforms.opacity;
-    }
-  }
-
-  private renderShape(): void {
+  protected applyData(): void {
     if (!this.graphics) return;
 
-    const shape = this.shapeData;
+    const shape = this._data.shapeData;
     const graphics = this.graphics;
 
     graphics.clear();

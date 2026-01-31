@@ -31,13 +31,12 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
 
   constructor(renderer: AudioRenderer, data: IAudioClip, trackId: string) {
     super(renderer, data);
-    this._data = data;
     this.trackId = trackId;
     this.debugCall(`(Audio) constructed`);
   }
 
   async init(): Promise<void> {
-    this.debugCall('(Audio) init start');
+    this.debugCall('(Audio) === init ===');
     const asset = this.renderer
       .getDoc()
       .assets.find((a: any) => a.id === this._data.assetId);
@@ -52,18 +51,21 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
     // VideoClip init과 동일하게 미리 Audio Element 준비
     this.audioElement = this.createAudioElement(this.filePath);
 
-    this.debugCall('(Audio) init complete');
+    this.sync(this.data);
+    this.debugCall('(Audio) === init-end ===');
   }
 
-  protected applyDataChange(): void {}
-
-  sync(data: IAudioClip): void {
-    this._data = data;
+  protected applyData(): void {
     // 볼륨 등 업데이트
     if (this.gainNode) {
-      this.gainNode.gain.value = data.volume ?? 1;
+      this.gainNode.gain.value = this.data.volume ?? 1;
     }
+  }
+
+  sync(data: IAudioClip): void {
     this.debugCall('(Audio) sync');
+    this._data = data;
+    this.applyData();
   }
 
   onBecameVisible(_ctx: TickContext): void {
@@ -72,10 +74,6 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
 
   onBecameHidden(_ctx: TickContext): void {
     this.debugCall('(Audio) became hidden');
-  }
-
-  onUpdateBeforeTick(_ctx: TickContext): void {
-    this.debugCall('(Audio) update before tick');
   }
 
   // 오디오는 매 프레임 tick보다는 상태 변화(재생/정지/탐색) 시점에 반응하는 것이 중요함.

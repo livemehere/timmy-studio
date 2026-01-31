@@ -36,6 +36,7 @@ export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
 
   protected constructor(renderer: GraphicRenderer, data: IGraphicClip) {
     super(renderer, data);
+    this.debugCall('(Graphic) constructor');
     this.container = new Container();
     this.container.label = `ClipRoot-${this.id}`;
   }
@@ -53,7 +54,8 @@ export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
   sync(newData: IGraphicClip): void {
     this.debugCall('(Graphic) sync');
     this._data = newData;
-    this.applyDataChange();
+    this.applyData();
+    this.applyTransform(this.data.transforms);
   }
 
   onBecameVisible(_ctx: TickContext): void {
@@ -66,16 +68,74 @@ export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
     this.container.visible = false;
   }
 
-  onUpdateBeforeTick(_ctx: TickContext): void {
-    //TODO: 나중에 공통 처리할 부분 있으면 여기에 추가
-  }
-
   onTick(_ctx: TickContext): void {
-    this.applyTransform(this._data.transforms);
+    // 애니메이션/트랜지션이 필요할 때만 여기서 처리
   }
 
-  // ⭐️ ShapeClip, SpriteClip, TextClip 에서 각자 구현
-  protected abstract applyTransform(transforms: ITransform): void;
+  // 각 Clip 유형별로 콘텐츠 크기 반환
+  protected abstract getContentSize(): { width: number; height: number };
+  // 기본 scale 계산 여부 (TextClip은 false)
+  protected abstract shouldApplyBaseScale(): boolean;
+
+  protected applyTransform(transforms: ITransform): void {
+    const root = this.container;
+    const { width: contentWidth, height: contentHeight } =
+      this.getContentSize();
+    const hasSize = contentWidth > 0 && contentHeight > 0;
+
+    // 1) scale 계산
+    let scaleX = 1;
+    let scaleY = 1;
+
+    if (this.shouldApplyBaseScale() && transforms.size && hasSize) {
+      // baseScale (size -> scale)
+      const baseScaleX = transforms.size.width / contentWidth;
+      const baseScaleY = transforms.size.height / contentHeight;
+      // userScale
+      const userScaleX = transforms.scaleX ?? 1;
+      const userScaleY = transforms.scaleY ?? 1;
+      scaleX = baseScaleX * userScaleX;
+      scaleY = baseScaleY * userScaleY;
+    } else {
+      // userScale only (TextClip 경우)
+      scaleX = transforms.scaleX ?? 1;
+      scaleY = transforms.scaleY ?? 1;
+    }
+
+    this.applyScale(scaleX, scaleY);
+
+    // 2) pivot (center)
+    if (hasSize) {
+      root.pivot.set((contentWidth * scaleX) / 2, (contentHeight * scaleY) / 2);
+    } else {
+      root.pivot.set(0, 0);
+    }
+
+    // 3) position (top-left -> center)
+    if (transforms.position) {
+      if (hasSize) {
+        root.x = transforms.position.x + (contentWidth * scaleX) / 2;
+        root.y = transforms.position.y + (contentHeight * scaleY) / 2;
+      } else {
+        root.x = transforms.position.x;
+        root.y = transforms.position.y;
+      }
+    }
+
+    // 4) rotation / alpha
+    if (transforms.rotation !== undefined) {
+      root.rotation = transforms.rotation;
+    }
+    if (transforms.opacity !== undefined) {
+      root.alpha = transforms.opacity;
+    }
+  }
+
+  // SpriteClip은 sprite.scale, ShapeClip은 container.scale 사용
+  protected applyScale(scaleX: number, scaleY: number): void {
+    this.container.scale.set(scaleX, scaleY);
+  }
+
   static computePlacement({
     total,
     target,

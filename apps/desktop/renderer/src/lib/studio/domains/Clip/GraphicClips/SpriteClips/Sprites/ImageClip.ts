@@ -1,24 +1,23 @@
 import { Texture } from 'pixi.js';
-import type { IImageClip } from '../../types';
-import { SpriteClip } from './SpriteClip';
+import type { IImageClip } from '../../../types';
+import { SpriteClip } from '../SpriteClip';
 import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
-import type { TickContext } from '@/lib/studio/engine/types';
 import { toFilePath } from '@/lib/studio/utils/toFilePath';
-import type { IImageAsset } from '../../../Asset/types';
+import type { IImageAsset } from '../../../../Asset/types';
 
 export class ImageClip extends SpriteClip {
   readonly type = 'image';
-  public _data: IImageClip;
+  declare protected _data: IImageClip;
 
   private element: HTMLImageElement | null = null;
 
   constructor(renderer: GraphicRenderer, data: IImageClip) {
     super(renderer, data);
-    this._data = data;
+    this.debugCall('(Image) constructor');
   }
 
   async init(): Promise<void> {
-    this.debugCall('(image) init start');
+    this.debugCall('(image) === init ===');
     const asset = this.renderer
       .getDoc()
       .assets.find((a: any) => a.id === this._data.assetId) as IImageAsset;
@@ -30,7 +29,9 @@ export class ImageClip extends SpriteClip {
 
     this.element = await this.createImageElement(asset);
     this.sprite.texture = Texture.from(this.element);
-    this.debugCall('(image) init complete');
+
+    this.sync(this.data);
+    this.debugCall('(image) === init-end ===');
   }
 
   destroy(): void {
@@ -39,12 +40,7 @@ export class ImageClip extends SpriteClip {
       this.cleanupImageElement(this.element);
       this.element = null;
     }
-
     super.destroy();
-  }
-
-  override onTick(ctx: TickContext): void {
-    super.onTick(ctx);
   }
 
   private createImageElement(asset: IImageAsset): Promise<HTMLImageElement> {
@@ -61,7 +57,7 @@ export class ImageClip extends SpriteClip {
   private cleanupImageElement(img: HTMLImageElement): void {
     img.onload = null;
     img.onerror = null;
-    img.src = '';
     img.removeAttribute('src');
+    img.src = '';
   }
 }

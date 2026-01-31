@@ -52,16 +52,16 @@ export abstract class Clip<
     this.id = data.id;
     this.renderer = renderer;
     this._data = data;
+    this.debugCall('(Clip) constructor');
   }
 
   abstract init(): Promise<void>;
   abstract destroy(): void;
   abstract sync(newData: TClipData): void;
 
-  protected abstract applyDataChange(): void; // tick 과 다르게, sync 호출될 때 1번 실행해야할 로직
+  protected abstract applyData(): void; // sync 시 1회 실행: effects, filters 등 구조 재구축
   abstract onBecameVisible(ctx: TickContext): void;
   abstract onBecameHidden(ctx: TickContext): void;
-  abstract onUpdateBeforeTick(ctx: TickContext): void;
   abstract onTick(ctx: TickContext): void;
 
   protected debugCall(hook: string): void {
@@ -161,7 +161,6 @@ export abstract class Clip<
           assetId: asset.id,
           trimStart: 0,
           trimEnd: 0,
-          zIndex: 0,
         };
         return videoClip;
       case 'image':
@@ -170,7 +169,6 @@ export abstract class Clip<
           transforms,
           type: 'image',
           assetId: asset.id,
-          zIndex: 0,
         };
         return imageClip;
       case 'animated-image':
@@ -179,7 +177,6 @@ export abstract class Clip<
           transforms,
           type: 'animated-image',
           assetId: asset.id,
-          zIndex: 0,
         };
         return animatedImageClip;
       case 'audio':
@@ -208,7 +205,6 @@ export abstract class Clip<
       enabled: true,
       effects: [],
       animations: [],
-      zIndex: 0,
       transforms: {
         position: { x: 0, y: 0 },
         size: { width: shapeData.width, height: shapeData.height },
@@ -235,7 +231,6 @@ export abstract class Clip<
       enabled: true,
       effects: [],
       animations: [],
-      zIndex: 0,
       transforms: {
         position: { x: 0, y: 0 },
         size: { ...Clip.DEFAULT_TRANSFORM_SIZE },

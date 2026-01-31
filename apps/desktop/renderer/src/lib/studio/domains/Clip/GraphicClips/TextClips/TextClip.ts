@@ -1,12 +1,12 @@
 import { Text, TextStyle, Graphics } from 'pixi.js';
-import type { ITextClip, ITransform } from '../../types';
+import type { ITextClip } from '../../types';
 import { GraphicClip } from '../GraphicClip';
 import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
-import type { TickContext } from '@/lib/studio/engine/types';
 
 export class TextClip extends GraphicClip {
   readonly type = 'text';
-  public _data: ITextClip;
+  declare protected _data: ITextClip;
+
   private text: Text | null = null;
   private background: Graphics | null = null;
   private selectionBounds: Graphics | null = null; // 선택 영역 표시용
@@ -14,15 +14,18 @@ export class TextClip extends GraphicClip {
 
   constructor(renderer: GraphicRenderer, data: ITextClip) {
     super(renderer, data);
-    this._data = data;
+    this.debugCall(`(Text) constructor`);
   }
 
   async init(): Promise<void> {
-    this.applyDataChange();
-    this.applyTransform(this._data.transforms);
+    this.debugCall('(Text) === init ===');
+    this.createTextObject();
+    this.sync(this.data);
+    this.debugCall('(Text) === init-end ===');
   }
 
   destroy(): void {
+    this.debugCall('(Text) destroy');
     if (this.text) {
       this.text.destroy();
       this.text = null;
@@ -39,83 +42,26 @@ export class TextClip extends GraphicClip {
       this.underline.destroy();
       this.underline = null;
     }
-    this.container.destroy({ children: true });
+    super.destroy();
   }
 
-  override onTick(ctx: TickContext): void {
-    super.onTick(ctx);
-  }
-
-  protected onUpdateVisible(_currentTime: number): void {
-    this.applyTransform(this._data.transforms);
-  }
-
-  protected applyDataChange(): void {
+  protected applyData(): void {
     this.debugCall('applyEffects');
-
-    // 텍스트 객체가 없으면 생성, 있으면 업데이트
-    if (!this.text) {
-      this.createTextContent();
-    } else {
-      this.updateContent();
-    }
-
+    this.updateContent();
     this.updateSelectionBounds();
   }
 
-  /**
-   * Overrides GraphicClip.applyTransform to handle Text specific scaling.
-   * Unlike images/videos, Text should not be forced to fit a specific width/height ratio.
-   * It should render at its natural size (based on font) and only be scaled by explicit scaleX/Y.
-   */
-  protected applyTransform(transforms: ITransform): void {
-    const root = this.container;
-    const text = this.text;
-    if (!text) return;
-
-    const contentWidth = text.width;
-    const contentHeight = text.height;
-    const hasSize = contentWidth > 0 && contentHeight > 0;
-
-    // 1) Scale (ignore transforms.size)
-    const userScaleX = transforms.scaleX ?? 1;
-    const userScaleY = transforms.scaleY ?? 1;
-
-    root.scale.set(userScaleX, userScaleY);
-
-    // 2) pivot (center)
-    if (hasSize) {
-      root.pivot.set(contentWidth / 2, contentHeight / 2);
-    } else {
-      root.pivot.set(0, 0);
-    }
-
-    // 3) position (top-left -> center)
-    if (transforms.position) {
-      if (hasSize) {
-        root.x = transforms.position.x + (contentWidth * userScaleX) / 2;
-        root.y = transforms.position.y + (contentHeight * userScaleY) / 2;
-      } else {
-        root.x = transforms.position.x;
-        root.y = transforms.position.y;
-      }
-    }
-
-    // 4) zIndex
-    if (this._data.zIndex !== undefined) {
-      root.zIndex = this._data.zIndex;
-    }
-
-    // 5) rotation / alpha
-    if (transforms.rotation !== undefined) {
-      root.rotation = transforms.rotation;
-    }
-    if (transforms.opacity !== undefined) {
-      root.alpha = transforms.opacity;
-    }
+  protected getContentSize(): { width: number; height: number } {
+    const width = this.text?.width ?? 0;
+    const height = this.text?.height ?? 0;
+    return { width, height };
   }
 
-  protected createTextContent(): void {
+  protected shouldApplyBaseScale(): boolean {
+    return false; // TextClip은 userScale만 사용
+  }
+
+  private createTextObject(): void {
     if (this.text) {
       this.text.destroy();
     }

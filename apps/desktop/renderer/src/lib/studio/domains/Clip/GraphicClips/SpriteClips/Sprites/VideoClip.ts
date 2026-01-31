@@ -1,35 +1,32 @@
 import { Texture, VideoSource } from 'pixi.js';
-import type { IVideoClip } from '../../types';
-import { SpriteClip } from './SpriteClip';
+import type { IVideoClip } from '../../../types';
+import { SpriteClip } from '../SpriteClip';
 import { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
 import type { SeekingRenderMode, TickContext } from '@/lib/studio/engine/types';
 import { toFilePath } from '@/lib/studio/utils/toFilePath';
-import type { IVideoAsset } from '../../../Asset/types';
+import type { IVideoAsset } from '../../../../Asset/types';
 
 export class VideoClip extends SpriteClip {
   readonly type = 'video';
-
   declare protected _data: IVideoClip;
 
   // State
   private originEl: HTMLVideoElement | null = null;
-  private proxyEl: HTMLVideoElement | undefined;
+  private proxyEl: HTMLVideoElement | null = null;
   private originVideoSource: VideoSource | undefined;
   private proxyVideoSource: VideoSource | undefined;
   private isUsingProxy = false;
   private pendingProxySwap = false;
   private pendingOriginSwap = false;
-
   private _wasVisible = false;
 
   constructor(renderer: GraphicRenderer, data: IVideoClip) {
     super(renderer, data);
-    this._data = data;
     this.debugCall(`(Video) constructor`);
   }
 
   async init(): Promise<void> {
-    this.debugCall('(Video) init start');
+    this.debugCall('=== (Video) init ===');
     const asset = this.renderer
       .getDoc()
       .assets.find((a) => a.id === this._data.assetId) as
@@ -69,9 +66,19 @@ export class VideoClip extends SpriteClip {
       });
     }
 
-    this.applyTransform(this._data.transforms);
-    this.applyDataChange();
-    this.debugCall('(Video) init complete');
+    this.sync(this.data);
+    this.debugCall('(Video) === init-end ===');
+  }
+
+  // VideoClip은 항상 origin 기준으로 contentSize 반환 (proxy는 해상도가 낮음)
+  protected override getContentSize(): { width: number; height: number } {
+    if (!this.originEl) {
+      return { width: 0, height: 0 };
+    }
+    return {
+      width: this.originEl.videoWidth || 0,
+      height: this.originEl.videoHeight || 0,
+    };
   }
 
   destroy(): void {
@@ -82,7 +89,7 @@ export class VideoClip extends SpriteClip {
     }
     if (this.proxyEl) {
       this.cleanupVideoElement(this.proxyEl);
-      this.proxyEl = undefined;
+      this.proxyEl = null;
     }
     super.destroy();
   }
@@ -306,8 +313,8 @@ export class VideoClip extends SpriteClip {
 
   private async createProxyVideoElement(
     asset: IVideoAsset
-  ): Promise<HTMLVideoElement | undefined> {
-    if (!asset.proxyFilePath) return undefined;
+  ): Promise<HTMLVideoElement | null> {
+    if (!asset.proxyFilePath) return null;
     const proxy = document.createElement('video');
     proxy.src = toFilePath(asset.proxyFilePath);
     proxy.crossOrigin = 'anonymous';
@@ -328,8 +335,8 @@ export class VideoClip extends SpriteClip {
     video.pause();
     video.oncanplay = null;
     video.onerror = null;
-    video.src = '';
     video.removeAttribute('src');
+    video.src = '';
     video.load();
   }
 }
