@@ -86,9 +86,6 @@ export function TimelineClip({
   const isLoaded = syncedClipIds.includes(clipId);
   const isFailed = failedClipIds.includes(clipId);
 
-  const width = msToSec(clip.endTime - clip.startTime) * pxPerSec;
-  const left = msToSec(clip.startTime) * pxPerSec;
-
   const isSelected = useInteractionStore((state) =>
     state.selectedClipIds.includes(clip.id)
   );
@@ -131,6 +128,24 @@ export function TimelineClip({
   const [isDragging, setIsDragging] = useState(false);
   const [dragMode, setDragMode] = useState<DragMode>(null);
   const [hoverEdge, setHoverEdge] = useState<'start' | 'end' | null>(null);
+
+  // 🔥 로컬 드래그 상태 - 드래그 중 store 업데이트 없이 UI만 업데이트
+  const [localDragState, setLocalDragState] = useState<{
+    startTime: number;
+    endTime: number;
+    trimStart: number;
+    trimEnd: number;
+  } | null>(null);
+
+  // 드래그 중이면 로컬 상태 사용, 아니면 store 값 사용
+  const displayStartTime = localDragState?.startTime ?? clip.startTime;
+  const displayEndTime = localDragState?.endTime ?? clip.endTime;
+  const displayTrimStart = localDragState?.trimStart ?? clip.trimStart;
+  const displayTrimEnd = localDragState?.trimEnd ?? clip.trimEnd;
+
+  // 표시용 width/left 계산 (로컬 상태 우선)
+  const displayWidth = msToSec(displayEndTime - displayStartTime) * pxPerSec;
+  const displayLeft = msToSec(displayStartTime) * pxPerSec;
 
   // 리사이즈 모드가 끝나면 motionX를 0으로 리셋
   useEffect(() => {
@@ -381,8 +396,8 @@ export function TimelineClip({
         <div
           className="absolute h-full bg-cyan-700/30 px-2 py-1 rounded overflow-hidden pointer-events-none border-2 border-dashed border-cyan-400/50"
           style={{
-            width,
-            left,
+            width: displayWidth,
+            left: displayLeft,
           }}
         >
           <span className="text-cyan-200/50 text-xs">{clip.name}</span>
@@ -395,8 +410,8 @@ export function TimelineClip({
             ref={clipRef}
             data-clip-id={clip.id}
             style={{
-              width,
-              left,
+              width: displayWidth,
+              left: displayLeft,
               x:
                 dragMode === 'resize-start' || dragMode === 'resize-end'
                   ? 0
@@ -407,8 +422,8 @@ export function TimelineClip({
                   ? 'grabbing'
                   : 'grab',
             }}
-            // 리사이즈 모드에서는 드래그 완전 비활성화
-            drag={dragMode === 'move' || dragMode === null ? 'x' : false}
+            // 리사이즈 모드에서는 드래그 완전 비활성화, move 모드에서는 x/y 모두 허용
+            drag={dragMode === 'move' || dragMode === null ? true : false}
             dragMomentum={false}
             dragSnapToOrigin={dragMode === 'move'}
             dragElastic={0}
@@ -489,14 +504,20 @@ export function TimelineClip({
                     newTrimStart = 0;
                   }
 
-                  updateClip(trackId, clip.id, {
+                  // 🔥 로컬 상태만 업데이트 (store 터치 안함)
+                  setLocalDragState({
                     startTime: newStartTime,
+                    endTime: dragStartDataRef.current.endTime,
                     trimStart: newTrimStart,
+                    trimEnd: dragStartDataRef.current.trimEnd,
                   });
                 } else {
                   // 일반 클립은 단순히 startTime만 조절
-                  updateClip(trackId, clip.id, {
+                  setLocalDragState({
                     startTime: newStartTime,
+                    endTime: dragStartDataRef.current.endTime,
+                    trimStart: dragStartDataRef.current.trimStart,
+                    trimEnd: dragStartDataRef.current.trimEnd,
                   });
                 }
               } else if (mode === 'resize-end') {
@@ -530,14 +551,20 @@ export function TimelineClip({
                     newTrimEnd = 0;
                   }
 
-                  updateClip(trackId, clip.id, {
+                  // 🔥 로컬 상태만 업데이트 (store 터치 안함)
+                  setLocalDragState({
+                    startTime: dragStartDataRef.current.startTime,
                     endTime: newEndTime,
+                    trimStart: dragStartDataRef.current.trimStart,
                     trimEnd: newTrimEnd,
                   });
                 } else {
                   // 일반 클립은 단순히 endTime만 조절 (무제한)
-                  updateClip(trackId, clip.id, {
+                  setLocalDragState({
+                    startTime: dragStartDataRef.current.startTime,
                     endTime: newEndTime,
+                    trimStart: dragStartDataRef.current.trimStart,
+                    trimEnd: dragStartDataRef.current.trimEnd,
                   });
                 }
               }
@@ -548,6 +575,18 @@ export function TimelineClip({
                 if (clipRef.current) {
                   clipRef.current.releasePointerCapture(e.pointerId);
                 }
+
+                // 🔥 드래그 종료 시 로컬 상태를 store에 커밋
+                if (localDragState) {
+                  updateClip(trackId, clip.id, {
+                    startTime: localDragState.startTime,
+                    endTime: localDragState.endTime,
+                    trimStart: localDragState.trimStart,
+                    trimEnd: localDragState.trimEnd,
+                  });
+                  setLocalDragState(null);
+                }
+
                 isDraggingRef.current = false;
                 setIsDragging(false);
                 setDraggingClipId(null);
@@ -562,6 +601,10 @@ export function TimelineClip({
                 if (clipRef.current) {
                   clipRef.current.releasePointerCapture(e.pointerId);
                 }
+
+                // 🔥 취소 시 로컬 상태 버림 (store 업데이트 안함)
+                setLocalDragState(null);
+
                 isDraggingRef.current = false;
                 setIsDragging(false);
                 setDraggingClipId(null);
@@ -831,14 +874,14 @@ export function TimelineClip({
               {/* Content area */}
               <div className="flex-1 px-2 py-0.5 flex items-center justify-between">
                 <span className="text-[10px] text-white/60 truncate">
-                  {((clip.endTime - clip.startTime) / 1000).toFixed(1)}s
+                  {((displayEndTime - displayStartTime) / 1000).toFixed(1)}s
                 </span>
                 {/* Show trim info for video/audio */}
                 {(clip.type === 'video' || clip.type === 'audio') &&
-                  (clip.trimStart > 0 || clip.trimEnd > 0) && (
+                  (displayTrimStart > 0 || displayTrimEnd > 0) && (
                     <span className="text-[9px] text-yellow-400/70 font-mono">
-                      ✂ {(clip.trimStart / 1000).toFixed(1)}-
-                      {(clip.trimEnd / 1000).toFixed(1)}
+                      ✂ {(displayTrimStart / 1000).toFixed(1)}-
+                      {(displayTrimEnd / 1000).toFixed(1)}
                     </span>
                   )}
               </div>
