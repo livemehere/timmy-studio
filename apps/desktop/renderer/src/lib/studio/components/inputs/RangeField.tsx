@@ -1,3 +1,6 @@
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+
 interface RangeFieldProps {
   label: string;
   value: number;
@@ -16,18 +19,19 @@ export function RangeField({
   step = 1,
 }: RangeFieldProps) {
   return (
-    <label className="flex items-center gap-3">
-      <span className="text-sm text-neutral-400 w-24 shrink-0">{label}</span>
-      <input
-        type="range"
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
+    <div className="flex items-center gap-3">
+      <Label className="text-neutral-400 w-24 shrink-0 text-sm">{label}</Label>
+      <Slider
+        value={[value]}
+        onValueChange={([v]) => onChange(v)}
         min={min}
         max={max}
         step={step}
-        className="flex-1 h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+        className="flex-1"
       />
-      <span className="text-sm text-neutral-300 w-12 text-right">{value}</span>
-    </label>
+      <span className="text-sm text-neutral-300 w-12 text-right tabular-nums">
+        {value}
+      </span>
+    </div>
   );
 }

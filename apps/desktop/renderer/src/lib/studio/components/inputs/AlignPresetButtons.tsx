@@ -6,6 +6,8 @@ import {
   Minus,
   ArrowDown,
 } from 'lucide-react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Label } from '@/components/ui/label';
 
 interface AlignPresetButtonsProps {
   onAlignX: (alignX: 'left' | 'center' | 'right') => void;
@@ -21,79 +23,49 @@ export function AlignPresetButtons({
   currentAlignY = 'center',
 }: AlignPresetButtonsProps) {
   return (
-    <div className="flex flex-col gap-2">
-      <div className="text-xs text-neutral-400">Horizontal</div>
-      <div className="flex items-center gap-1 bg-neutral-800/50 rounded-lg p-1">
-        <button
-          onClick={() => onAlignX('left')}
-          className={`p-2 rounded-md transition-colors ${
-            currentAlignX === 'left'
-              ? 'bg-neutral-700 text-white'
-              : 'text-neutral-400 hover:text-neutral-300'
-          }`}
-          title="Left"
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-neutral-400 text-xs">Horizontal</Label>
+        <ToggleGroup
+          type="single"
+          value={currentAlignX}
+          onValueChange={(v) => v && onAlignX(v as 'left' | 'center' | 'right')}
+          variant="outline"
+          size="sm"
+          className="justify-start"
         >
-          <AlignLeft size={16} />
-        </button>
-        <button
-          onClick={() => onAlignX('center')}
-          className={`p-2 rounded-md transition-colors ${
-            currentAlignX === 'center'
-              ? 'bg-neutral-700 text-white'
-              : 'text-neutral-400 hover:text-neutral-300'
-          }`}
-          title="Center"
-        >
-          <AlignCenter size={16} />
-        </button>
-        <button
-          onClick={() => onAlignX('right')}
-          className={`p-2 rounded-md transition-colors ${
-            currentAlignX === 'right'
-              ? 'bg-neutral-700 text-white'
-              : 'text-neutral-400 hover:text-neutral-300'
-          }`}
-          title="Right"
-        >
-          <AlignRight size={16} />
-        </button>
+          <ToggleGroupItem value="left" aria-label="Left align">
+            <AlignLeft className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="center" aria-label="Center align">
+            <AlignCenter className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="right" aria-label="Right align">
+            <AlignRight className="h-4 w-4" />
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
-      <div className="text-xs text-neutral-400 mt-2">Vertical</div>
-      <div className="flex items-center gap-1 bg-neutral-800/50 rounded-lg p-1">
-        <button
-          onClick={() => onAlignY('top')}
-          className={`p-2 rounded-md transition-colors ${
-            currentAlignY === 'top'
-              ? 'bg-neutral-700 text-white'
-              : 'text-neutral-400 hover:text-neutral-300'
-          }`}
-          title="Top"
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-neutral-400 text-xs">Vertical</Label>
+        <ToggleGroup
+          type="single"
+          value={currentAlignY}
+          onValueChange={(v) => v && onAlignY(v as 'top' | 'center' | 'bottom')}
+          variant="outline"
+          size="sm"
+          className="justify-start"
         >
-          <ArrowUp size={16} />
-        </button>
-        <button
-          onClick={() => onAlignY('center')}
-          className={`p-2 rounded-md transition-colors ${
-            currentAlignY === 'center'
-              ? 'bg-neutral-700 text-white'
-              : 'text-neutral-400 hover:text-neutral-300'
-          }`}
-          title="Center"
-        >
-          <Minus size={16} />
-        </button>
-        <button
-          onClick={() => onAlignY('bottom')}
-          className={`p-2 rounded-md transition-colors ${
-            currentAlignY === 'bottom'
-              ? 'bg-neutral-700 text-white'
-              : 'text-neutral-400 hover:text-neutral-300'
-          }`}
-          title="Bottom"
-        >
-          <ArrowDown size={16} />
-        </button>
+          <ToggleGroupItem value="top" aria-label="Top align">
+            <ArrowUp className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="center" aria-label="Center align">
+            <Minus className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="bottom" aria-label="Bottom align">
+            <ArrowDown className="h-4 w-4" />
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
     </div>
   );

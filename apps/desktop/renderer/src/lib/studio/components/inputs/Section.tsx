@@ -1,17 +1,29 @@
 import type { ReactNode } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 interface SectionProps {
   title: string;
   children: ReactNode;
+  className?: string;
 }
 
-export function Section({ title, children }: SectionProps) {
+export function Section({ title, children, className }: SectionProps) {
   return (
-    <div className="flex flex-col gap-3 bg-neutral-800/30 rounded-lg p-3">
-      <h4 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider pb-1 border-b border-neutral-700/50">
-        {title}
-      </h4>
-      <div className="flex flex-col gap-2">{children}</div>
-    </div>
+    <Card
+      className={cn(
+        'bg-neutral-800/30 border-neutral-700/50 py-0 gap-0',
+        className
+      )}
+    >
+      <CardHeader className="px-3 py-2 border-b border-neutral-700/50">
+        <CardTitle className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-3 py-3 flex flex-col gap-2">
+        {children}
+      </CardContent>
+    </Card>
   );
 }

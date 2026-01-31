@@ -14,7 +14,13 @@ import {
   useEngineStore,
   useInteractionStore,
 } from '../../hooks/useStudioStores';
-import { ContextMenu } from '@/components/ContextMenu';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuShortcut,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 import { toast } from 'sonner';
 
 function TrackButton({
@@ -242,20 +248,6 @@ export function TimelineTrack({
     // Cut이든 Copy든 clipboard는 유지 (여러 번 붙여넣기 가능)
   };
 
-  const contextMenuSections = [
-    {
-      items: [
-        {
-          label: 'Paste',
-          icon: Clipboard,
-          shortcut: '⌘V',
-          onSelect: handlePaste,
-          disabled: !clipboard,
-        },
-      ],
-    },
-  ];
-
   const isActive = activeTrackId === trackId;
   const syncedTrackIds =
     track.type === 'audio' ? syncedAudioTrackIds : syncedGraphicTrackIds;
@@ -302,26 +294,35 @@ export function TimelineTrack({
         )}
       </div>
 
-      <ContextMenu sections={contextMenuSections}>
-        <div
-          ref={trackContentRef}
-          className={cn('bg-neutral-800 flex-1 relative transition-colors', {
-            'bg-cyan-900/30': isHovering,
-            'ring-2 ring-inset ring-blue-500/50': isActive,
-          })}
-          onContextMenu={handleContextMenu}
-          onClick={handleClick}
-        >
-          {track.clips.map((clip) => (
-            <TimelineClip
-              key={clip.id}
-              trackId={track.id}
-              clipId={clip.id}
-              pxPerSec={pxPerSec}
-              trackHeight={trackHeight}
-            />
-          ))}
-        </div>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div
+            ref={trackContentRef}
+            className={cn('bg-neutral-800 flex-1 relative transition-colors', {
+              'bg-cyan-900/30': isHovering,
+              'ring-2 ring-inset ring-blue-500/50': isActive,
+            })}
+            onContextMenu={handleContextMenu}
+            onClick={handleClick}
+          >
+            {track.clips.map((clip) => (
+              <TimelineClip
+                key={clip.id}
+                trackId={track.id}
+                clipId={clip.id}
+                pxPerSec={pxPerSec}
+                trackHeight={trackHeight}
+              />
+            ))}
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem onSelect={handlePaste} disabled={!clipboard}>
+            <Clipboard size={14} />
+            <span>Paste</span>
+            <ContextMenuShortcut>⌘V</ContextMenuShortcut>
+          </ContextMenuItem>
+        </ContextMenuContent>
       </ContextMenu>
     </div>
   );

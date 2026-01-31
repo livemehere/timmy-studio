@@ -1,8 +1,36 @@
 import { useDocStore, useEngineStore } from '../hooks/useStudioStores';
-import { PauseIcon, PlayIcon, HardDriveUploadIcon } from 'lucide-react';
+import {
+  PauseIcon,
+  PlayIcon,
+  HardDriveUploadIcon,
+  SkipBack,
+  SkipForward,
+  Film,
+  Music,
+  CheckCircle2,
+  AlertCircle,
+} from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { formatTime } from '../utils/time';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
+import { Slider } from '@/components/ui/slider';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export function TimerActionBar() {
   const timer = useEngineStore((state) => state.timer);
@@ -445,7 +473,7 @@ export function TimerActionBar() {
   };
 
   return (
-    <>
+    <TooltipProvider>
       <div className="grid grid-cols-3 items-center px-4 py-2">
         {/* Timecode Display */}
         <div className="flex items-center gap-2">
@@ -460,180 +488,237 @@ export function TimerActionBar() {
 
         {/* Playback Controls */}
         <div className="flex justify-center items-center gap-1">
-          <Button
-            variant={timerState.isPlaying ? 'default' : 'ghost'}
-            size="icon-sm"
-            onClick={handlePlay}
-            className="rounded-full w-9 h-9 transition-all"
-          >
-            {timerState.isPlaying ? (
-              <PauseIcon size={18} />
-            ) : (
-              <PlayIcon size={18} className="ml-0.5" />
-            )}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => timer?.seek(0)}
+                className="rounded-full w-8 h-8"
+              >
+                <SkipBack size={14} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Go to start</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={timerState.isPlaying ? 'default' : 'ghost'}
+                size="icon-sm"
+                onClick={handlePlay}
+                className="rounded-full w-10 h-10 transition-all"
+              >
+                {timerState.isPlaying ? (
+                  <PauseIcon size={20} />
+                ) : (
+                  <PlayIcon size={20} className="ml-0.5" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{timerState.isPlaying ? 'Pause' : 'Play'}</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => timer?.seek(timerState.durationMs)}
+                className="rounded-full w-8 h-8"
+              >
+                <SkipForward size={14} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Go to end</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Export Button */}
         <div className="flex justify-end gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowExportSettings((prev) => !prev)}
-            className="text-xs gap-1.5"
+          <Dialog
+            open={showExportSettings}
+            onOpenChange={setShowExportSettings}
           >
-            <HardDriveUploadIcon size={14} />
-            <span>내보내기</span>
-          </Button>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="text-xs gap-1.5">
+                <HardDriveUploadIcon size={14} />
+                <span>내보내기</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[480px]">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <HardDriveUploadIcon size={18} />
+                  내보내기 설정
+                </DialogTitle>
+                <DialogDescription>
+                  비디오와 오디오를 내보낼 범위를 설정하세요.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-6 py-4">
+                {/* Export Range */}
+                {!exportState.isExporting && (
+                  <div className="space-y-4">
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-neutral-400">시작 시간</span>
+                        <Badge variant="secondary" className="font-mono">
+                          {formatTime(exportRange.start)}
+                        </Badge>
+                      </div>
+                      <Slider
+                        value={[exportRange.start]}
+                        max={settings.duration}
+                        step={100}
+                        onValueChange={([val]) =>
+                          setExportRange((prev) => ({
+                            ...prev,
+                            start: Math.min(val, prev.end),
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-neutral-400">종료 시간</span>
+                        <Badge variant="secondary" className="font-mono">
+                          {formatTime(exportRange.end)}
+                        </Badge>
+                      </div>
+                      <Slider
+                        value={[exportRange.end]}
+                        max={settings.duration}
+                        step={100}
+                        onValueChange={([val]) =>
+                          setExportRange((prev) => ({
+                            ...prev,
+                            end: Math.max(val, prev.start),
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        className="flex-1 gap-2"
+                        onClick={() =>
+                          handleExport({
+                            startMs: exportRange.start,
+                            endMs: exportRange.end,
+                          })
+                        }
+                      >
+                        <Film size={16} />
+                        Export MP4 (
+                        {formatTime(exportRange.end - exportRange.start)})
+                      </Button>
+
+                      <Button
+                        variant="secondary"
+                        className="flex-1 gap-2"
+                        onClick={handleExportAudio}
+                        disabled={audioExportState.isExporting}
+                      >
+                        <Music size={16} />
+                        {audioExportState.isExporting
+                          ? 'Exporting...'
+                          : 'Export Audio'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Export Status */}
+                <div className="space-y-3">
+                  {/* Video Export Progress */}
+                  {exportState.error && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Video Export Error</AlertTitle>
+                      <AlertDescription>{exportState.error}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  {exportState.isExporting && (
+                    <div className="space-y-2 p-3 bg-neutral-800/50 rounded-lg">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2">
+                          <Film size={14} className="text-blue-400" />
+                          Exporting Video...
+                        </span>
+                        <span className="font-mono text-xs">
+                          {exportState.percent.toFixed(1)}%
+                        </span>
+                      </div>
+                      <Progress value={exportState.percent} className="h-2" />
+                      <div className="text-xs text-neutral-500">
+                        {exportState.writtenFrames} / {exportState.totalFrames}{' '}
+                        frames
+                      </div>
+                    </div>
+                  )}
+
+                  {exportState.outputPath && !exportState.isExporting && (
+                    <Alert>
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <AlertTitle>Video Export Complete</AlertTitle>
+                      <AlertDescription className="font-mono text-xs truncate">
+                        {exportState.outputPath}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {/* Audio Export Progress */}
+                  {audioExportState.error && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Audio Export Error</AlertTitle>
+                      <AlertDescription>
+                        {audioExportState.error}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {audioExportState.isExporting && (
+                    <div className="space-y-2 p-3 bg-neutral-800/50 rounded-lg">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2">
+                          <Music size={14} className="text-purple-400" />
+                          Exporting Audio...
+                        </span>
+                      </div>
+                      <Progress value={100} className="h-2 animate-pulse" />
+                    </div>
+                  )}
+
+                  {audioExportState.outputPath &&
+                    !audioExportState.isExporting && (
+                      <Alert>
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        <AlertTitle>Audio Export Complete</AlertTitle>
+                        <AlertDescription className="font-mono text-xs truncate">
+                          {audioExportState.outputPath}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                </div>
+
+                <div ref={exportGridRef} className="grid grid-cols-4 gap-1" />
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
-
-      {showExportSettings && (
-        <div className="fixed right-3 bottom-12 z-50 w-[420px] max-h-[70vh] overflow-auto rounded bg-neutral-800/95 border border-neutral-700 p-3 shadow-xl backdrop-blur-sm">
-          <div className="flex justify-between items-center mb-3 border-b border-neutral-700 pb-2">
-            <span className="text-sm font-medium text-neutral-200">
-              내보내기 설정
-            </span>
-            <button
-              onClick={() => setShowExportSettings(false)}
-              className="text-neutral-400 hover:text-white"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            {!exportState.isExporting && (
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs text-neutral-400">
-                    <span>시작 시간</span>
-                    <span className="text-neutral-200 tabular-nums">
-                      {formatTime(exportRange.start)}
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    className="w-full accent-blue-500 h-1 bg-neutral-600 rounded-lg appearance-none cursor-pointer"
-                    min={0}
-                    max={settings.duration}
-                    step={100}
-                    value={exportRange.start}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      setExportRange((prev) => ({
-                        ...prev,
-                        start: Math.min(val, prev.end),
-                      }));
-                    }}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs text-neutral-400">
-                    <span>종료 시간</span>
-                    <span className="text-neutral-200 tabular-nums">
-                      {formatTime(exportRange.end)}
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    className="w-full accent-blue-500 h-1 bg-neutral-600 rounded-lg appearance-none cursor-pointer"
-                    min={0}
-                    max={settings.duration}
-                    step={100}
-                    value={exportRange.end}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      setExportRange((prev) => ({
-                        ...prev,
-                        end: Math.max(val, prev.start),
-                      }));
-                    }}
-                  />
-                </div>
-
-                <button
-                  className="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium py-2 rounded transition-colors"
-                  onClick={() =>
-                    handleExport({
-                      startMs: exportRange.start,
-                      endMs: exportRange.end,
-                    })
-                  }
-                >
-                  Export MP4 ({formatTime(exportRange.end - exportRange.start)})
-                </button>
-
-                <button
-                  className="w-full bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium py-2 rounded transition-colors"
-                  onClick={handleExportAudio}
-                  disabled={audioExportState.isExporting}
-                >
-                  {audioExportState.isExporting
-                    ? 'Exporting Audio...'
-                    : 'Export Audio (전체)'}
-                </button>
-              </div>
-            )}
-
-            <div className="text-[10px] text-neutral-200 tabular-nums space-y-2">
-              {/* 비디오 내보내기 상태 */}
-              {exportState.error ? (
-                <div className="p-2 bg-red-900/50 rounded border border-red-800 text-red-200">
-                  [Video] {exportState.error}
-                </div>
-              ) : exportState.isExporting ? (
-                <div className="space-y-2">
-                  <div className="w-full bg-neutral-700 rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className="bg-blue-500 h-full transition-all duration-300"
-                      style={{ width: `${exportState.percent}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-neutral-400">
-                    <span>Exporting Video...</span>
-                    <span>
-                      {exportState.percent.toFixed(1)}% (
-                      {exportState.writtenFrames}/{exportState.totalFrames})
-                    </span>
-                  </div>
-                </div>
-              ) : exportState.outputPath ? (
-                <div className="p-2 bg-green-900/30 rounded border border-green-800 text-green-300">
-                  Video Done: {exportState.outputPath}
-                </div>
-              ) : null}
-
-              {/* 오디오 내보내기 상태 */}
-              {audioExportState.error ? (
-                <div className="p-2 bg-red-900/50 rounded border border-red-800 text-red-200">
-                  [Audio] {audioExportState.error}
-                </div>
-              ) : audioExportState.isExporting ? (
-                <div className="space-y-2">
-                  <div className="w-full bg-neutral-700 rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className="bg-purple-500 h-full transition-all duration-300 animate-pulse"
-                      style={{ width: '100%' }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-neutral-400">
-                    <span>Exporting Audio...</span>
-                    <span>Processing...</span>
-                  </div>
-                </div>
-              ) : audioExportState.outputPath ? (
-                <div className="p-2 bg-green-900/30 rounded border border-green-800 text-green-300">
-                  Audio Done: {audioExportState.outputPath}
-                </div>
-              ) : null}
-            </div>
-
-            <div ref={exportGridRef} className="grid grid-cols-4 gap-1" />
-          </div>
-        </div>
-      )}
-    </>
+    </TooltipProvider>
   );
 }

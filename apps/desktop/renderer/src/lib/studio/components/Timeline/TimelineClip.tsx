@@ -9,7 +9,14 @@ import { msToSec } from '../../utils/time';
 import type { IGraphicClip } from '@/lib/studio/domains/Clip/types';
 import { cn } from '@/lib/utils';
 import { Track } from '@/lib/studio/domains/Track/Track';
-import { ContextMenu } from '@/components/ContextMenu';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuShortcut,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 import { toast } from 'sonner';
 import {
   Copy,
@@ -268,56 +275,6 @@ export function TimelineClip({
     console.log('[TimelineClip] Toggled visibility:', clip.id, !clip.enabled);
   };
 
-  const contextMenuSections = [
-    {
-      items: [
-        {
-          label: 'Copy',
-          icon: Copy,
-          shortcut: '⌘C',
-          onSelect: handleCopy,
-        },
-        {
-          label: 'Cut',
-          icon: Scissors,
-          shortcut: '⌘X',
-          onSelect: handleCut,
-        },
-        {
-          label: 'Duplicate',
-          icon: Files,
-          shortcut: '⌘D',
-          onSelect: handleDuplicate,
-        },
-      ],
-    },
-    {
-      items: [
-        {
-          label: clip.locked ? 'Unlock' : 'Lock',
-          icon: clip.locked ? Unlock : Lock,
-          onSelect: handleToggleLock,
-        },
-        {
-          label: clip.enabled ? 'Hide' : 'Show',
-          icon: clip.enabled ? EyeOff : Eye,
-          onSelect: handleToggleVisibility,
-        },
-      ],
-    },
-    {
-      items: [
-        {
-          label: 'Delete',
-          icon: Trash2,
-          shortcut: '⌫',
-          onSelect: handleDelete,
-          variant: 'destructive' as const,
-        },
-      ],
-    },
-  ];
-
   const handleContextMenuOpen = (open: boolean) => {
     if (open) {
       // 우클릭 시 이 클립을 선택
@@ -342,235 +299,266 @@ export function TimelineClip({
         </div>
       )}
 
-      <ContextMenu
-        sections={contextMenuSections}
-        onOpenChange={handleContextMenuOpen}
-      >
-        <motion.div
-          data-clip-id={clip.id}
-          style={{
-            width,
-            left,
-          }}
-          drag
-          dragMomentum={false}
-          dragSnapToOrigin
-          dragElastic={0}
-          onDragStart={(e) => {
-            setDraggingClipId(clip.id);
-            isDraggingRef.current = true;
-            setIsDragging(true);
-            wheelDeltaRef.current = { x: 0, y: 0 };
-            // @ts-ignore - e.altKey exists in drag events
-            const altPressed = e.altKey || false;
-            isAltPressedRef.current = altPressed;
-            setIsCloneMode(altPressed);
-          }}
-          onDrag={(e, info) => {
-            // @ts-ignore - e.altKey exists in drag events
-            const altPressed = e.altKey || false;
-            isAltPressedRef.current = altPressed;
-            setIsCloneMode(altPressed);
+      <ContextMenu onOpenChange={handleContextMenuOpen}>
+        <ContextMenuTrigger asChild>
+          <motion.div
+            data-clip-id={clip.id}
+            style={{
+              width,
+              left,
+            }}
+            drag
+            dragMomentum={false}
+            dragSnapToOrigin
+            dragElastic={0}
+            onDragStart={(e) => {
+              setDraggingClipId(clip.id);
+              isDraggingRef.current = true;
+              setIsDragging(true);
+              wheelDeltaRef.current = { x: 0, y: 0 };
+              // @ts-ignore - e.altKey exists in drag events
+              const altPressed = e.altKey || false;
+              isAltPressedRef.current = altPressed;
+              setIsCloneMode(altPressed);
+            }}
+            onDrag={(e, info) => {
+              // @ts-ignore - e.altKey exists in drag events
+              const altPressed = e.altKey || false;
+              isAltPressedRef.current = altPressed;
+              setIsCloneMode(altPressed);
 
-            const offsetY = info.offset.y + wheelDeltaRef.current.y;
-            const trackIndexDelta = Math.round(offsetY / trackHeight);
+              const offsetY = info.offset.y + wheelDeltaRef.current.y;
+              const trackIndexDelta = Math.round(offsetY / trackHeight);
 
-            if (trackIndexDelta !== 0) {
-              const currentTrackIndex = tracks.findIndex(
-                (t) => t.id === trackId
-              );
-              const targetTrackIndex = currentTrackIndex + trackIndexDelta;
+              if (trackIndexDelta !== 0) {
+                const currentTrackIndex = tracks.findIndex(
+                  (t) => t.id === trackId
+                );
+                const targetTrackIndex = currentTrackIndex + trackIndexDelta;
 
-              if (targetTrackIndex >= 0 && targetTrackIndex < tracks.length) {
-                const targetTrack = tracks[targetTrackIndex];
-                setHoverTrackId(targetTrack.id);
+                if (targetTrackIndex >= 0 && targetTrackIndex < tracks.length) {
+                  const targetTrack = tracks[targetTrackIndex];
+                  setHoverTrackId(targetTrack.id);
+                } else {
+                  setHoverTrackId(null);
+                }
               } else {
                 setHoverTrackId(null);
               }
-            } else {
+            }}
+            onWheel={(e) => {
+              if (isDraggingRef.current) {
+                e.preventDefault();
+                wheelDeltaRef.current.x += e.deltaX;
+                wheelDeltaRef.current.y += e.deltaY;
+              }
+            }}
+            className={cn(
+              'absolute h-full bg-cyan-700 px-2 py-1 rounded overflow-hidden z-5',
+              {
+                'border border-white': isSelected,
+                'ring-2 ring-yellow-400': isCloneMode,
+              }
+            )}
+            onClick={(e) => {
+              // Set the parent track as active when clicking a clip
+              setActiveTrackId(trackId);
+              navigator.clipboard.writeText(clip.id);
+              toast('id copied!');
+
+              if (e.shiftKey) {
+                addSelectedClipId(clip.id);
+              } else {
+                setSelectedClipId(clip.id);
+              }
+            }}
+            onDragEnd={(_, info) => {
+              const isCloning = isAltPressedRef.current;
+              isDraggingRef.current = false;
+              setIsDragging(false);
+              setDraggingClipId(null);
               setHoverTrackId(null);
-            }
-          }}
-          onWheel={(e) => {
-            if (isDraggingRef.current) {
-              e.preventDefault();
-              wheelDeltaRef.current.x += e.deltaX;
-              wheelDeltaRef.current.y += e.deltaY;
-            }
-          }}
-          className={cn(
-            'absolute h-full bg-cyan-700 px-2 py-1 rounded overflow-hidden z-5',
-            {
-              'border border-white': isSelected,
-              'ring-2 ring-yellow-400': isCloneMode,
-            }
-          )}
-          onClick={(e) => {
-            // Set the parent track as active when clicking a clip
-            setActiveTrackId(trackId);
-            navigator.clipboard.writeText(clip.id);
-            toast('id copied!');
+              setIsCloneMode(false);
 
-            if (e.shiftKey) {
-              addSelectedClipId(clip.id);
-            } else {
-              setSelectedClipId(clip.id);
-            }
-          }}
-          onDragEnd={(_, info) => {
-            const isCloning = isAltPressedRef.current;
-            isDraggingRef.current = false;
-            setIsDragging(false);
-            setDraggingClipId(null);
-            setHoverTrackId(null);
-            setIsCloneMode(false);
+              const totalOffsetX = info.offset.x + wheelDeltaRef.current.x;
+              const totalOffsetY = info.offset.y + wheelDeltaRef.current.y;
 
-            const totalOffsetX = info.offset.x + wheelDeltaRef.current.x;
-            const totalOffsetY = info.offset.y + wheelDeltaRef.current.y;
+              const deltaStartTime = (totalOffsetX / pxPerSec) * 1000;
+              const newStartTime = Math.max(0, clip.startTime + deltaStartTime);
+              const newEndTime = newStartTime + (clip.endTime - clip.startTime);
 
-            const deltaStartTime = (totalOffsetX / pxPerSec) * 1000;
-            const newStartTime = Math.max(0, clip.startTime + deltaStartTime);
-            const newEndTime = newStartTime + (clip.endTime - clip.startTime);
-
-            console.log('[TimelineClip] Drag end:', {
-              isCloning,
-              clipId: clip.id,
-              originalTime: { start: clip.startTime, end: clip.endTime },
-              newTime: { start: newStartTime, end: newEndTime },
-            });
-
-            // 트랙 간 이동/복제 로직
-            const trackIndexDelta = Math.round(totalOffsetY / trackHeight);
-
-            if (trackIndexDelta !== 0) {
-              // 현재 트랙의 인덱스 찾기
-              const currentTrackIndex = tracks.findIndex(
-                (t) => t.id === trackId
-              );
-              const targetTrackIndex = currentTrackIndex + trackIndexDelta;
-
-              // 타겟 트랙이 존재하는 경우 이동/복제
-              if (targetTrackIndex >= 0 && targetTrackIndex < tracks.length) {
-                const targetTrack = tracks[targetTrackIndex];
-
-                if (isCloning) {
-                  // Alt 키가 눌려있으면 복제
-                  cloneClipToTrack(
-                    trackId,
-                    targetTrack.id,
-                    clip.id,
-                    newStartTime,
-                    newEndTime
-                  );
-                } else {
-                  // Alt 키가 안 눌려있으면 이동
-                  moveClipToTrack(trackId, targetTrack.id, clip.id);
-                  // 타겟 트랙에서 시간 업데이트
-                  updateClip(targetTrack.id, clip.id, {
-                    startTime: newStartTime,
-                    endTime: newEndTime,
-                  });
-                }
-                return;
-              }
-
-              // 타겟 트랙이 없으면 새로 생성 (중간 빈 트랙 포함)
-              if (targetTrackIndex >= tracks.length || targetTrackIndex < 0) {
-                // 현재 트랙의 타입을 확인
-                const currentTrack = tracks[currentTrackIndex];
-                const trackType = currentTrack?.type || 'graphic';
-
-                const newTracks = [];
-                let targetTrackId = '';
-
-                if (targetTrackIndex >= tracks.length) {
-                  // 아래로 이동 - 필요한 만큼 트랙 생성
-                  const tracksToCreate = targetTrackIndex - tracks.length + 1;
-                  // 가장 낮은 zIndex 찾기
-                  const minZIndex = Math.min(...tracks.map((t) => t.zIndex));
-
-                  for (let i = 0; i < tracksToCreate; i++) {
-                    const newTrack = Track.create(trackType);
-                    // 아래로 갈수록 zIndex 감소: minZIndex-1, minZIndex-2, ...
-                    newTrack.zIndex = minZIndex - (i + 1);
-                    newTracks.push(newTrack);
-
-                    // 마지막 트랙이 타겟 트랙
-                    if (i === tracksToCreate - 1) {
-                      targetTrackId = newTrack.id;
-                    }
-                  }
-                } else if (targetTrackIndex < 0) {
-                  // 위로 이동 - 필요한 만큼 트랙 생성
-                  const tracksToCreate = Math.abs(targetTrackIndex);
-                  // 가장 높은 zIndex 찾기
-                  const maxZIndex = Math.max(...tracks.map((t) => t.zIndex));
-
-                  for (let i = 0; i < tracksToCreate; i++) {
-                    const newTrack = Track.create(trackType);
-                    // 위로 갈수록 zIndex 증가: maxZIndex+1, maxZIndex+2, ...
-                    newTrack.zIndex = maxZIndex + (i + 1);
-                    newTracks.push(newTrack);
-
-                    // 마지막 트랙이 타겟 트랙 (가장 위)
-                    if (i === tracksToCreate - 1) {
-                      targetTrackId = newTrack.id;
-                    }
-                  }
-                }
-
-                // 트랙 추가
-                addTrack(newTracks);
-
-                if (isCloning) {
-                  // Alt 키가 눌려있으면 복제
-                  cloneClipToTrack(
-                    trackId,
-                    targetTrackId,
-                    clip.id,
-                    newStartTime,
-                    newEndTime
-                  );
-                } else {
-                  // Alt 키가 안 눌려있으면 이동
-                  moveClipToTrack(trackId, targetTrackId, clip.id);
-                  // 시간 업데이트
-                  updateClip(targetTrackId, clip.id, {
-                    startTime: newStartTime,
-                    endTime: newEndTime,
-                  });
-                }
-                return;
-              }
-            }
-
-            // 같은 트랙 내에서 시간만 변경 (복제 모드면 복제)
-            if (isCloning) {
-              // 같은 트랙에 복제
-              cloneClipToTrack(
-                trackId,
-                trackId,
-                clip.id,
-                newStartTime,
-                newEndTime
-              );
-            } else {
-              // 같은 트랙 내에서 시간만 이동
-              updateClip(trackId, clip.id, {
-                startTime: newStartTime,
-                endTime: newEndTime,
+              console.log('[TimelineClip] Drag end:', {
+                isCloning,
+                clipId: clip.id,
+                originalTime: { start: clip.startTime, end: clip.endTime },
+                newTime: { start: newStartTime, end: newEndTime },
               });
-            }
-          }}
-        >
-          {clip.name}
-          {isLoaded && !isFailed && (
-            <span className="ml-1 text-xs opacity-70">(synced)</span>
-          )}
-          {isFailed && (
-            <span className="ml-1 text-xs text-red-400">(failed)</span>
-          )}
-        </motion.div>
+
+              // 트랙 간 이동/복제 로직
+              const trackIndexDelta = Math.round(totalOffsetY / trackHeight);
+
+              if (trackIndexDelta !== 0) {
+                // 현재 트랙의 인덱스 찾기
+                const currentTrackIndex = tracks.findIndex(
+                  (t) => t.id === trackId
+                );
+                const targetTrackIndex = currentTrackIndex + trackIndexDelta;
+
+                // 타겟 트랙이 존재하는 경우 이동/복제
+                if (targetTrackIndex >= 0 && targetTrackIndex < tracks.length) {
+                  const targetTrack = tracks[targetTrackIndex];
+
+                  if (isCloning) {
+                    // Alt 키가 눌려있으면 복제
+                    cloneClipToTrack(
+                      trackId,
+                      targetTrack.id,
+                      clip.id,
+                      newStartTime,
+                      newEndTime
+                    );
+                  } else {
+                    // Alt 키가 안 눌려있으면 이동
+                    moveClipToTrack(trackId, targetTrack.id, clip.id);
+                    // 타겟 트랙에서 시간 업데이트
+                    updateClip(targetTrack.id, clip.id, {
+                      startTime: newStartTime,
+                      endTime: newEndTime,
+                    });
+                  }
+                  return;
+                }
+
+                // 타겟 트랙이 없으면 새로 생성 (중간 빈 트랙 포함)
+                if (targetTrackIndex >= tracks.length || targetTrackIndex < 0) {
+                  // 현재 트랙의 타입을 확인
+                  const currentTrack = tracks[currentTrackIndex];
+                  const trackType = currentTrack?.type || 'graphic';
+
+                  const newTracks = [];
+                  let targetTrackId = '';
+
+                  if (targetTrackIndex >= tracks.length) {
+                    // 아래로 이동 - 필요한 만큼 트랙 생성
+                    const tracksToCreate = targetTrackIndex - tracks.length + 1;
+                    // 가장 낮은 zIndex 찾기
+                    const minZIndex = Math.min(...tracks.map((t) => t.zIndex));
+
+                    for (let i = 0; i < tracksToCreate; i++) {
+                      const newTrack = Track.create(trackType);
+                      // 아래로 갈수록 zIndex 감소: minZIndex-1, minZIndex-2, ...
+                      newTrack.zIndex = minZIndex - (i + 1);
+                      newTracks.push(newTrack);
+
+                      // 마지막 트랙이 타겟 트랙
+                      if (i === tracksToCreate - 1) {
+                        targetTrackId = newTrack.id;
+                      }
+                    }
+                  } else if (targetTrackIndex < 0) {
+                    // 위로 이동 - 필요한 만큼 트랙 생성
+                    const tracksToCreate = Math.abs(targetTrackIndex);
+                    // 가장 높은 zIndex 찾기
+                    const maxZIndex = Math.max(...tracks.map((t) => t.zIndex));
+
+                    for (let i = 0; i < tracksToCreate; i++) {
+                      const newTrack = Track.create(trackType);
+                      // 위로 갈수록 zIndex 증가: maxZIndex+1, maxZIndex+2, ...
+                      newTrack.zIndex = maxZIndex + (i + 1);
+                      newTracks.push(newTrack);
+
+                      // 마지막 트랙이 타겟 트랙 (가장 위)
+                      if (i === tracksToCreate - 1) {
+                        targetTrackId = newTrack.id;
+                      }
+                    }
+                  }
+
+                  // 트랙 추가
+                  addTrack(newTracks);
+
+                  if (isCloning) {
+                    // Alt 키가 눌려있으면 복제
+                    cloneClipToTrack(
+                      trackId,
+                      targetTrackId,
+                      clip.id,
+                      newStartTime,
+                      newEndTime
+                    );
+                  } else {
+                    // Alt 키가 안 눌려있으면 이동
+                    moveClipToTrack(trackId, targetTrackId, clip.id);
+                    // 시간 업데이트
+                    updateClip(targetTrackId, clip.id, {
+                      startTime: newStartTime,
+                      endTime: newEndTime,
+                    });
+                  }
+                  return;
+                }
+              }
+
+              // 같은 트랙 내에서 시간만 변경 (복제 모드면 복제)
+              if (isCloning) {
+                // 같은 트랙에 복제
+                cloneClipToTrack(
+                  trackId,
+                  trackId,
+                  clip.id,
+                  newStartTime,
+                  newEndTime
+                );
+              } else {
+                // 같은 트랙 내에서 시간만 이동
+                updateClip(trackId, clip.id, {
+                  startTime: newStartTime,
+                  endTime: newEndTime,
+                });
+              }
+            }}
+          >
+            {clip.name}
+            {isLoaded && !isFailed && (
+              <span className="ml-1 text-xs opacity-70">(synced)</span>
+            )}
+            {isFailed && (
+              <span className="ml-1 text-xs text-red-400">(failed)</span>
+            )}
+          </motion.div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem onSelect={handleCopy}>
+            <Copy size={14} />
+            <span>Copy</span>
+            <ContextMenuShortcut>⌘C</ContextMenuShortcut>
+          </ContextMenuItem>
+          <ContextMenuItem onSelect={handleCut}>
+            <Scissors size={14} />
+            <span>Cut</span>
+            <ContextMenuShortcut>⌘X</ContextMenuShortcut>
+          </ContextMenuItem>
+          <ContextMenuItem onSelect={handleDuplicate}>
+            <Files size={14} />
+            <span>Duplicate</span>
+            <ContextMenuShortcut>⌘D</ContextMenuShortcut>
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem onSelect={handleToggleLock}>
+            {clip.locked ? <Unlock size={14} /> : <Lock size={14} />}
+            <span>{clip.locked ? 'Unlock' : 'Lock'}</span>
+          </ContextMenuItem>
+          <ContextMenuItem onSelect={handleToggleVisibility}>
+            {clip.enabled ? <EyeOff size={14} /> : <Eye size={14} />}
+            <span>{clip.enabled ? 'Hide' : 'Show'}</span>
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem variant="destructive" onSelect={handleDelete}>
+            <Trash2 size={14} />
+            <span>Delete</span>
+            <ContextMenuShortcut>⌫</ContextMenuShortcut>
+          </ContextMenuItem>
+        </ContextMenuContent>
       </ContextMenu>
     </>
   );
