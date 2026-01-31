@@ -9,6 +9,12 @@ export class ShapeClip extends GraphicClip {
 
   private graphics: Graphics | null = null;
 
+  protected getContentSize(): { width: number; height: number } {
+    const width = this._data.shapeData.width;
+    const height = this._data.shapeData.height;
+    return { width, height };
+  }
+
   constructor(renderer: GraphicRenderer, data: IShapeClip) {
     super(renderer, data);
     this.debugCall('(Shape) constructor');
@@ -35,12 +41,6 @@ export class ShapeClip extends GraphicClip {
       this.graphics = null;
     }
     super.destroy();
-  }
-
-  protected getContentSize(): { width: number; height: number } {
-    const width = this._data.shapeData.width;
-    const height = this._data.shapeData.height;
-    return { width, height };
   }
 
   protected shouldApplyBaseScale(): boolean {

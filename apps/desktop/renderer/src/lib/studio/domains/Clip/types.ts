@@ -67,20 +67,18 @@ export interface IAudioClip extends IBaseClip {
 }
 
 export interface ITransform {
-  position?: {
+  position: {
     x: number;
     y: number;
   };
-  size?: {
+  size: {
     width: number;
     height: number;
   };
-  scaleX?: number;
-  scaleY?: number;
-  rotation?: number; // radian
-  opacity?: number; // 0-1
-  anchorX?: number; // 0-1
-  anchorY?: number; // 0-1
+  scaleX: number;
+  scaleY: number;
+  rotation: number; // radian
+  opacity: number; // 0-1
 }
 
 // Utility Types for Placement Calculation

@@ -65,10 +65,6 @@ export abstract class SpriteClip extends GraphicClip {
     return true;
   }
 
-  protected override applyScale(scaleX: number, scaleY: number): void {
-    this.sprite.scale.set(scaleX, scaleY);
-  }
-
   private createFilter(effect: any): any {
     this.debugCall('(Sprite) createFilter');
     switch (effect.type) {

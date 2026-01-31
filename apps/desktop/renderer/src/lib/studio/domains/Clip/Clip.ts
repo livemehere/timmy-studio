@@ -144,8 +144,6 @@ export abstract class Clip<
       scaleY: 1,
       rotation: 0,
       opacity: 1,
-      anchorX: 0,
-      anchorY: 0,
     };
   }
 
@@ -212,8 +210,6 @@ export abstract class Clip<
         scaleY: 1,
         rotation: 0,
         opacity: 1,
-        anchorX: 0,
-        anchorY: 0,
       },
       type: 'shape',
       shapeData,
@@ -238,8 +234,6 @@ export abstract class Clip<
         scaleY: 1,
         rotation: 0,
         opacity: 1,
-        anchorX: 0,
-        anchorY: 0,
       },
       type: 'text',
       textData,

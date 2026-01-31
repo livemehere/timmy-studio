@@ -20,6 +20,17 @@ export class VideoClip extends SpriteClip {
   private pendingOriginSwap = false;
   private _wasVisible = false;
 
+  // VideoClip은 항상 origin 기준으로 contentSize 반환 (proxy는 해상도가 낮음)
+  protected override getContentSize(): { width: number; height: number } {
+    if (!this.originEl) {
+      return { width: 0, height: 0 };
+    }
+    return {
+      width: this.originEl.videoWidth || 0,
+      height: this.originEl.videoHeight || 0,
+    };
+  }
+
   constructor(renderer: GraphicRenderer, data: IVideoClip) {
     super(renderer, data);
     this.debugCall(`(Video) constructor`);
@@ -66,19 +77,11 @@ export class VideoClip extends SpriteClip {
       });
     }
 
+    console.log('originSource', this.originVideoSource);
+    console.log('proxySource', this.proxyVideoSource);
+
     this.sync(this.data);
     this.debugCall('(Video) === init-end ===');
-  }
-
-  // VideoClip은 항상 origin 기준으로 contentSize 반환 (proxy는 해상도가 낮음)
-  protected override getContentSize(): { width: number; height: number } {
-    if (!this.originEl) {
-      return { width: 0, height: 0 };
-    }
-    return {
-      width: this.originEl.videoWidth || 0,
-      height: this.originEl.videoHeight || 0,
-    };
   }
 
   destroy(): void {
@@ -246,6 +249,10 @@ export class VideoClip extends SpriteClip {
 
     // 만들어져있는 videoSource 를 가지고 texture 생성 및 교체
     this.sprite.texture = Texture.from(videoSource!);
+    const originSize = this.getContentSize();
+    this.sprite.width = originSize.width;
+    this.sprite.height = originSize.height;
+
     // 일시정지 상태라면 비디오도 일시정지
     if (!this.renderer.timer.isPlaying) {
       targetEl.pause();

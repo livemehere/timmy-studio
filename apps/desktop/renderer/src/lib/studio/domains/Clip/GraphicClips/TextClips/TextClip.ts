@@ -12,6 +12,12 @@ export class TextClip extends GraphicClip {
   private selectionBounds: Graphics | null = null; // 선택 영역 표시용
   private underline: Graphics | null = null; // 언더라인 표시용
 
+  protected getContentSize(): { width: number; height: number } {
+    const width = this.text?.width ?? 0;
+    const height = this.text?.height ?? 0;
+    return { width, height };
+  }
+
   constructor(renderer: GraphicRenderer, data: ITextClip) {
     super(renderer, data);
     this.debugCall(`(Text) constructor`);
@@ -49,12 +55,6 @@ export class TextClip extends GraphicClip {
     this.debugCall('applyEffects');
     this.updateContent();
     this.updateSelectionBounds();
-  }
-
-  protected getContentSize(): { width: number; height: number } {
-    const width = this.text?.width ?? 0;
-    const height = this.text?.height ?? 0;
-    return { width, height };
   }
 
   protected shouldApplyBaseScale(): boolean {

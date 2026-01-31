@@ -81,13 +81,11 @@ export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
     const root = this.container;
     const { width: contentWidth, height: contentHeight } =
       this.getContentSize();
-    const hasSize = contentWidth > 0 && contentHeight > 0;
 
-    // 1) scale 계산
     let scaleX = 1;
     let scaleY = 1;
 
-    if (this.shouldApplyBaseScale() && transforms.size && hasSize) {
+    if (this.shouldApplyBaseScale()) {
       // baseScale (size -> scale)
       const baseScaleX = transforms.size.width / contentWidth;
       const baseScaleY = transforms.size.height / contentHeight;
@@ -102,38 +100,16 @@ export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
       scaleY = transforms.scaleY ?? 1;
     }
 
-    this.applyScale(scaleX, scaleY);
+    this.container.scale.set(scaleX, scaleY);
 
-    // 2) pivot (center)
-    if (hasSize) {
-      root.pivot.set((contentWidth * scaleX) / 2, (contentHeight * scaleY) / 2);
-    } else {
-      root.pivot.set(0, 0);
-    }
+    root.pivot.set(contentWidth / 2, contentHeight / 2);
 
     // 3) position (top-left -> center)
-    if (transforms.position) {
-      if (hasSize) {
-        root.x = transforms.position.x + (contentWidth * scaleX) / 2;
-        root.y = transforms.position.y + (contentHeight * scaleY) / 2;
-      } else {
-        root.x = transforms.position.x;
-        root.y = transforms.position.y;
-      }
-    }
+    root.x = transforms.position.x + (contentWidth * scaleX) / 2;
+    root.y = transforms.position.y + (contentHeight * scaleY) / 2;
 
-    // 4) rotation / alpha
-    if (transforms.rotation !== undefined) {
-      root.rotation = transforms.rotation;
-    }
-    if (transforms.opacity !== undefined) {
-      root.alpha = transforms.opacity;
-    }
-  }
-
-  // SpriteClip은 sprite.scale, ShapeClip은 container.scale 사용
-  protected applyScale(scaleX: number, scaleY: number): void {
-    this.container.scale.set(scaleX, scaleY);
+    root.rotation = transforms.rotation;
+    root.alpha = transforms.opacity;
   }
 
   static computePlacement({
