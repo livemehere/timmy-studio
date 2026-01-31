@@ -2,11 +2,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
+import { useState, useRef, useEffect } from 'react';
 
 interface NumberFieldProps {
   label: string;
   value: number;
   onChange: (value: number) => void;
+  /** 🔥 드래그 중 실시간 미리보기용 - store 거치지 않고 직접 clip에 적용 */
+  onLiveChange?: (value: number) => void;
   min?: number;
   max?: number;
   step?: number;
@@ -18,14 +21,28 @@ export function NumberField({
   label,
   value,
   onChange,
+  onLiveChange,
   min = 0,
   max = 100,
   step = 1,
   showRange = false,
   unit,
 }: NumberFieldProps) {
-  // Format display value based on step
-  const displayValue = step < 1 ? value.toFixed(2) : value.toString();
+  // 로컬 상태 - 드래그 중 UI 업데이트
+  const [localValue, setLocalValue] = useState<number | null>(null);
+  const isDraggingRef = useRef(false);
+
+  // 외부 value가 변경되면 로컬 상태 리셋
+  useEffect(() => {
+    if (!isDraggingRef.current) {
+      setLocalValue(null);
+    }
+  }, [value]);
+
+  // 표시할 값: 드래그 중이면 로컬 값, 아니면 store 값
+  const displayValue = localValue ?? value;
+  const formattedValue =
+    step < 1 ? displayValue.toFixed(2) : displayValue.toString();
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -36,7 +53,7 @@ export function NumberField({
         <div className="flex-1 flex items-center gap-2">
           <Input
             type="number"
-            value={value}
+            value={displayValue}
             onChange={(e) => onChange(Number(e.target.value) || 0)}
             min={min}
             max={max}
@@ -55,15 +72,26 @@ export function NumberField({
       {showRange && (
         <div className="ml-[108px] flex items-center gap-2">
           <Slider
-            value={[value]}
-            onValueChange={([v]) => onChange(v)}
+            value={[displayValue]}
+            onValueChange={([v]) => {
+              isDraggingRef.current = true;
+              setLocalValue(v);
+              // 🔥 드래그 중 실시간 미리보기 (store 안 거침)
+              onLiveChange?.(v);
+            }}
+            onValueCommit={([v]) => {
+              // 🔥 드래그 끝날 때 store에 커밋
+              isDraggingRef.current = false;
+              setLocalValue(null);
+              onChange(v);
+            }}
             min={min}
             max={max}
             step={step}
             className="flex-1"
           />
           <span className="text-[10px] text-neutral-500 w-10 text-right font-mono">
-            {displayValue}
+            {formattedValue}
           </span>
         </div>
       )}

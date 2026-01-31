@@ -1,4 +1,8 @@
-import { useDocStore, useInteractionStore } from '../../hooks/useStudioStores';
+import {
+  useDocStore,
+  useInteractionStore,
+  useEngineStore,
+} from '../../hooks/useStudioStores';
 import type {
   IClip,
   IGraphicClip,
@@ -6,7 +10,7 @@ import type {
   IShapeClip,
   IAudioClip,
 } from '@/lib/studio/domains/Clip/types';
-import { Section, InputField, NumberField, ToggleField } from '../inputs';
+import { InputField, NumberField, ToggleField } from '../inputs';
 import { TransformsSection } from '../Properties/TransformsSection';
 import { TextPropertiesSection } from '../Properties/TextPropertiesSection';
 import { ShapePropertiesSection } from '../Properties/ShapePropertiesSection';
@@ -41,12 +45,17 @@ import {
   Sparkles,
   Volume2,
 } from 'lucide-react';
+import { useRef } from 'react';
 
 export function PropertiesPanel() {
   const selectedClipIds = useInteractionStore((state) => state.selectedClipIds);
   const tracks = useDocStore((state) => state.tracks);
   const updateClipInTrack = useDocStore((state) => state.updateClip);
   const settings = useDocStore((state) => state.settings);
+  const renderer = useEngineStore((state) => state.renderer);
+
+  // 🔥 드래그 중 로컬 transforms 상태 (store 거치지 않고 직접 적용용)
+  const liveTransformsRef = useRef<IGraphicClip['transforms'] | null>(null);
 
   const selectedClipId = selectedClipIds[0];
   if (!selectedClipId) {
@@ -97,6 +106,8 @@ export function PropertiesPanel() {
   const canvasHeight = settings.height;
 
   const updateClip = (updates: Partial<IClip>) => {
+    // 🔥 드래그 끝나면 liveTransforms 리셋
+    liveTransformsRef.current = null;
     updateClipInTrack(trackId, clip.id, updates);
   };
 
@@ -105,6 +116,36 @@ export function PropertiesPanel() {
   const textClip = clip.type === 'text' ? (clip as ITextClip) : null;
   const shapeClip = clip.type === 'shape' ? (clip as IShapeClip) : null;
   const audioClip = clip.type === 'audio' ? (clip as IAudioClip) : null;
+
+  // 🔥 드래그 중 GraphicClip에 직접 applyTransform 호출 (store 거치지 않음)
+  const handleLiveTransformChange = (path: JsonPath, value: JsonPrimitive) => {
+    if (!renderer || !graphicClip) return;
+
+    // GraphicTrack에서 GraphicClip 인스턴스 가져오기
+    const graphicTrack = renderer.tracks.get(trackId);
+    if (!graphicTrack) return;
+
+    const clipInstance = graphicTrack.clips.get(clip.id);
+    if (!clipInstance) return;
+
+    // liveTransforms가 없으면 현재 transforms 복사
+    if (!liveTransformsRef.current) {
+      liveTransformsRef.current = JSON.parse(
+        JSON.stringify(graphicClip.transforms)
+      );
+    }
+
+    // path에 따라 liveTransforms 업데이트
+    const newTransforms = updateTransformAtPath(
+      liveTransformsRef.current,
+      path,
+      value
+    );
+    liveTransformsRef.current = newTransforms as IGraphicClip['transforms'];
+
+    // 🔥 GraphicClip에 직접 applyTransform 호출 (store 거치지 않음!)
+    clipInstance.applyTransform(liveTransformsRef.current);
+  };
 
   return (
     <TooltipProvider>
@@ -262,6 +303,7 @@ export function PropertiesPanel() {
                         newTransforms as typeof graphicClip.transforms,
                     });
                   }}
+                  onLiveChange={handleLiveTransformChange}
                   onBatchChange={(updates) => {
                     updateClip({
                       transforms: { ...graphicClip.transforms, ...updates },

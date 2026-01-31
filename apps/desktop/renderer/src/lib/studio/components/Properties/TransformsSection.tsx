@@ -5,6 +5,8 @@ import type { JsonPath, JsonPrimitive } from '../../utils/transformHelpers';
 interface TransformsSectionProps {
   transforms: ITransform;
   onChange: (path: JsonPath, value: JsonPrimitive) => void;
+  /** 🔥 드래그 중 실시간 미리보기용 - store 거치지 않고 직접 clip에 적용 */
+  onLiveChange?: (path: JsonPath, value: JsonPrimitive) => void;
   onBatchChange?: (updates: Partial<ITransform>) => void;
   isTextClip?: boolean;
   canvasWidth?: number;
@@ -14,6 +16,7 @@ interface TransformsSectionProps {
 export function TransformsSection({
   transforms,
   onChange,
+  onLiveChange,
   onBatchChange,
   isTextClip = false,
   canvasWidth = 1920,
@@ -90,6 +93,11 @@ export function TransformsSection({
         label="X"
         value={getPosition()?.x ?? 0}
         onChange={(value) => onChange(['position', 'x'], value)}
+        onLiveChange={
+          onLiveChange
+            ? (value) => onLiveChange(['position', 'x'], value)
+            : undefined
+        }
         max={canvasWidth * 2}
         showRange
       />
@@ -97,6 +105,11 @@ export function TransformsSection({
         label="Y"
         value={getPosition()?.y ?? 0}
         onChange={(value) => onChange(['position', 'y'], value)}
+        onLiveChange={
+          onLiveChange
+            ? (value) => onLiveChange(['position', 'y'], value)
+            : undefined
+        }
         max={canvasHeight * 2}
         showRange
       />
@@ -108,12 +121,22 @@ export function TransformsSection({
             label="Width"
             value={getSize()?.width ?? 0}
             onChange={(value) => onChange(['size', 'width'], value)}
+            onLiveChange={
+              onLiveChange
+                ? (value) => onLiveChange(['size', 'width'], value)
+                : undefined
+            }
             showRange
           />
           <NumberField
             label="Height"
             value={getSize()?.height ?? 0}
             onChange={(value) => onChange(['size', 'height'], value)}
+            onLiveChange={
+              onLiveChange
+                ? (value) => onLiveChange(['size', 'height'], value)
+                : undefined
+            }
             showRange
           />
         </>
@@ -124,6 +147,9 @@ export function TransformsSection({
         label="X"
         value={getScale().x}
         onChange={(value) => onChange(['scaleX'], value)}
+        onLiveChange={
+          onLiveChange ? (value) => onLiveChange(['scaleX'], value) : undefined
+        }
         min={0.1}
         max={5}
         step={0.1}
@@ -133,6 +159,9 @@ export function TransformsSection({
         label="Y"
         value={getScale().y}
         onChange={(value) => onChange(['scaleY'], value)}
+        onLiveChange={
+          onLiveChange ? (value) => onLiveChange(['scaleY'], value) : undefined
+        }
         min={0.1}
         max={5}
         step={0.1}
@@ -144,6 +173,11 @@ export function TransformsSection({
         label="Degrees"
         value={Math.round((getRotation() * 180) / Math.PI)}
         onChange={(value) => onChange(['rotation'], (value * Math.PI) / 180)}
+        onLiveChange={
+          onLiveChange
+            ? (value) => onLiveChange(['rotation'], (value * Math.PI) / 180)
+            : undefined
+        }
         min={0}
         max={360}
         showRange
@@ -154,6 +188,9 @@ export function TransformsSection({
         label="Opacity"
         value={getOpacity()}
         onChange={(value) => onChange(['opacity'], value)}
+        onLiveChange={
+          onLiveChange ? (value) => onLiveChange(['opacity'], value) : undefined
+        }
         min={0}
         max={1}
         step={0.1}

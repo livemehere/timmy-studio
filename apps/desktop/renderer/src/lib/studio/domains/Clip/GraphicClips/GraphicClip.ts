@@ -77,7 +77,8 @@ export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
   // 기본 scale 계산 여부 (TextClip은 false)
   protected abstract shouldApplyBaseScale(): boolean;
 
-  protected applyTransform(transforms: ITransform): void {
+  /** 🔥 실시간 미리보기용 - store 거치지 않고 직접 transform 적용 */
+  public applyTransform(transforms: ITransform): void {
     const root = this.container;
     const { width: contentWidth, height: contentHeight } =
       this.getContentSize();
