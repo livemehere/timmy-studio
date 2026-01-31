@@ -18,7 +18,7 @@ export function TimelinePanel() {
   const { duration } = useDocStore((state) => state.settings);
   const totalTrackHeight = 2200;
 
-  const trackTitleWidth = 120;
+  const trackTitleWidth = 160;
   const trackHeight = 60;
 
   const [pxPerSec, setPixPerSec] = useState(10);

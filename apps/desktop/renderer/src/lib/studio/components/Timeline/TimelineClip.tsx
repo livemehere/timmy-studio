@@ -354,10 +354,16 @@ export function TimelineClip({
               }
             }}
             className={cn(
-              'absolute h-full bg-cyan-700 px-2 py-1 rounded overflow-hidden z-5',
+              'absolute h-full rounded-md overflow-hidden z-5 group',
+              'bg-linear-to-b from-cyan-600 to-cyan-700',
+              'border border-cyan-500/30',
+              'shadow-sm hover:shadow-md transition-shadow',
               {
-                'border border-white': isSelected,
-                'ring-2 ring-yellow-400': isCloneMode,
+                'ring-2 ring-white ring-offset-1 ring-offset-neutral-900':
+                  isSelected,
+                'ring-2 ring-yellow-400 ring-offset-1 ring-offset-neutral-900':
+                  isCloneMode,
+                'opacity-50': !clip.enabled,
               }
             )}
             onClick={(e) => {
@@ -518,13 +524,36 @@ export function TimelineClip({
               }
             }}
           >
-            {clip.name}
-            {isLoaded && !isFailed && (
-              <span className="ml-1 text-xs opacity-70">(synced)</span>
-            )}
-            {isFailed && (
-              <span className="ml-1 text-xs text-red-400">(failed)</span>
-            )}
+            {/* Clip Header */}
+            <div className="absolute inset-0 flex flex-col">
+              {/* Top bar with name */}
+              <div className="flex items-center gap-1 px-2 py-1 bg-black/20">
+                <span className="text-xs font-medium text-white truncate flex-1">
+                  {clip.name}
+                </span>
+                {isLoaded && !isFailed && (
+                  <span
+                    className="shrink-0 w-1.5 h-1.5 rounded-full bg-emerald-400"
+                    title="Synced"
+                  />
+                )}
+                {isFailed && (
+                  <span
+                    className="shrink-0 w-1.5 h-1.5 rounded-full bg-red-400"
+                    title="Failed"
+                  />
+                )}
+              </div>
+              {/* Content area */}
+              <div className="flex-1 px-2 py-0.5">
+                <span className="text-[10px] text-white/60 truncate block">
+                  {((clip.endTime - clip.startTime) / 1000).toFixed(1)}s
+                </span>
+              </div>
+              {/* Resize handles (visual only) */}
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-white/0 group-hover:bg-white/20 transition-colors cursor-ew-resize" />
+              <div className="absolute right-0 top-0 bottom-0 w-1 bg-white/0 group-hover:bg-white/20 transition-colors cursor-ew-resize" />
+            </div>
           </motion.div>
         </ContextMenuTrigger>
         <ContextMenuContent>

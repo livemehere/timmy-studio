@@ -31,7 +31,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
 function TrackButton({
@@ -343,25 +342,30 @@ export function TimelineTrack({
             />
           </div>
 
-          {/* Status Badges */}
-          <div className="flex-1 flex items-center justify-end gap-1">
+          {/* Status & zIndex */}
+          <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
+            {/* Status dot */}
             {isSynced && !isFailed && (
-              <Badge
-                variant="outline"
-                className="h-4 px-1 text-[9px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-              >
-                synced
-              </Badge>
+              <Tooltip>
+                <TooltipTrigger>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  Synced
+                </TooltipContent>
+              </Tooltip>
             )}
             {isFailed && (
-              <Badge
-                variant="outline"
-                className="h-4 px-1 text-[9px] bg-red-500/10 text-red-400 border-red-500/30"
-              >
-                failed
-              </Badge>
+              <Tooltip>
+                <TooltipTrigger>
+                  <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  Failed
+                </TooltipContent>
+              </Tooltip>
             )}
-            <span className="text-[10px] text-neutral-500 font-mono tabular-nums">
+            <span className="text-[10px] text-neutral-500 font-mono tabular-nums shrink-0">
               z:{track.zIndex}
             </span>
           </div>
