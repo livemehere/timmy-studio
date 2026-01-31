@@ -1,11 +1,15 @@
 import * as react from 'react';
 import {
-  Ellipsis,
   Eye,
+  EyeOff,
   LockKeyhole,
+  LockKeyholeOpen,
   type LucideProps,
+  Volume2,
   VolumeOff,
   Clipboard,
+  Music,
+  Film,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TimelineClip } from '@/lib/studio/components/Timeline/TimelineClip';
@@ -21,27 +25,61 @@ import {
   ContextMenuShortcut,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
 function TrackButton({
   icon: IconComp,
+  activeIcon: ActiveIconComp,
   active,
   onClick,
+  tooltip,
+  activeColor = 'text-blue-400',
 }: {
   icon: react.ForwardRefExoticComponent<
     Omit<LucideProps, 'ref'> & react.RefAttributes<SVGSVGElement>
   >;
+  activeIcon?: react.ForwardRefExoticComponent<
+    Omit<LucideProps, 'ref'> & react.RefAttributes<SVGSVGElement>
+  >;
   active?: boolean;
   onClick?: () => void;
+  tooltip?: string;
+  activeColor?: string;
 }) {
-  return (
+  const Icon = active && ActiveIconComp ? ActiveIconComp : IconComp;
+  const button = (
     <button
-      className={cn('hover:bg-neutral-700 p-1 rounded')}
+      className={cn(
+        'p-1 rounded transition-colors',
+        active
+          ? `${activeColor} bg-neutral-700/50`
+          : 'text-neutral-500 hover:text-neutral-300 hover:bg-neutral-700/50'
+      )}
       onClick={onClick}
     >
-      <IconComp size={14} color={active ? 'dodgerblue' : undefined} />
+      <Icon className="h-3.5 w-3.5" />
     </button>
   );
+
+  if (tooltip) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipContent side="top" className="text-xs">
+          {tooltip}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return button;
 }
 
 export function TimelineTrack({
@@ -261,50 +299,98 @@ export function TimelineTrack({
       style={{
         height: trackHeight,
       }}
-      className={'bg-neutral-850 flex'}
+      className="bg-neutral-850 flex border-b border-neutral-800/50"
       onPointerDown={handlePointerDown}
     >
-      <div
-        className={cn(
-          'sticky left-0 z-50 bg-neutral-800 shrink-0 flex items-center justify-between gap-1.5 px-2',
-          {
-            'ring-2 ring-inset ring-blue-500/50': isActive,
-          }
-        )}
-        style={{ width: trackTitleWidth }}
-      >
-        <div className="flex items-center gap-1.5">
-          <TrackButton
-            icon={LockKeyhole}
-            active={track.locked}
-            onClick={() => toggleTrackLock(track.id, !track.locked)}
-          />
-          <TrackButton icon={Eye} />
-          <TrackButton icon={VolumeOff} />
-          <TrackButton icon={Ellipsis} />
+      <TooltipProvider delayDuration={200}>
+        <div
+          className={cn(
+            'sticky left-0 z-50 bg-neutral-850 shrink-0 flex items-center gap-1 px-2 border-r border-neutral-800/50',
+            {
+              'bg-blue-950/30 border-l-2 border-l-blue-500': isActive,
+            }
+          )}
+          style={{ width: trackTitleWidth }}
+        >
+          {/* Track Type Icon */}
+          <div className="flex items-center justify-center w-5 h-5 rounded bg-neutral-700/50">
+            {track.type === 'audio' ? (
+              <Music className="h-3 w-3 text-purple-400" />
+            ) : (
+              <Film className="h-3 w-3 text-emerald-400" />
+            )}
+          </div>
+
+          {/* Track Controls */}
+          <div className="flex items-center gap-0.5">
+            <TrackButton
+              icon={LockKeyholeOpen}
+              activeIcon={LockKeyhole}
+              active={track.locked}
+              onClick={() => toggleTrackLock(track.id, !track.locked)}
+              tooltip={track.locked ? 'Unlock' : 'Lock'}
+              activeColor="text-orange-400"
+            />
+            <TrackButton
+              icon={Eye}
+              activeIcon={EyeOff}
+              tooltip="Toggle visibility"
+            />
+            <TrackButton
+              icon={Volume2}
+              activeIcon={VolumeOff}
+              tooltip="Toggle mute"
+            />
+          </div>
+
+          {/* Status Badges */}
+          <div className="flex-1 flex items-center justify-end gap-1">
+            {isSynced && !isFailed && (
+              <Badge
+                variant="outline"
+                className="h-4 px-1 text-[9px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+              >
+                synced
+              </Badge>
+            )}
+            {isFailed && (
+              <Badge
+                variant="outline"
+                className="h-4 px-1 text-[9px] bg-red-500/10 text-red-400 border-red-500/30"
+              >
+                failed
+              </Badge>
+            )}
+            <span className="text-[10px] text-neutral-500 font-mono tabular-nums">
+              z:{track.zIndex}
+            </span>
+          </div>
         </div>
-        <span className="text-xs text-neutral-400 font-mono pointer-events-none relative">
-          z:{track.zIndex}
-        </span>
-        {isSynced && !isFailed && (
-          <span className="text-[10px] text-emerald-400 font-mono">synced</span>
-        )}
-        {isFailed && (
-          <span className="text-[10px] text-red-400 font-mono">failed</span>
-        )}
-      </div>
+      </TooltipProvider>
 
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <div
             ref={trackContentRef}
-            className={cn('bg-neutral-800 flex-1 relative transition-colors', {
-              'bg-cyan-900/30': isHovering,
-              'ring-2 ring-inset ring-blue-500/50': isActive,
-            })}
+            className={cn(
+              'bg-neutral-800/50 flex-1 relative transition-colors',
+              {
+                'bg-cyan-900/20 ring-1 ring-inset ring-cyan-500/30': isHovering,
+                'bg-blue-950/20': isActive,
+              }
+            )}
             onContextMenu={handleContextMenu}
             onClick={handleClick}
           >
+            {/* Track Grid Pattern */}
+            <div
+              className="absolute inset-0 opacity-20"
+              style={{
+                backgroundImage:
+                  'linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px)',
+                backgroundSize: `${pxPerSec}px 100%`,
+              }}
+            />
             {track.clips.map((clip) => (
               <TimelineClip
                 key={clip.id}
@@ -316,9 +402,9 @@ export function TimelineTrack({
             ))}
           </div>
         </ContextMenuTrigger>
-        <ContextMenuContent>
+        <ContextMenuContent className="w-48">
           <ContextMenuItem onSelect={handlePaste} disabled={!clipboard}>
-            <Clipboard size={14} />
+            <Clipboard className="h-4 w-4 mr-2" />
             <span>Paste</span>
             <ContextMenuShortcut>⌘V</ContextMenuShortcut>
           </ContextMenuItem>

@@ -79,19 +79,22 @@ export function TimelineRulerCanvas({
   };
 
   return (
-    <div className={'w-full h-[20px] select-none flex'}>
-      <div style={{ width: leftPadding }} className={'h-full shrink-0'}></div>
+    <div className="w-full h-6 select-none flex bg-neutral-900/80 border-b border-neutral-800">
+      <div
+        style={{ width: leftPadding }}
+        className="h-full shrink-0 flex items-center justify-center border-r border-neutral-800"
+      >
+        <span className="text-[10px] text-neutral-500 font-medium">TIME</span>
+      </div>
       <div
         ref={containerRef}
-        className={
-          'h-full border-t-orange-400/30 border-t cursor-pointer flex-1'
-        }
+        className="h-full cursor-pointer flex-1 hover:bg-neutral-800/30 transition-colors"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
       >
-        <canvas ref={canvasRef}></canvas>
+        <canvas ref={canvasRef} />
       </div>
     </div>
   );

@@ -479,21 +479,24 @@ export function TimelinePanel() {
         vScrollContainerRef.current = el;
         timelinePanelRef.current = el;
       }}
-      className={'relative h-full overflow-y-scroll'}
+      className="relative h-full overflow-y-scroll bg-neutral-900/50"
       tabIndex={0}
     >
-      {/* 현재시간 */}
+      {/* 현재시간 인디케이터 */}
       <motion.div
-        className={'w-0.5 bg-white/50 absolute top-0 z-30'}
+        className="w-0.5 bg-red-500 absolute top-0 z-30 shadow-[0_0_8px_rgba(239,68,68,0.5)]"
         style={{
           left: currentTimeLeft,
           marginLeft: trackTitleWidth,
           height: totalTrackHeight,
           pointerEvents: 'none',
         }}
-      />
+      >
+        {/* 플레이헤드 삼각형 */}
+        <div className="absolute top-0 -left-1.5 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-8 border-t-red-500" />
+      </motion.div>
 
-      <div className={'sticky top-0 z-60 bg-neutral-900'}>
+      <div className="sticky top-0 z-60 bg-neutral-900 shadow-lg">
         <ActionBar />
         <TimelineRulerCanvas
           leftPadding={trackTitleWidth}
@@ -502,7 +505,7 @@ export function TimelinePanel() {
         />
       </div>
 
-      <div ref={hScrollContainerRef} className={'w-full overflow-x-scroll'}>
+      <div ref={hScrollContainerRef} className="w-full overflow-x-scroll">
         <TimelineTracks
           width={totalTrackWidth + trackTitleWidth}
           height={totalTrackHeight}
