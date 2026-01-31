@@ -1,10 +1,10 @@
 import { Texture } from 'pixi.js';
-import type { IImageClip } from './types';
+import type { IImageClip } from '../../types';
 import { SpriteClip } from './SpriteClip';
 import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
 import type { TickContext } from '@/lib/studio/engine/types';
 import { toFilePath } from '@/lib/studio/utils/toFilePath';
-import type { IImageAsset } from '../Asset/types';
+import type { IImageAsset } from '../../../Asset/types';
 
 export class ImageClip extends SpriteClip {
   readonly type = 'image';

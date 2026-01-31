@@ -1,6 +1,6 @@
 import { Text, TextStyle, Graphics } from 'pixi.js';
-import type { ITextClip, ITransform } from './types';
-import { GraphicClip } from './GraphicClip';
+import type { ITextClip, ITransform } from '../../types';
+import { GraphicClip } from '../GraphicClip';
 import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
 import type { TickContext } from '@/lib/studio/engine/types';
 

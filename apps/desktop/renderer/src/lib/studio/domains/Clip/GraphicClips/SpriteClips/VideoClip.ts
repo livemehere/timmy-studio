@@ -1,10 +1,10 @@
 import { Texture, VideoSource } from 'pixi.js';
-import type { IVideoClip } from './types';
+import type { IVideoClip } from '../../types';
 import { SpriteClip } from './SpriteClip';
 import { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
 import type { SeekingRenderMode, TickContext } from '@/lib/studio/engine/types';
 import { toFilePath } from '@/lib/studio/utils/toFilePath';
-import type { IVideoAsset } from '../Asset/types';
+import type { IVideoAsset } from '../../../Asset/types';
 
 export class VideoClip extends SpriteClip {
   readonly type = 'video';
@@ -108,7 +108,7 @@ export class VideoClip extends SpriteClip {
       this.cancelPendingSwaps('proxy');
 
       if (this.isUsingProxy && this.proxyEl && !this.pendingOriginSwap) {
-        this.debugCall('swapping proxy -> origin (during playback)');
+        this.debugCall('swap proxy -> origin (during playback)');
         this.requestSwapToOrigin({ resumePlayback: true });
       }
 

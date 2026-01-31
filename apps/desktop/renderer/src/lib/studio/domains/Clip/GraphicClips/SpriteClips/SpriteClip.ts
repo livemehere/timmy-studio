@@ -1,11 +1,12 @@
 import { Container, Sprite, BlurFilter, Graphics } from 'pixi.js';
 import { PixelateFilter } from 'pixi-filters/pixelate';
 import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
-import { GraphicClip } from './GraphicClip';
-import type { IGraphicClip, ITransform } from './types';
+import { GraphicClip } from '../GraphicClip';
+import type { IGraphicClip, ITransform } from '../../types';
 import type { IEffectMask } from '@/lib/studio/types/effect';
 
 export abstract class SpriteClip extends GraphicClip {
+  // width,height 담당
   public sprite: Sprite;
 
   // For masked effects
@@ -50,52 +51,27 @@ export abstract class SpriteClip extends GraphicClip {
     // this.debugCall('(Sprite) applyTransform');
 
     const root = this.container;
-    const sprite = this.sprite;
-    const texture = sprite.texture;
-    const contentWidth = texture?.orig?.width || texture?.width || 0;
-    const contentHeight = texture?.orig?.height || texture?.height || 0;
-    const hasSize = contentWidth > 0 && contentHeight > 0;
 
     // 1) base scale (size -> scale)
-    let baseScaleX = 1;
-    let baseScaleY = 1;
-    if (transforms.size && hasSize) {
-      baseScaleX = transforms.size.width / contentWidth;
-      baseScaleY = transforms.size.height / contentHeight;
-    }
+    const baseScale = this.baseScaleFor(transforms);
+    const userScale = this.userScaleFor(transforms);
+    this.setSpriteScale({
+      x: baseScale.x * userScale.x,
+      y: baseScale.y * userScale.y,
+    });
 
-    // 2) user scale
-    const userScaleX = transforms.scaleX ?? 1;
-    const userScaleY = transforms.scaleY ?? 1;
-    const scaleX = baseScaleX * userScaleX;
-    const scaleY = baseScaleY * userScaleY;
+    // 2) pivot (center)
+    this.setPivotCenter();
 
-    sprite.scale.set(scaleX, scaleY);
+    // 3) position (top-left -> center)
+    this.setPositionTopLeft(transforms.position);
 
-    // 3) pivot (center)
-    if (hasSize) {
-      root.pivot.set((contentWidth * scaleX) / 2, (contentHeight * scaleY) / 2);
-    } else {
-      root.pivot.set(0, 0);
-    }
-
-    // 4) position (top-left -> center)
-    if (transforms.position) {
-      if (hasSize) {
-        root.x = transforms.position.x + (contentWidth * scaleX) / 2;
-        root.y = transforms.position.y + (contentHeight * scaleY) / 2;
-      } else {
-        root.x = transforms.position.x;
-        root.y = transforms.position.y;
-      }
-    }
-
-    // 5) zIndex
+    // 4) zIndex
     if (this._data.zIndex !== undefined) {
       root.zIndex = this._data.zIndex;
     }
 
-    // 6) rotation / alpha
+    // 5) rotation / alpha
     if (transforms.rotation !== undefined) {
       root.rotation = transforms.rotation;
     }
@@ -122,7 +98,6 @@ export abstract class SpriteClip extends GraphicClip {
   }
 
   private applyMaskedEffect(effect: any, mask: IEffectMask): void {
-    this.debugCall('(Sprite) applyMaskedEffect');
     // Create container for this masked effect
     const container = new Container();
     container.label = `MaskedEffect-${effect.id}`;
@@ -188,5 +163,56 @@ export abstract class SpriteClip extends GraphicClip {
     });
     this.effectContainers.clear();
     this.maskGraphics.clear();
+  }
+
+  // 콘텐츠 원본 크기
+  private get contentSize(): { width: number; height: number } {
+    const texture = this.sprite.texture;
+    const width = texture?.orig?.width || texture?.width || 0;
+    const height = texture?.orig?.height || texture?.height || 0;
+    return { width, height };
+  }
+
+  // 사용자는 width,height 로 크기를 지정하지만 내부적으로는 scale로 처리
+  private baseScaleFor(transforms: ITransform): { x: number; y: number } {
+    const { width, height } = this.contentSize;
+    if (transforms.size) {
+      return {
+        x: transforms.size.width / width,
+        y: transforms.size.height / height,
+      };
+    }
+    return { x: 1, y: 1 };
+  }
+
+  // 사용자 지정 scale(width,height 외의 scale)
+  private userScaleFor(transforms: ITransform): { x: number; y: number } {
+    return {
+      x: transforms.scaleX ?? 1,
+      y: transforms.scaleY ?? 1,
+    };
+  }
+
+  private setSpriteScale(scale: { x: number; y: number }): void {
+    this.sprite.scale.set(scale.x, scale.y);
+  }
+
+  // container의 pivot를 콘텐츠 크기 기준으로 중앙에 맞춤
+  private setPivotCenter(): void {
+    const root = this.container;
+    const { width, height } = this.contentSize;
+    const scale = this.sprite.scale;
+    root.pivot.set((width * scale.x) / 2, (height * scale.y) / 2);
+  }
+
+  private setPositionTopLeft(
+    position: ITransform['position'] | undefined
+  ): void {
+    if (!position) return;
+    const root = this.container;
+    const { width, height } = this.contentSize;
+    const scale = this.sprite.scale;
+    root.x = position.x + (width * scale.x) / 2;
+    root.y = position.y + (height * scale.y) / 2;
   }
 }

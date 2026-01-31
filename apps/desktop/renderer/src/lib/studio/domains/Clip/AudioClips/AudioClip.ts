@@ -1,7 +1,7 @@
-import type { IAudioClip } from './types';
+import type { IAudioClip } from '../types';
 import type { AudioRenderer } from '@/lib/studio/engine/AudioRenderer';
 import { toFilePath } from '@/lib/studio/utils/toFilePath';
-import { Clip } from './Clip';
+import { Clip } from '../Clip';
 import type { TickContext } from '@/lib/studio/engine/types';
 
 /**

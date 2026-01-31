@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 
 import { Asset } from '@/lib/studio/domains/Asset/Asset';
 import { Clip } from '@/lib/studio/domains/Clip/Clip';
-import { GraphicClip } from '@/lib/studio/domains/Clip/GraphicClip';
+import { GraphicClip } from '@/lib/studio/domains/Clip/GraphicClips/GraphicClip';
 import { GraphicTrack } from '@/lib/studio/domains/Track/GraphicTrack';
 import type { ITrack } from '../../Track/types';
 import { Track } from '@/lib/studio/domains/Track/Track';

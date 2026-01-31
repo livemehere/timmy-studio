@@ -1,6 +1,6 @@
 import { Container } from 'pixi.js';
 import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
-import { Clip } from './Clip';
+import { Clip } from '../Clip';
 import type { TickContext } from '@/lib/studio/engine/types';
 import type {
   IGraphicClip,
@@ -8,9 +8,10 @@ import type {
   PlacementPreset,
   PlacementResult,
   Size,
-} from './types';
+} from '../types';
 
 export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
+  // pivot, position, rotation, alpha, zIndex 담당
   public container: Container;
 
   static readonly ASSET_PLACEMENT_PRESETS = {
@@ -65,12 +66,15 @@ export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
     this.container.visible = false;
   }
 
-  onUpdateBeforeTick(_ctx: TickContext): void {}
+  onUpdateBeforeTick(_ctx: TickContext): void {
+    //TODO: 나중에 공통 처리할 부분 있으면 여기에 추가
+  }
 
   onTick(_ctx: TickContext): void {
     this.applyTransform(this._data.transforms);
   }
 
+  // ⭐️ ShapeClip, SpriteClip, TextClip 에서 각자 구현
   protected abstract applyTransform(transforms: ITransform): void;
   static computePlacement({
     total,
