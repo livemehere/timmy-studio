@@ -477,13 +477,17 @@ export function TimerActionBar() {
       <div className="grid grid-cols-3 items-center px-4 py-2">
         {/* Timecode Display */}
         <div className="flex items-center gap-2">
-          <span className="tabular-nums text-xs font-mono text-neutral-300 bg-neutral-800/50 px-2 py-1 rounded">
-            {formatTime(timerState.currentMs)}
-          </span>
-          <span className="text-neutral-600 text-xs">/</span>
-          <span className="tabular-nums text-xs font-mono text-neutral-500">
-            {formatTime(timerState.durationMs)}
-          </span>
+          <div className="flex items-center bg-neutral-800/80 rounded-md overflow-hidden border border-neutral-700/50">
+            <span className="tabular-nums text-sm font-mono text-white px-2.5 py-1 min-w-[70px] text-center">
+              {formatTime(timerState.currentMs)}
+            </span>
+            <span className="text-neutral-600 text-xs px-1 bg-neutral-900/50">
+              /
+            </span>
+            <span className="tabular-nums text-xs font-mono text-neutral-400 px-2 py-1">
+              {formatTime(timerState.durationMs)}
+            </span>
+          </div>
         </div>
 
         {/* Playback Controls */}
@@ -500,7 +504,7 @@ export function TimerActionBar() {
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Go to start</p>
+              <p>Go to start (Home)</p>
             </TooltipContent>
           </Tooltip>
 
@@ -520,7 +524,7 @@ export function TimerActionBar() {
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{timerState.isPlaying ? 'Pause' : 'Play'}</p>
+              <p>{timerState.isPlaying ? 'Pause (Space)' : 'Play (Space)'}</p>
             </TooltipContent>
           </Tooltip>
 
@@ -536,7 +540,7 @@ export function TimerActionBar() {
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Go to end</p>
+              <p>Go to end (End)</p>
             </TooltipContent>
           </Tooltip>
         </div>
@@ -550,17 +554,17 @@ export function TimerActionBar() {
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" className="text-xs gap-1.5">
                 <HardDriveUploadIcon size={14} />
-                <span>내보내기</span>
+                <span>Export</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[480px]">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <HardDriveUploadIcon size={18} />
-                  내보내기 설정
+                  Export Settings
                 </DialogTitle>
                 <DialogDescription>
-                  비디오와 오디오를 내보낼 범위를 설정하세요.
+                  Configure the export range for video and audio.
                 </DialogDescription>
               </DialogHeader>
 
@@ -570,7 +574,7 @@ export function TimerActionBar() {
                   <div className="space-y-4">
                     <div className="space-y-3">
                       <div className="flex justify-between text-sm">
-                        <span className="text-neutral-400">시작 시간</span>
+                        <span className="text-neutral-400">Start Time</span>
                         <Badge variant="secondary" className="font-mono">
                           {formatTime(exportRange.start)}
                         </Badge>
@@ -590,7 +594,7 @@ export function TimerActionBar() {
 
                     <div className="space-y-3">
                       <div className="flex justify-between text-sm">
-                        <span className="text-neutral-400">종료 시간</span>
+                        <span className="text-neutral-400">End Time</span>
                         <Badge variant="secondary" className="font-mono">
                           {formatTime(exportRange.end)}
                         </Badge>

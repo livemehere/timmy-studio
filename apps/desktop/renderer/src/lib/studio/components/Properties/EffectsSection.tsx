@@ -98,19 +98,21 @@ export function EffectsSection({ effects, onChange }: EffectsSectionProps) {
           <div className="text-xs text-neutral-400 mb-1">Add Effect</div>
           <div className="grid grid-cols-2 gap-2">
             <Button
-              variant="secondary"
-              className="flex items-center justify-center gap-2"
+              variant="outline"
+              size="sm"
+              className="flex items-center justify-center gap-2 h-9 hover:bg-blue-500/10 hover:border-blue-500/50 hover:text-blue-400 transition-colors"
               onClick={() => handleAddEffect('blur')}
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5" />
               <span>Blur</span>
             </Button>
             <Button
-              variant="secondary"
-              className="flex items-center justify-center gap-2"
+              variant="outline"
+              size="sm"
+              className="flex items-center justify-center gap-2 h-9 hover:bg-purple-500/10 hover:border-purple-500/50 hover:text-purple-400 transition-colors"
               onClick={() => handleAddEffect('pixelate')}
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5" />
               <span>Mosaic</span>
             </Button>
           </div>
@@ -308,8 +310,16 @@ export function EffectsSection({ effects, onChange }: EffectsSectionProps) {
         ))}
 
         {effects.length === 0 && (
-          <div className="text-sm text-neutral-500 text-center py-4">
-            효과가 없습니다. 추가 버튼을 눌러 효과를 추가하세요.
+          <div className="flex flex-col items-center justify-center py-6 gap-3">
+            <div className="w-10 h-10 rounded-full bg-neutral-800/50 flex items-center justify-center">
+              <Plus className="w-5 h-5 text-neutral-600" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-neutral-400">No effects</p>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                Add blur or mosaic effects above
+              </p>
+            </div>
           </div>
         )}
       </div>

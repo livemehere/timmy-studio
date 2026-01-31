@@ -10,6 +10,9 @@ import {
   Clipboard,
   Music,
   Film,
+  Trash2,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TimelineClip } from '@/lib/studio/components/Timeline/TimelineClip';
@@ -22,6 +25,7 @@ import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuSeparator,
   ContextMenuShortcut,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
@@ -94,6 +98,7 @@ export function TimelineTrack({
 }) {
   const getTrackById = useDocStore((state) => state.getTrackById);
   const updateTrack = useDocStore((state) => state.updateTrack);
+  const removeTrack = useDocStore((state) => state.removeTrack);
   const addClipToTrack = useDocStore((state) => state.addClipToTrack);
   const tracks = useDocStore((state) => state.tracks);
   const track = getTrackById(trackId);
@@ -411,6 +416,70 @@ export function TimelineTrack({
             <Clipboard className="h-4 w-4 mr-2" />
             <span>Paste</span>
             <ContextMenuShortcut>⌘V</ContextMenuShortcut>
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            onSelect={() => {
+              // Move track up (increase zIndex)
+              const currentIndex = tracks.findIndex((t) => t.id === trackId);
+              if (currentIndex > 0) {
+                const aboveTrack = tracks[currentIndex - 1];
+                const newZIndex = aboveTrack.zIndex + 1;
+                updateTrack(trackId, { zIndex: newZIndex });
+                toast.success('Track moved up');
+              }
+            }}
+            disabled={tracks.findIndex((t) => t.id === trackId) === 0}
+          >
+            <ChevronUp className="h-4 w-4 mr-2" />
+            <span>Move Up</span>
+          </ContextMenuItem>
+          <ContextMenuItem
+            onSelect={() => {
+              // Move track down (decrease zIndex)
+              const currentIndex = tracks.findIndex((t) => t.id === trackId);
+              if (currentIndex < tracks.length - 1) {
+                const belowTrack = tracks[currentIndex + 1];
+                const newZIndex = belowTrack.zIndex - 1;
+                updateTrack(trackId, { zIndex: newZIndex });
+                toast.success('Track moved down');
+              }
+            }}
+            disabled={
+              tracks.findIndex((t) => t.id === trackId) === tracks.length - 1
+            }
+          >
+            <ChevronDown className="h-4 w-4 mr-2" />
+            <span>Move Down</span>
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            onSelect={() => toggleTrackLock(trackId, !track.locked)}
+          >
+            {track.locked ? (
+              <LockKeyholeOpen className="h-4 w-4 mr-2" />
+            ) : (
+              <LockKeyhole className="h-4 w-4 mr-2" />
+            )}
+            <span>{track.locked ? 'Unlock Track' : 'Lock Track'}</span>
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            variant="destructive"
+            onSelect={() => {
+              if (tracks.length <= 1) {
+                toast.error('Cannot delete', {
+                  description: 'At least one track is required',
+                });
+                return;
+              }
+              removeTrack(trackId);
+              toast.success('Track deleted');
+            }}
+            disabled={tracks.length <= 1}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            <span>Delete Track</span>
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>

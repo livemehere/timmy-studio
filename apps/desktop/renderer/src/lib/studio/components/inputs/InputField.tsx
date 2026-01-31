@@ -1,6 +1,12 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface InputFieldProps {
   label: string;
@@ -21,13 +27,32 @@ export function InputField({
     <div className="flex items-center gap-3">
       <Label className="text-neutral-400 w-24 shrink-0 text-sm">{label}</Label>
       {type === 'color' ? (
-        <input
-          type="color"
-          readOnly={readOnly}
-          value={value}
-          onChange={(e) => onChange?.(e.target.value)}
-          className="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0"
-        />
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-8 h-8 rounded-md border border-neutral-600 overflow-hidden cursor-pointer hover:border-neutral-500 transition-colors shadow-sm"
+                  style={{ backgroundColor: value }}
+                >
+                  <input
+                    type="color"
+                    readOnly={readOnly}
+                    value={value}
+                    onChange={(e) => onChange?.(e.target.value)}
+                    className="opacity-0 w-full h-full cursor-pointer"
+                  />
+                </div>
+                <span className="text-xs text-neutral-500 font-mono uppercase">
+                  {value}
+                </span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>Click to change color</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       ) : (
         <Input
           readOnly={readOnly}
