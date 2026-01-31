@@ -183,19 +183,22 @@ export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
       }
     }
 
-    const x =
+    const rawX =
       preset.alignX === 'left'
         ? 0
         : preset.alignX === 'center'
           ? (totalW - width) / 2
           : totalW - width;
 
-    const y =
+    const rawY =
       preset.alignY === 'top'
         ? 0
         : preset.alignY === 'center'
           ? (totalH - height) / 2
           : totalH - height;
+
+    const x = Math.min(Math.max(0, rawX), totalW - width);
+    const y = Math.min(Math.max(0, rawY), totalH - height);
 
     return {
       position: { x, y },

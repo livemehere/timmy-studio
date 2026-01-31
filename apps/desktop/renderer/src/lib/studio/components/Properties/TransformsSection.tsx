@@ -27,10 +27,6 @@ export function TransformsSection({
   });
   const getRotation = () => transforms?.rotation ?? 0;
   const getOpacity = () => transforms?.opacity ?? 1;
-  const getAnchor = () => ({
-    x: transforms?.anchorX ?? 0,
-    y: transforms?.anchorY ?? 0,
-  });
 
   // Anchor와 Position을 함께 조정하는 정렬 핸들러
   const handleAlignX = (alignX: 'left' | 'center' | 'right') => {
@@ -41,13 +37,10 @@ export function TransformsSection({
 
       if (alignX === 'left') {
         updates.position!.x = 0;
-        updates.anchorX = 0;
       } else if (alignX === 'center') {
         updates.position!.x = canvasWidth / 2;
-        updates.anchorX = 0.5;
       } else {
         updates.position!.x = canvasWidth;
-        updates.anchorX = 1;
       }
 
       onBatchChange(updates);
@@ -71,13 +64,10 @@ export function TransformsSection({
 
       if (alignY === 'top') {
         updates.position!.y = 0;
-        updates.anchorY = 0;
       } else if (alignY === 'center') {
         updates.position!.y = canvasHeight / 2;
-        updates.anchorY = 0.5;
       } else {
         updates.position!.y = canvasHeight;
-        updates.anchorY = 1;
       }
 
       onBatchChange(updates);
@@ -169,25 +159,6 @@ export function TransformsSection({
         step={0.1}
         showRange
       />
-
-      <div className="text-xs text-neutral-400 mb-1 mt-4">Anchor</div>
-      <NumberField
-        label="X"
-        value={getAnchor().x}
-        onChange={(value) => onChange(['anchorX'], value)}
-        min={0}
-        max={1}
-        step={0.1}
-      />
-      <NumberField
-        label="Y"
-        value={getAnchor().y}
-        onChange={(value) => onChange(['anchorY'], value)}
-        min={0}
-        max={1}
-        step={0.1}
-      />
-
       <div className="text-xs text-neutral-400 mb-1 mt-4">Alignment</div>
       <AlignPresetButtons
         currentAlignX="center"

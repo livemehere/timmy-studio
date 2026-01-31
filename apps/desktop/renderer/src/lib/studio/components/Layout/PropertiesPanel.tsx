@@ -125,19 +125,6 @@ export function PropertiesPanel() {
         </Section>
       )}
 
-      {/* Layer Section (for graphic clips) */}
-      {graphicClip && (
-        <Section title="Layer">
-          <NumberField
-            label="Z Index"
-            value={graphicClip.zIndex}
-            onChange={(value) => updateClip({ zIndex: value })}
-            min={0}
-            step={1}
-          />
-        </Section>
-      )}
-
       {/* Transform Section (for graphic clips) */}
       {graphicClip && (
         <TransformsSection
