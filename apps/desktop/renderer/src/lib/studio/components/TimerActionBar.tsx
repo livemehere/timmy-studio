@@ -1,4 +1,8 @@
-import { useDocStore, useEngineStore } from '../hooks/useStudioStores';
+import {
+  useDocStore,
+  useEngineStore,
+  useInteractionStore,
+} from '../hooks/useStudioStores';
 import {
   PauseIcon,
   PlayIcon,
@@ -73,6 +77,18 @@ export function TimerActionBar() {
 
   const [showExportSettings, setShowExportSettings] = useState(false);
   const [exportRange, setExportRange] = useState({ start: 0, end: 0 });
+  const setExportPreviewRange = useInteractionStore(
+    (state) => state.setExportPreviewRange
+  );
+
+  // Export 다이얼로그 열릴 때 범위 표시, 닫힐 때 숨김
+  useEffect(() => {
+    if (showExportSettings) {
+      setExportPreviewRange(exportRange);
+    } else {
+      setExportPreviewRange(null);
+    }
+  }, [showExportSettings, exportRange, setExportPreviewRange]);
 
   useEffect(() => {
     if (settings.duration) {

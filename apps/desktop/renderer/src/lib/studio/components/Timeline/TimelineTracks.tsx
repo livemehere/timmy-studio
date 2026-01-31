@@ -1,6 +1,7 @@
 import { useDocStore, useInteractionStore } from '../../hooks/useStudioStores';
 import { TimelineTrack } from '@/lib/studio/components/Timeline/TimelineTrack';
 import { useState, useRef, useCallback } from 'react';
+import { msToSec } from '../../utils/time';
 
 interface SelectionRect {
   startX: number;
@@ -25,6 +26,9 @@ export function TimelineTracks({
   const tracks = useDocStore((state) => state.tracks);
   const setSelectedClipIds = useInteractionStore(
     (state) => state.setSelectedClipIds
+  );
+  const exportPreviewRange = useInteractionStore(
+    (state) => state.exportPreviewRange
   );
 
   const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(
@@ -199,6 +203,51 @@ export function TimelineTracks({
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp} // 마우스가 영역 밖으로 나가면 종료
     >
+      {/* Export Range Overlay - 왼쪽 어둡게 */}
+      {exportPreviewRange && (
+        <div
+          className="absolute top-0 bottom-0 bg-black/60 pointer-events-none z-50"
+          style={{
+            left: 0,
+            width: Math.max(0, msToSec(exportPreviewRange.start) * pxPerSec),
+          }}
+        />
+      )}
+
+      {/* Export Range Overlay - 오른쪽 어둡게 */}
+      {exportPreviewRange && (
+        <div
+          className="absolute top-0 bottom-0 bg-black/60 pointer-events-none z-50"
+          style={{
+            left: msToSec(exportPreviewRange.end) * pxPerSec,
+            right: 0,
+          }}
+        />
+      )}
+
+      {/* Export Range Overlay - 선택 구간 테두리 */}
+      {exportPreviewRange && (
+        <div
+          className="absolute top-0 bottom-0 border-x-2 border-emerald-500/80 pointer-events-none z-50"
+          style={{
+            left: msToSec(exportPreviewRange.start) * pxPerSec,
+            width:
+              msToSec(exportPreviewRange.end - exportPreviewRange.start) *
+              pxPerSec,
+          }}
+        >
+          {/* 상단 레이블 */}
+          <div className="absolute -top-6 left-0 right-0 flex justify-between px-1">
+            <span className="text-[10px] font-mono text-emerald-400 bg-neutral-900/90 px-1 rounded">
+              Export Start
+            </span>
+            <span className="text-[10px] font-mono text-emerald-400 bg-neutral-900/90 px-1 rounded">
+              Export End
+            </span>
+          </div>
+        </div>
+      )}
+
       {tracks.map((track) => (
         <TimelineTrack
           key={track.id}

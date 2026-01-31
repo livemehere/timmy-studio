@@ -18,6 +18,7 @@ export interface InteractionState {
   hoverTrackId: string | null;
   clipboard: ClipboardData | null;
   lastClickedTime: number | null; // 트랙 클릭 시 시간 위치 (ms)
+  exportPreviewRange: { start: number; end: number } | null; // Export 다이얼로그 열릴 때 범위 표시
 }
 
 export interface InteractionActions {
@@ -29,6 +30,7 @@ export interface InteractionActions {
   setHoverTrackId: (trackId: string | null) => void;
   setClipboard: (data: ClipboardData | null) => void;
   setLastClickedTime: (time: number | null) => void;
+  setExportPreviewRange: (range: { start: number; end: number } | null) => void;
 }
 
 export type InteractionStore = InteractionState & InteractionActions;
@@ -44,6 +46,7 @@ export const createInteractionStore = () => {
     hoverTrackId: null,
     clipboard: null,
     lastClickedTime: null,
+    exportPreviewRange: null,
 
     setSelectedClipId: (clipId) => {
       set({ selectedClipIds: clipId ? [clipId] : [] });
@@ -78,6 +81,10 @@ export const createInteractionStore = () => {
 
     setLastClickedTime: (time) => {
       set({ lastClickedTime: time });
+    },
+
+    setExportPreviewRange: (range) => {
+      set({ exportPreviewRange: range });
     },
   }));
 };
