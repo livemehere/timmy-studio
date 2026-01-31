@@ -6,7 +6,6 @@ import { ResourcePanel } from '@/lib/studio/components/Layout/ResourcePanel';
 import { useAssetUpdateSubscription } from '@/lib/studio/domains/Asset/hooks/useAssetUpdateSubscription';
 import { useDocStore } from '../hooks/useStudioStores';
 import { useEffect } from 'react';
-import { runtimeDebugObj } from '@/utils/gui';
 import { toast } from 'sonner';
 
 export function StudioApp() {
@@ -15,10 +14,8 @@ export function StudioApp() {
   const doc = useDocStore((state) => state);
 
   useEffect(() => {
-    if (runtimeDebugObj.autoSave) {
-      localStorage.setItem('autosave-doc', JSON.stringify(doc.getProject()));
-      toast.info('Auto-saved');
-    }
+    localStorage.setItem('autosave-doc', JSON.stringify(doc.getProject()));
+    toast.info('Auto-saved');
   }, [doc]);
 
   return (
