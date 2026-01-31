@@ -74,14 +74,9 @@ export abstract class Clip<
   }
 
   protected isInRangeAt(timeMs: number): boolean {
-    const trimStart =
-      'trimStart' in this._data ? (this._data.trimStart ?? 0) : 0;
-    const trimEnd = 'trimEnd' in this._data ? (this._data.trimEnd ?? 0) : 0;
-
-    const visibleStart = this._data.startTime + trimStart;
-    const visibleEnd = this._data.endTime - trimEnd;
-
-    return timeMs >= visibleStart && timeMs < visibleEnd;
+    // startTime/endTime은 타임라인 상의 클립 위치를 나타냄
+    // trimStart/trimEnd는 소스 미디어의 재생 오프셋으로만 사용됨 (visibility에 영향 없음)
+    return timeMs >= this._data.startTime && timeMs < this._data.endTime;
   }
 
   shouldRenderAt(timeMs: number): boolean {

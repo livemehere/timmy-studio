@@ -1,12 +1,16 @@
-import { motion } from 'motion/react';
-import { useRef, useState } from 'react';
+import { motion, useMotionValue } from 'motion/react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import {
   useDocStore,
   useEngineStore,
   useInteractionStore,
 } from '../../hooks/useStudioStores';
 import { msToSec } from '../../utils/time';
-import type { IGraphicClip } from '@/lib/studio/domains/Clip/types';
+import type {
+  IVideoClip,
+  IAudioClip,
+  IClip,
+} from '@/lib/studio/domains/Clip/types';
 import { cn } from '@/lib/utils';
 import { Track } from '@/lib/studio/domains/Track/Track';
 import {
@@ -29,6 +33,13 @@ import {
   EyeOff,
 } from 'lucide-react';
 
+// 최소 클립 길이 (ms)
+const MIN_CLIP_DURATION_MS = 100;
+// 엣지 드래그 감지 영역 (px)
+const EDGE_DRAG_ZONE_PX = 8;
+
+type DragMode = 'move' | 'resize-start' | 'resize-end' | null;
+
 export function TimelineClip({
   clipId,
   pxPerSec,
@@ -42,6 +53,7 @@ export function TimelineClip({
 }) {
   const getClipById = useDocStore((state) => state.getClipById);
   const getTrackById = useDocStore((state) => state.getTrackById);
+  const getAssetById = useDocStore((state) => state.getAssetById);
   const updateClip = useDocStore((state) => state.updateClip);
   const moveClipToTrack = useDocStore((state) => state.moveClipToTrack);
   const cloneClipToTrack = useDocStore((state) => state.cloneClipToTrack);
@@ -49,7 +61,8 @@ export function TimelineClip({
   const addTrack = useDocStore((state) => state.addTrack);
   const tracks = useDocStore((state) => state.tracks);
   const setActiveTrackId = useDocStore((state) => state.setActiveTrackId);
-  const clip = getClipById<IGraphicClip>(trackId, clipId)!;
+  // Use IClip to support both graphic and audio clips
+  const clip = getClipById<IClip>(trackId, clipId)!;
 
   const track = getTrackById(trackId);
   const syncedGraphicClipIds = useEngineStore(
@@ -96,11 +109,88 @@ export function TimelineClip({
   const setHoverTrackId = useInteractionStore((state) => state.setHoverTrackId);
   const setClipboard = useInteractionStore((state) => state.setClipboard);
 
+  // Refs for drag state
+  const clipRef = useRef<HTMLDivElement>(null);
   const wheelDeltaRef = useRef({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
   const isAltPressedRef = useRef(false);
+  const dragModeRef = useRef<DragMode>(null);
+  const dragStartDataRef = useRef<{
+    startTime: number;
+    endTime: number;
+    trimStart: number;
+    trimEnd: number;
+    mouseX: number;
+  } | null>(null);
+
+  // Motion value for x - 리사이즈 모드에서 motion의 transform을 비활성화
+  const motionX = useMotionValue(0);
+
+  // UI states
   const [isCloneMode, setIsCloneMode] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [dragMode, setDragMode] = useState<DragMode>(null);
+  const [hoverEdge, setHoverEdge] = useState<'start' | 'end' | null>(null);
+
+  // 리사이즈 모드가 끝나면 motionX를 0으로 리셋
+  useEffect(() => {
+    if (!isDragging || dragMode === null) {
+      motionX.set(0);
+    }
+  }, [isDragging, dragMode, motionX]);
+
+  // Get asset duration for video/audio clips
+  const getMaxDuration = useCallback((): number | null => {
+    if (clip.type === 'video' || clip.type === 'audio') {
+      const assetId = (clip as IVideoClip | IAudioClip).assetId;
+      const asset = getAssetById(assetId);
+      if (asset?.metadata?.durationMs) {
+        return asset.metadata.durationMs;
+      }
+    }
+    return null; // unlimited for non-video/audio clips
+  }, [clip, getAssetById]);
+
+  // Determine drag mode based on mouse position
+  const getDragModeFromPosition = useCallback(
+    (e: React.MouseEvent | React.PointerEvent): DragMode => {
+      if (!clipRef.current) return 'move';
+
+      const rect = clipRef.current.getBoundingClientRect();
+      const localX = e.clientX - rect.left;
+
+      if (localX <= EDGE_DRAG_ZONE_PX) {
+        return 'resize-start';
+      } else if (localX >= rect.width - EDGE_DRAG_ZONE_PX) {
+        return 'resize-end';
+      }
+      return 'move';
+    },
+    []
+  );
+
+  // Handle mouse move for cursor change
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (isDraggingRef.current) return;
+
+      const mode = getDragModeFromPosition(e);
+      if (mode === 'resize-start') {
+        setHoverEdge('start');
+      } else if (mode === 'resize-end') {
+        setHoverEdge('end');
+      } else {
+        setHoverEdge(null);
+      }
+    },
+    [getDragModeFromPosition]
+  );
+
+  const handleMouseLeave = useCallback(() => {
+    if (!isDraggingRef.current) {
+      setHoverEdge(null);
+    }
+  }, []);
 
   // Context menu actions
   const handleCopy = () => {
@@ -287,7 +377,7 @@ export function TimelineClip({
   return (
     <>
       {/* Ghost Element: Alt 키로 복제 중일 때 원본 위치에 표시 */}
-      {isCloneMode && isDragging && (
+      {isCloneMode && isDragging && dragMode === 'move' && (
         <div
           className="absolute h-full bg-cyan-700/30 px-2 py-1 rounded overflow-hidden pointer-events-none border-2 border-dashed border-cyan-400/50"
           style={{
@@ -302,19 +392,196 @@ export function TimelineClip({
       <ContextMenu onOpenChange={handleContextMenuOpen}>
         <ContextMenuTrigger asChild>
           <motion.div
+            ref={clipRef}
             data-clip-id={clip.id}
             style={{
               width,
               left,
+              x:
+                dragMode === 'resize-start' || dragMode === 'resize-end'
+                  ? 0
+                  : motionX,
+              cursor: hoverEdge
+                ? 'ew-resize'
+                : isDragging && dragMode === 'move'
+                  ? 'grabbing'
+                  : 'grab',
             }}
-            drag
+            // 리사이즈 모드에서는 드래그 완전 비활성화
+            drag={dragMode === 'move' || dragMode === null ? 'x' : false}
             dragMomentum={false}
-            dragSnapToOrigin
+            dragSnapToOrigin={dragMode === 'move'}
             dragElastic={0}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            onPointerDown={(e) => {
+              const mode = getDragModeFromPosition(e);
+              dragModeRef.current = mode;
+              setDragMode(mode);
+
+              // 리사이즈 모드면 드래그 데이터 저장 및 이벤트 캡처
+              if (mode === 'resize-start' || mode === 'resize-end') {
+                e.preventDefault();
+                e.stopPropagation();
+
+                // clipRef에서 pointer capture
+                if (clipRef.current) {
+                  clipRef.current.setPointerCapture(e.pointerId);
+                }
+
+                dragStartDataRef.current = {
+                  startTime: clip.startTime,
+                  endTime: clip.endTime,
+                  trimStart: clip.trimStart,
+                  trimEnd: clip.trimEnd,
+                  mouseX: e.clientX,
+                };
+                isDraggingRef.current = true;
+                setIsDragging(true);
+                setDraggingClipId(clip.id);
+              }
+            }}
+            onPointerMove={(e) => {
+              const mode = dragModeRef.current;
+              if (!isDraggingRef.current || !dragStartDataRef.current) return;
+              if (mode !== 'resize-start' && mode !== 'resize-end') return;
+
+              const deltaX = e.clientX - dragStartDataRef.current.mouseX;
+              const deltaMsRaw = (deltaX / pxPerSec) * 1000;
+
+              const maxDuration = getMaxDuration();
+              const isVideoOrAudio =
+                clip.type === 'video' || clip.type === 'audio';
+
+              if (mode === 'resize-start') {
+                // 시작점 드래그: startTime 조절
+                let newStartTime =
+                  dragStartDataRef.current.startTime + deltaMsRaw;
+
+                // 최소/최대 제약
+                const minStart = 0;
+                const maxStart =
+                  dragStartDataRef.current.endTime - MIN_CLIP_DURATION_MS;
+                newStartTime = Math.max(
+                  minStart,
+                  Math.min(maxStart, newStartTime)
+                );
+
+                // VideoClip의 경우 trimStart도 조절
+                if (isVideoOrAudio && maxDuration) {
+                  const originalDuration =
+                    dragStartDataRef.current.endTime -
+                    dragStartDataRef.current.startTime;
+                  const newDuration =
+                    dragStartDataRef.current.endTime - newStartTime;
+                  const durationDelta = newDuration - originalDuration;
+
+                  // trimStart 감소 = 더 많이 보여줌 (왼쪽으로 확장)
+                  let newTrimStart =
+                    dragStartDataRef.current.trimStart - durationDelta;
+
+                  // trimStart는 0 이상이어야 함
+                  if (newTrimStart < 0) {
+                    // trimStart가 0 미만이 되려고 하면 startTime을 조절
+                    newStartTime =
+                      dragStartDataRef.current.startTime +
+                      dragStartDataRef.current.trimStart;
+                    newTrimStart = 0;
+                  }
+
+                  updateClip(trackId, clip.id, {
+                    startTime: newStartTime,
+                    trimStart: newTrimStart,
+                  });
+                } else {
+                  // 일반 클립은 단순히 startTime만 조절
+                  updateClip(trackId, clip.id, {
+                    startTime: newStartTime,
+                  });
+                }
+              } else if (mode === 'resize-end') {
+                // 끝점 드래그: endTime 조절
+                let newEndTime = dragStartDataRef.current.endTime + deltaMsRaw;
+
+                // 최소 제약
+                const minEnd =
+                  dragStartDataRef.current.startTime + MIN_CLIP_DURATION_MS;
+                newEndTime = Math.max(minEnd, newEndTime);
+
+                // VideoClip의 경우 최대 길이 제약 + trimEnd 조절
+                if (isVideoOrAudio && maxDuration) {
+                  const originalDuration =
+                    dragStartDataRef.current.endTime -
+                    dragStartDataRef.current.startTime;
+                  const newDuration =
+                    newEndTime - dragStartDataRef.current.startTime;
+                  const durationDelta = newDuration - originalDuration;
+
+                  // trimEnd 감소 = 더 많이 보여줌 (오른쪽으로 확장)
+                  let newTrimEnd =
+                    dragStartDataRef.current.trimEnd - durationDelta;
+
+                  // trimEnd는 0 이상이어야 함
+                  if (newTrimEnd < 0) {
+                    // trimEnd가 0 미만이 되려고 하면 endTime을 조절
+                    newEndTime =
+                      dragStartDataRef.current.startTime +
+                      (maxDuration - dragStartDataRef.current.trimStart);
+                    newTrimEnd = 0;
+                  }
+
+                  updateClip(trackId, clip.id, {
+                    endTime: newEndTime,
+                    trimEnd: newTrimEnd,
+                  });
+                } else {
+                  // 일반 클립은 단순히 endTime만 조절 (무제한)
+                  updateClip(trackId, clip.id, {
+                    endTime: newEndTime,
+                  });
+                }
+              }
+            }}
+            onPointerUp={(e) => {
+              const mode = dragModeRef.current;
+              if (mode === 'resize-start' || mode === 'resize-end') {
+                if (clipRef.current) {
+                  clipRef.current.releasePointerCapture(e.pointerId);
+                }
+                isDraggingRef.current = false;
+                setIsDragging(false);
+                setDraggingClipId(null);
+                dragStartDataRef.current = null;
+                dragModeRef.current = null;
+                setDragMode(null);
+              }
+            }}
+            onPointerCancel={(e) => {
+              const mode = dragModeRef.current;
+              if (mode === 'resize-start' || mode === 'resize-end') {
+                if (clipRef.current) {
+                  clipRef.current.releasePointerCapture(e.pointerId);
+                }
+                isDraggingRef.current = false;
+                setIsDragging(false);
+                setDraggingClipId(null);
+                dragStartDataRef.current = null;
+                dragModeRef.current = null;
+                setDragMode(null);
+              }
+            }}
             onDragStart={(e) => {
+              if (
+                dragModeRef.current !== 'move' &&
+                dragModeRef.current !== null
+              )
+                return;
+
               setDraggingClipId(clip.id);
               isDraggingRef.current = true;
               setIsDragging(true);
+              dragModeRef.current = 'move';
+              setDragMode('move');
               wheelDeltaRef.current = { x: 0, y: 0 };
               // @ts-ignore - e.altKey exists in drag events
               const altPressed = e.altKey || false;
@@ -322,6 +589,8 @@ export function TimelineClip({
               setIsCloneMode(altPressed);
             }}
             onDrag={(e, info) => {
+              if (dragModeRef.current !== 'move') return;
+
               // @ts-ignore - e.altKey exists in drag events
               const altPressed = e.altKey || false;
               isAltPressedRef.current = altPressed;
@@ -347,7 +616,7 @@ export function TimelineClip({
               }
             }}
             onWheel={(e) => {
-              if (isDraggingRef.current) {
+              if (isDraggingRef.current && dragModeRef.current === 'move') {
                 e.preventDefault();
                 wheelDeltaRef.current.x += e.deltaX;
                 wheelDeltaRef.current.y += e.deltaY;
@@ -362,15 +631,21 @@ export function TimelineClip({
                 'ring-2 ring-white ring-offset-1 ring-offset-neutral-900':
                   isSelected,
                 'ring-2 ring-yellow-400 ring-offset-1 ring-offset-neutral-900':
-                  isCloneMode,
+                  isCloneMode && dragMode === 'move',
                 'opacity-50': !clip.enabled,
               }
             )}
             onClick={(e) => {
+              // 리사이즈 중이면 클릭 무시
+              if (
+                dragModeRef.current === 'resize-start' ||
+                dragModeRef.current === 'resize-end'
+              ) {
+                return;
+              }
+
               // Set the parent track as active when clicking a clip
               setActiveTrackId(trackId);
-              navigator.clipboard.writeText(clip.id);
-              toast('id copied!');
 
               if (e.shiftKey) {
                 addSelectedClipId(clip.id);
@@ -379,6 +654,11 @@ export function TimelineClip({
               }
             }}
             onDragEnd={(_, info) => {
+              if (dragModeRef.current !== 'move') {
+                dragModeRef.current = null;
+                setDragMode(null);
+                return;
+              }
               const isCloning = isAltPressedRef.current;
               isDraggingRef.current = false;
               setIsDragging(false);
@@ -522,10 +802,14 @@ export function TimelineClip({
                   endTime: newEndTime,
                 });
               }
+
+              // Reset drag mode
+              dragModeRef.current = null;
+              setDragMode(null);
             }}
           >
-            {/* Clip Header */}
-            <div className="absolute inset-0 flex flex-col">
+            {/* Clip Content */}
+            <div className="absolute inset-0 flex flex-col pointer-events-none">
               {/* Top bar with name */}
               <div className="flex items-center gap-1 px-2 py-1 bg-black/20">
                 <span className="text-xs font-medium text-white truncate flex-1">
@@ -545,15 +829,38 @@ export function TimelineClip({
                 )}
               </div>
               {/* Content area */}
-              <div className="flex-1 px-2 py-0.5">
-                <span className="text-[10px] text-white/60 truncate block">
+              <div className="flex-1 px-2 py-0.5 flex items-center justify-between">
+                <span className="text-[10px] text-white/60 truncate">
                   {((clip.endTime - clip.startTime) / 1000).toFixed(1)}s
                 </span>
+                {/* Show trim info for video/audio */}
+                {(clip.type === 'video' || clip.type === 'audio') &&
+                  (clip.trimStart > 0 || clip.trimEnd > 0) && (
+                    <span className="text-[9px] text-yellow-400/70 font-mono">
+                      ✂ {(clip.trimStart / 1000).toFixed(1)}-
+                      {(clip.trimEnd / 1000).toFixed(1)}
+                    </span>
+                  )}
               </div>
-              {/* Resize handles (visual only) */}
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-white/0 group-hover:bg-white/20 transition-colors cursor-ew-resize" />
-              <div className="absolute right-0 top-0 bottom-0 w-1 bg-white/0 group-hover:bg-white/20 transition-colors cursor-ew-resize" />
             </div>
+
+            {/* Resize handles */}
+            <div
+              className={cn(
+                'absolute left-0 top-0 bottom-0 w-2 transition-colors cursor-ew-resize',
+                hoverEdge === 'start' || dragMode === 'resize-start'
+                  ? 'bg-white/40'
+                  : 'bg-white/0 group-hover:bg-white/20'
+              )}
+            />
+            <div
+              className={cn(
+                'absolute right-0 top-0 bottom-0 w-2 transition-colors cursor-ew-resize',
+                hoverEdge === 'end' || dragMode === 'resize-end'
+                  ? 'bg-white/40'
+                  : 'bg-white/0 group-hover:bg-white/20'
+              )}
+            />
           </motion.div>
         </ContextMenuTrigger>
         <ContextMenuContent>
