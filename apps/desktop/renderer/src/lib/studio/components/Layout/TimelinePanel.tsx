@@ -10,7 +10,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { toast } from 'sonner';
-import { Z_INDEX } from '@/constants/zIndex';
+import { Z_INDEX } from '../../constants/zIndex';
 
 const MIN_PIXELS_PER_SECOND = 2;
 const MAX_PIXELS_PER_SECOND = 100;

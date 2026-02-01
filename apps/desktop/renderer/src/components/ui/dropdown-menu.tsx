@@ -3,7 +3,7 @@ import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
 import { CheckIcon, ChevronRightIcon, CircleIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import { Z_INDEX } from '@/constants/zIndex';
+import { Z_INDEX } from '@/lib/studio/constants/zIndex';
 
 function DropdownMenu({
   ...props

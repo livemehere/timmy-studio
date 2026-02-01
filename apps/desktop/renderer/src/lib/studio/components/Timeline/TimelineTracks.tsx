@@ -7,7 +7,7 @@ import { TimelineTrack } from '@/lib/studio/components/Timeline/TimelineTrack';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, useMotionValue } from 'motion/react';
 import { msToSec } from '../../utils/time';
-import { Z_INDEX } from '@/constants/zIndex';
+import { Z_INDEX } from '../../constants/zIndex';
 
 interface SelectionRect {
   startX: number;

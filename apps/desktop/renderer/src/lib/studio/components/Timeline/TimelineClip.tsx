@@ -13,7 +13,7 @@ import type {
 } from '@/lib/studio/domains/Clip/types';
 import { cn } from '@/lib/utils';
 import { Track } from '@/lib/studio/domains/Track/Track';
-import { Z_INDEX } from '@/constants/zIndex';
+import { Z_INDEX } from '../../constants/zIndex';
 import {
   ContextMenu,
   ContextMenuContent,

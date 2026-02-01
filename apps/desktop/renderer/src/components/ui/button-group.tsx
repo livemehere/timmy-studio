@@ -3,7 +3,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
-import { Z_INDEX } from '@/constants/zIndex';
+import { Z_INDEX } from '@/lib/studio/constants/zIndex';
 
 const buttonGroupVariants = cva(
   "flex w-fit items-stretch [&>*]:focus-visible:z-[var(--z-focus)] [&>*]:focus-visible:relative [&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1 has-[select[aria-hidden=true]:last-child]:[&>[data-slot=select-trigger]:last-of-type]:rounded-r-md has-[>[data-slot=button-group]]:gap-2",

@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/field';
 import { useMotionValue } from 'motion/react';
 import { cn } from '@/lib/utils';
-import { Z_INDEX } from '@/constants/zIndex';
+import { Z_INDEX } from '@/lib/studio/constants/zIndex';
 import {
   AlignCenterVertical,
   AlignEndVertical,

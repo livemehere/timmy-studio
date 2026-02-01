@@ -2,7 +2,7 @@ import * as React from 'react';
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 
 import { cn } from '@/lib/utils';
-import { Z_INDEX } from '@/constants/zIndex';
+import { Z_INDEX } from '@/lib/studio/constants/zIndex';
 
 function TooltipProvider({
   delayDuration = 0,

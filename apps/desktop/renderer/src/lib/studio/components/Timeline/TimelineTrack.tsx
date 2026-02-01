@@ -35,7 +35,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Z_INDEX } from '@/constants/zIndex';
+import { Z_INDEX } from '../../constants/zIndex';
 import { toast } from 'sonner';
 
 function TrackButton({

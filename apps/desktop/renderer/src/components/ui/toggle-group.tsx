@@ -6,7 +6,7 @@ import { type VariantProps } from 'class-variance-authority';
 
 import { cn } from '@/lib/utils';
 import { toggleVariants } from '@/components/ui/toggle';
-import { Z_INDEX } from '@/constants/zIndex';
+import { Z_INDEX } from '@/lib/studio/constants/zIndex';
 
 const ToggleGroupContext = React.createContext<
   VariantProps<typeof toggleVariants> & {
