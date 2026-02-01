@@ -69,11 +69,12 @@ export function TimerActionBar() {
     outputPath: '',
     error: null,
   });
-  const [timerState, setTimerState] = useState({
-    currentMs: 0,
-    isPlaying: false,
-    durationMs: 0,
-  });
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [durationMs, setDurationMs] = useState(0);
+  const currentMsRef = useRef(0);
+  const isPlayingRef = useRef(false);
+  const durationMsRef = useRef(0);
+  const timecodeRef = useRef<HTMLSpanElement | null>(null);
 
   const [showExportSettings, setShowExportSettings] = useState(false);
   const [exportRange, setExportRange] = useState({ start: 0, end: 0 });
@@ -100,12 +101,33 @@ export function TimerActionBar() {
   useEffect(() => {
     if (!timer) return;
 
-    return timer.subscribe(setTimerState);
+    const setTimecodeText = (ms: number) => {
+      currentMsRef.current = ms;
+      if (timecodeRef.current) {
+        timecodeRef.current.textContent = formatTime(ms);
+      }
+    };
+
+    const unsubscribe = timer.subscribe((state) => {
+      if (state.currentMs !== currentMsRef.current) {
+        setTimecodeText(state.currentMs);
+      }
+      if (state.isPlaying !== isPlayingRef.current) {
+        isPlayingRef.current = state.isPlaying;
+        setIsPlaying(state.isPlaying);
+      }
+      if (state.durationMs !== durationMsRef.current) {
+        durationMsRef.current = state.durationMs;
+        setDurationMs(state.durationMs);
+      }
+    });
+
+    return unsubscribe;
   }, [timer]);
 
   const handlePlay = () => {
     if (!timer) return;
-    if (timerState.isPlaying) {
+    if (isPlaying) {
       timer.pause();
     } else {
       timer.play();
@@ -494,14 +516,17 @@ export function TimerActionBar() {
         {/* Timecode Display */}
         <div className="flex items-center gap-2">
           <div className="flex items-center bg-neutral-800/80 rounded-md overflow-hidden border border-neutral-700/50">
-            <span className="tabular-nums text-sm font-mono text-white px-2.5 py-1 min-w-[70px] text-center">
-              {formatTime(timerState.currentMs)}
+            <span
+              ref={timecodeRef}
+              className="tabular-nums text-sm font-mono text-white px-2.5 py-1 min-w-[70px] text-center"
+            >
+              {formatTime(timer?.currentMs ?? 0)}
             </span>
             <span className="text-neutral-600 text-xs px-1 bg-neutral-900/50">
               /
             </span>
             <span className="tabular-nums text-xs font-mono text-neutral-400 px-2 py-1">
-              {formatTime(timerState.durationMs)}
+              {formatTime(durationMs)}
             </span>
           </div>
         </div>
@@ -527,12 +552,12 @@ export function TimerActionBar() {
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant={timerState.isPlaying ? 'default' : 'ghost'}
+                variant={isPlaying ? 'default' : 'ghost'}
                 size="icon-sm"
                 onClick={handlePlay}
                 className="rounded-full w-10 h-10 transition-all"
               >
-                {timerState.isPlaying ? (
+                {isPlaying ? (
                   <PauseIcon size={20} />
                 ) : (
                   <PlayIcon size={20} className="ml-0.5" />
@@ -540,7 +565,7 @@ export function TimerActionBar() {
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{timerState.isPlaying ? 'Pause (Space)' : 'Play (Space)'}</p>
+              <p>{isPlaying ? 'Pause (Space)' : 'Play (Space)'}</p>
             </TooltipContent>
           </Tooltip>
 
@@ -549,7 +574,7 @@ export function TimerActionBar() {
               <Button
                 variant="ghost"
                 size="icon-sm"
-                onClick={() => timer?.seek(timerState.durationMs)}
+                onClick={() => timer?.seek(durationMs)}
                 className="rounded-full w-8 h-8"
               >
                 <SkipForward size={14} />
