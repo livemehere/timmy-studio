@@ -7,12 +7,11 @@ import type { IAsset } from '@/lib/studio/domains/Asset/types';
  */
 export function useAssetUpdateSubscription() {
   const updateAsset = useDocStore((state) => state.updateAsset);
-
   useEffect(() => {
     const unsubscribe = window.app.on('asset:update', (asset: IAsset) => {
       updateAsset(asset.id, asset);
+      console.log('updated', asset);
     });
-
     return () => unsubscribe();
   }, [updateAsset]);
 }

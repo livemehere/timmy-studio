@@ -21,6 +21,7 @@ const DEFAULT_PROJECT: IProject = {
   assets: [],
 };
 
+// TODO: load from file system and user preferences
 let autoSaved: IProject | null = null;
 try {
   const autoSavedStr = window.localStorage.getItem('autosave-doc');

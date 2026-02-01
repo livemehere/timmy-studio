@@ -2,8 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Suspense } from 'react';
 import { AppRoutes } from './routes';
-import { Spinner } from './components/Spinner';
 import { Toaster } from './components/ui/sonner';
+import { Spinner } from './components/ui/spinner';
 
 const queryClient = new QueryClient({
   defaultOptions: {

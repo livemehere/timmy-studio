@@ -12,6 +12,8 @@ export function StudioApp() {
   useAssetUpdateSubscription();
   const { docStore } = useStudioStores();
 
+  console.log('docsore');
+
   useEffect(() => {
     const save = () => {
       localStorage.setItem(

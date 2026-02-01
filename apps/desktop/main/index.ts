@@ -20,6 +20,7 @@ import {
   handleSourceScheme,
   SOURCE_SCHEME,
 } from '@timmy-studio/electron-utils/utils/main';
+import { registerGlobalShortcuts } from './utils/globalShortcuts';
 
 log.initialize();
 log.info('App starting...');
@@ -98,6 +99,7 @@ app.whenReady().then(async () => {
     app.quit();
   });
   registerIpcHandlers(win);
+  registerGlobalShortcuts(win);
 });
 
 process.on('uncaughtException', (error) => {

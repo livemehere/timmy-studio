@@ -380,7 +380,7 @@ export const createDocStore = (initialProject?: IProject) => {
         const currentAssets = get().assets;
         set({
           assets: currentAssets.map((asset) =>
-            asset.id === assetId ? ({ ...asset, ...updates } as IAsset) : asset
+            asset.id === assetId ? { ...asset, ...updates } : asset
           ),
         });
       },

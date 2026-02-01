@@ -5,7 +5,6 @@ import { toFilePath } from '@/lib/studio/utils/toFilePath';
 import { useAsset } from '@/lib/studio/domains/Asset/hooks/useAsset';
 import { Layers, Plus, Film, ImageIcon, Music, FileIcon } from 'lucide-react';
 import { formatFileSize } from '@/lib/studio/utils/size';
-import { Spinner } from '@/components/Spinner';
 import {
   Tooltip,
   TooltipContent,
@@ -13,6 +12,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
+import { Spinner } from '@/components/ui/spinner';
 
 export function AssetItem({ asset }: { asset: IAsset }) {
   const { addClip, firstTrackId, status } = useAsset(asset);
@@ -59,7 +59,7 @@ export function AssetItem({ asset }: { asset: IAsset }) {
           {/* Loading Overlay */}
           {!status.isReady && !status.isError && (
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center">
-              <Spinner strokeWidth={2} size={16} />
+              <Spinner />
             </div>
           )}
 

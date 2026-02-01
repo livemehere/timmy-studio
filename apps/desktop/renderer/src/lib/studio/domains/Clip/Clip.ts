@@ -26,7 +26,7 @@ export abstract class Clip<
     | AudioRenderer,
 > implements Dirtyable
 {
-  static DEBUG_LIFECYCLE = true;
+  static DEBUG_LIFECYCLE = false;
   static readonly DEFAULT_CLIP_DURATION_MS = 3000; //ms
   static readonly DEFAULT_TRANSFORM_SIZE = {
     width: 150,
