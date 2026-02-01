@@ -19,7 +19,7 @@ export function ResourcePanel() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-neutral-900/50">
+    <div className="h-full flex flex-col">
       {/* Header */}
       <div className="shrink-0 px-3 py-2 border-b border-neutral-800">
         <div className="flex items-center justify-between">
