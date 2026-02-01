@@ -6,7 +6,7 @@ import { ResourcePanel } from '@/lib/studio/components/Layout/ResourcePanel';
 
 export function StudioApp() {
   return (
-    <div className="h-full p-2 overflow-hidden">
+    <div className="h-full overflow-hidden">
       <PanelGroup direction={'vertical'}>
         <Panel>
           <PanelGroup direction={'horizontal'}>

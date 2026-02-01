@@ -7,24 +7,14 @@ import { DEFAULT_PROJECT } from '@/lib/studio/constants/defaultValues';
 import { useMemo } from 'react';
 import { toast } from 'sonner';
 
-// let autoSaved: IProject | null = null;
-// console.log('load');
-// try {
-//   const autoSavedStr = window.localStorage.getItem('autosave-doc');
-//   if (!autoSavedStr) throw new Error('No autosave data');
-//   autoSaved = JSON.parse(autoSavedStr) as IProject;
-//   toast.success('Auto-saved project loaded');
-// } catch (e) {
-//   autoSaved = null;
-// }
-// const initialProject = autoSaved || DEFAULT_PROJECT;
+const AUTO_SAVE_KEY = 'autosave-doc';
 
 export default function VideoEditorPage() {
+  // TODO: if there is no auto-saved data, open dialog to create new project
   const initialProject = useMemo(() => {
     let autoSaved: IProject | null = null;
-    console.log('load');
     try {
-      const autoSavedStr = window.localStorage.getItem('autosave-doc');
+      const autoSavedStr = window.localStorage.getItem(AUTO_SAVE_KEY);
       if (!autoSavedStr) throw new Error('No autosave data');
       autoSaved = JSON.parse(autoSavedStr) as IProject;
       toast.success('Auto-saved project loaded');
@@ -37,7 +27,7 @@ export default function VideoEditorPage() {
   return (
     <StudioProvider initialProject={initialProject}>
       <AssetUpdater />
-      <AutoSave saveKey="autosave-doc" />
+      <AutoSave saveKey={AUTO_SAVE_KEY} />
       <StudioApp />
     </StudioProvider>
   );
