@@ -6,7 +6,7 @@ import {
   useSpring,
   useTransform,
 } from 'motion/react';
-import { useRef, useState } from 'react';
+import { useRef, useState, memo } from 'react';
 
 interface IDockItemProps {
   id: string;
@@ -94,7 +94,7 @@ function DockItem({
   );
 }
 
-export function Docks({
+export const Docks = memo(function Docks({
   items,
   distance = 200,
   baseSize = 40,
@@ -128,4 +128,4 @@ export function Docks({
       ))}
     </motion.div>
   );
-}
+});

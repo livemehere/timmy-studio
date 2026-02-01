@@ -10,6 +10,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { toast } from 'sonner';
+import { Z_INDEX } from '@/constants/zIndex';
 
 const MIN_PIXELS_PER_SECOND = 2;
 const MAX_PIXELS_PER_SECOND = 100;
@@ -484,19 +485,23 @@ export function TimelinePanel() {
     >
       {/* 현재시간 인디케이터 */}
       <motion.div
-        className="w-0.5 bg-red-500 absolute top-0 z-30 shadow-[0_0_8px_rgba(239,68,68,0.5)]"
+        className="w-0.5 bg-red-500 absolute top-0 shadow-[0_0_8px_rgba(239,68,68,0.5)]"
         style={{
           left: currentTimeLeft,
           marginLeft: trackTitleWidth,
           height: totalTrackHeight,
           pointerEvents: 'none',
+          zIndex: Z_INDEX.timeline.playhead,
         }}
       >
         {/* 플레이헤드 삼각형 */}
         <div className="absolute top-0 -left-1.5 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-8 border-t-red-500" />
       </motion.div>
 
-      <div className="sticky top-0 z-60 bg-neutral-900 shadow-lg">
+      <div
+        className="sticky top-0 bg-neutral-900 shadow-lg"
+        style={{ zIndex: Z_INDEX.timeline.rulerSticky }}
+      >
         <ActionBar />
         <TimelineRulerCanvas
           leftPadding={trackTitleWidth}

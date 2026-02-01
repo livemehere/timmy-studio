@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/field';
 import { useMotionValue } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { Z_INDEX } from '@/constants/zIndex';
 import {
   AlignCenterVertical,
   AlignEndVertical,
@@ -571,18 +572,25 @@ export default function PixiPlaygroundPage() {
   return (
     <div className={'relative h-full flex items-center justify-center gap-4'}>
       <div
-        className="absolute inset-0 z-0"
+        className="absolute inset-0"
         style={{
           background:
             'radial-gradient(125% 125% at 50% 100%, #000000 40%, #010133 100%)',
+          zIndex: Z_INDEX.demo.background,
         }}
       />
 
-      <div className="relative z-10 w-full grid grid-cols-[350px_1fr_350px] gap-4 px-4">
+      <div
+        className="relative w-full grid grid-cols-[350px_1fr_350px] gap-4 px-4"
+        style={{ zIndex: Z_INDEX.demo.content }}
+      >
         <div></div>
 
         <div className={'flex flex-col items-center gap-4'}>
-          <ButtonGroup className="relative z-10">
+          <ButtonGroup
+            className="relative"
+            style={{ zIndex: Z_INDEX.demo.content }}
+          >
             <Button variant={'outline'} onClick={() => create(1920, 1080)}>
               Create
             </Button>
@@ -602,7 +610,10 @@ export default function PixiPlaygroundPage() {
               Stop Recording Audio
             </Button>
           </ButtonGroup>
-          <ButtonGroup className="relative z-10">
+          <ButtonGroup
+            className="relative"
+            style={{ zIndex: Z_INDEX.demo.content }}
+          >
             <Button
               variant={'outline'}
               onClick={async () => {

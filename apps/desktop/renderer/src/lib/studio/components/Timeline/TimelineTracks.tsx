@@ -7,6 +7,7 @@ import { TimelineTrack } from '@/lib/studio/components/Timeline/TimelineTrack';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, useMotionValue } from 'motion/react';
 import { msToSec } from '../../utils/time';
+import { Z_INDEX } from '@/constants/zIndex';
 
 interface SelectionRect {
   startX: number;
@@ -233,7 +234,7 @@ export function TimelineTracks({
       border: '2px solid #60a5fa',
       backgroundColor: 'rgba(96, 165, 250, 0.1)',
       pointerEvents: 'none',
-      zIndex: 1000,
+      zIndex: Z_INDEX.timeline.selectionRect,
     };
   };
 
@@ -253,19 +254,30 @@ export function TimelineTracks({
     >
       {/* Export Range Overlay - left/right dim + range border (motion values) */}
       <motion.div
-        className="absolute top-0 bottom-0 bg-black/60 pointer-events-none z-50"
-        style={{ left: 0, width: leftOverlayWidth, opacity: overlayOpacity }}
+        className="absolute top-0 bottom-0 bg-black/60 pointer-events-none"
+        style={{
+          left: 0,
+          width: leftOverlayWidth,
+          opacity: overlayOpacity,
+          zIndex: Z_INDEX.timeline.overlay,
+        }}
       />
       <motion.div
-        className="absolute top-0 bottom-0 bg-black/60 pointer-events-none z-50"
-        style={{ left: rightOverlayLeft, right: 0, opacity: overlayOpacity }}
+        className="absolute top-0 bottom-0 bg-black/60 pointer-events-none"
+        style={{
+          left: rightOverlayLeft,
+          right: 0,
+          opacity: overlayOpacity,
+          zIndex: Z_INDEX.timeline.overlay,
+        }}
       />
       <motion.div
-        className="absolute top-0 bottom-0 border-x-2 border-emerald-500/80 pointer-events-none z-50"
+        className="absolute top-0 bottom-0 border-x-2 border-emerald-500/80 pointer-events-none"
         style={{
           left: rangeOverlayLeft,
           width: rangeOverlayWidth,
           opacity: overlayOpacity,
+          zIndex: Z_INDEX.timeline.overlay,
         }}
       >
         <div className="absolute -top-6 left-0 right-0 flex justify-between px-1">

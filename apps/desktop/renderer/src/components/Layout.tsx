@@ -1,15 +1,19 @@
 import { css } from '@emotion/react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
-import { Suspense } from 'react';
+import { Suspense, useMemo } from 'react';
 import { Spinner } from './Spinner';
 import { Docks } from './Docks';
 import { createDockItems } from '@/configs/dock';
 
 export default function Layout() {
   const navigate = useNavigate();
-  const docks = createDockItems({
-    navigate,
-  });
+  const docks = useMemo(
+    () =>
+      createDockItems({
+        navigate,
+      }),
+    [navigate]
+  );
   const { pathname } = useLocation();
 
   return (

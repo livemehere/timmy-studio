@@ -13,6 +13,7 @@ import type {
 } from '@/lib/studio/domains/Clip/types';
 import { cn } from '@/lib/utils';
 import { Track } from '@/lib/studio/domains/Track/Track';
+import { Z_INDEX } from '@/constants/zIndex';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -416,6 +417,7 @@ export function TimelineClip({
                 dragMode === 'resize-start' || dragMode === 'resize-end'
                   ? 0
                   : motionX,
+              zIndex: Z_INDEX.timeline.clip,
               cursor: hoverEdge
                 ? 'ew-resize'
                 : isDragging && dragMode === 'move'
@@ -666,7 +668,7 @@ export function TimelineClip({
               }
             }}
             className={cn(
-              'absolute h-full rounded-md overflow-hidden z-5 group',
+              'absolute h-full rounded-md overflow-hidden group',
               'bg-linear-to-b from-cyan-600 to-cyan-700',
               'border border-cyan-500/30',
               'shadow-sm hover:shadow-md transition-shadow',

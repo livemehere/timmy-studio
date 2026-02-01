@@ -35,6 +35,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { Z_INDEX } from '@/constants/zIndex';
 import { toast } from 'sonner';
 
 function TrackButton({
@@ -263,7 +264,6 @@ export function TimelineTrack({
             newClip.newStartTime >= existingClip.endTime
           );
         });
-
         if (hasOverlap) {
           console.error('[TimelineTrack] Cannot paste: clips would overlap');
           toast.error('Cannot paste', {
@@ -309,12 +309,15 @@ export function TimelineTrack({
       <TooltipProvider delayDuration={200}>
         <div
           className={cn(
-            'sticky left-0 z-50 bg-neutral-850 shrink-0 flex items-center gap-1 px-2 border-r border-neutral-800/50',
+            'sticky left-0 bg-neutral-850 shrink-0 flex items-center gap-1 px-2 border-r border-neutral-800/50',
             {
               'bg-blue-950/30 border-l-2 border-l-blue-500': isActive,
             }
           )}
-          style={{ width: trackTitleWidth }}
+          style={{
+            width: trackTitleWidth,
+            zIndex: Z_INDEX.timeline.trackHeader,
+          }}
         >
           {/* Track Type Icon */}
           <div className="flex items-center justify-center w-5 h-5 rounded bg-neutral-700/50">
