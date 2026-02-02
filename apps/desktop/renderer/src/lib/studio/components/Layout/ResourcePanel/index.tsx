@@ -12,6 +12,8 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { Upload, ChevronDown } from 'lucide-react';
+import { css } from '@emotion/react';
+import { GradientScroll } from '@/components/GradientScroll';
 
 export function ResourcePanel() {
   const [activeTabIndex, setActiveTabIndex] = useState(0);
@@ -24,7 +26,8 @@ export function ResourcePanel() {
   return (
     <div className="h-full flex flex-col">
       {/* Top Tabs */}
-      <div className="shrink-0 px-3 py-2 border-b border-neutral-800 overflow-x-auto scrollbar-4">
+
+      <GradientScroll className="px-3 py-2">
         <ToggleGroup
           type="single"
           value={String(activeTabIndex)}
@@ -42,7 +45,7 @@ export function ResourcePanel() {
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
-      </div>
+      </GradientScroll>
 
       {/* Main Content Area */}
       <div className="flex-1 flex min-h-0">
