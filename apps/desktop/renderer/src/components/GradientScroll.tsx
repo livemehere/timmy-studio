@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { useEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 export function GradientScroll({
   children,
@@ -20,9 +20,22 @@ export function GradientScroll({
     setShowRight(el.scrollLeft + el.clientWidth < el.scrollWidth);
   };
 
-  useEffect(() => {
+  // 1️⃣ 최초 레이아웃 확정 직후
+  useLayoutEffect(() => {
     update();
   }, []);
+
+  // 2️⃣ 컨텐츠/사이즈 변화 감지
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+
+    return () => ro.disconnect();
+  }, []);
+
   return (
     <div className="relative">
       {showLeft && (
@@ -31,6 +44,7 @@ export function GradientScroll({
       {showRight && (
         <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-7 bg-linear-to-l from-neutral-950" />
       )}
+
       <div
         ref={scrollRef}
         onScroll={update}

@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { Upload, ChevronDown } from 'lucide-react';
-import { css } from '@emotion/react';
 import { GradientScroll } from '@/components/GradientScroll';
 
 export function ResourcePanel() {
@@ -25,8 +24,6 @@ export function ResourcePanel() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Top Tabs */}
-
       <GradientScroll className="px-3 py-2">
         <ToggleGroup
           type="single"
