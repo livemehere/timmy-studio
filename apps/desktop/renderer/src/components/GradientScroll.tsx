@@ -81,7 +81,7 @@ export function GradientScroll({
         ref={scrollRef}
         onScroll={update}
         className={cn(
-          'shrink-0 scrollbar-4',
+          'shrink-0 scrollbar-2',
           isHorizontal ? 'overflow-x-auto' : 'overflow-y-auto',
           className
         )}
