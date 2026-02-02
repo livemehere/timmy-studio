@@ -145,6 +145,18 @@ body {
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+@layer utilities {
+  .scrollbar-2::-webkit-scrollbar {
+    width: 2px !important;
+    height: 2px !important;
+  }
+
+  .scrollbar-4::-webkit-scrollbar {
+    width: 4px !important;
+    height: 4px !important;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
