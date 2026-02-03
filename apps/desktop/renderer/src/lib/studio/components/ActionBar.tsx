@@ -6,6 +6,8 @@ import {
   ClipboardPaste,
   Layers,
   Files,
+  Film,
+  Music,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,9 +18,16 @@ import {
 } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import { useDocStore, useInteractionStore } from '../hooks/useStudioStores';
 import { cn } from '@/lib/utils';
 import { Track } from '@/lib/studio/domains/Track/Track';
+import type { TrackType } from '../domains/Track/types';
 
 export function ActionBar() {
   const tracks = useDocStore((state) => state.tracks);
@@ -29,25 +38,39 @@ export function ActionBar() {
   const totalClips = tracks.reduce((sum, t) => sum + t.clips.length, 0);
   const hasSelection = selectedClipIds.length > 0;
 
+  const handleAddTrack = (trackType: TrackType) => {
+    const zIndex = Track.getNextTrackZIndex(tracks, trackType);
+    const newTrack = Track.create(trackType, zIndex);
+    addTrack(newTrack);
+  };
+
   return (
     <TooltipProvider delayDuration={300}>
       <div className="h-10 px-3 flex items-center justify-between border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-sm">
         <div className="flex items-center gap-1">
           {/* Track Actions */}
-          <Tooltip>
-            <TooltipTrigger asChild>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-7 px-2 text-xs gap-1.5"
-                onClick={() => addTrack(Track.create('graphic'))}
               >
                 <Plus className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Add Track</span>
               </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">Add new track</TooltipContent>
-          </Tooltip>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleAddTrack('graphic')}>
+                <Film className="h-4 w-4" />
+                Video
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddTrack('audio')}>
+                <Music className="h-4 w-4" />
+                Audio
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <Separator orientation="vertical" className="h-5 mx-1" />
 
