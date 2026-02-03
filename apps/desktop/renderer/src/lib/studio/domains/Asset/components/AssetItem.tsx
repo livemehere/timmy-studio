@@ -21,6 +21,8 @@ import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { Trash2 } from 'lucide-react';
@@ -61,6 +63,37 @@ export function AssetItem({ asset, onAddToTrack, onDelete }: AssetItemProps) {
           <Trash2 />
           Delete
         </ContextMenuItem>
+
+        {Asset.hasMetadata(asset) && (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuLabel>Info</ContextMenuLabel>
+            {asset.metadata.size != null && (
+              <ContextMenuItem disabled>
+                Size: {formatFileSize(asset.metadata.size)}
+              </ContextMenuItem>
+            )}
+            {asset.metadata.durationMs != null && (
+              <ContextMenuItem disabled>
+                Duration:{' '}
+                {formatTime(asset.metadata.durationMs, {
+                  style: 'short',
+                  unit: 'ms',
+                })}
+              </ContextMenuItem>
+            )}
+            {asset.metadata.width != null && asset.metadata.height != null && (
+              <ContextMenuItem disabled>
+                Resolution: {asset.metadata.width} × {asset.metadata.height}
+              </ContextMenuItem>
+            )}
+            {asset.metadata.frameRate != null && (
+              <ContextMenuItem disabled>
+                FPS: {asset.metadata.frameRate} fps
+              </ContextMenuItem>
+            )}
+          </>
+        )}
       </ContextMenuContent>
     </ContextMenu>
   );
@@ -151,10 +184,13 @@ function AssetPreview({
         </button>
       </div>
 
-      {/* File Size */}
-      {Asset.hasMetadata(asset) && asset.metadata.size != null && (
+      {/* Duration Badge - Bottom Left */}
+      {Asset.hasMetadata(asset) && asset.metadata.durationMs != null && (
         <span className="absolute bottom-1 left-1 text-[9px] bg-black/60 px-1 py-0.5 rounded leading-none text-neutral-300">
-          {formatFileSize(asset.metadata.size)}
+          {formatTime(asset.metadata.durationMs, {
+            style: 'short',
+            unit: 'ms',
+          })}
         </span>
       )}
     </div>
