@@ -10,6 +10,8 @@ import {
   Music,
   FileIcon,
   Square,
+  Circle,
+  Triangle,
   Type,
 } from 'lucide-react';
 import { formatFileSize } from '@/lib/studio/utils/size';
@@ -122,8 +124,17 @@ function AssetPreview({
         return <ImageIcon className="h-3 w-3" />;
       case 'audio':
         return <Music className="h-3 w-3" />;
-      case 'shape':
+      case 'shape': {
+        const shapeType = asset.shapeData.shapeType;
+        if (shapeType === 'rectangle' || shapeType === 'rounded-rectangle') {
+          return <Square className="h-3 w-3" />;
+        } else if (shapeType === 'ellipse' || shapeType === 'circle') {
+          return <Circle className="h-3 w-3" />;
+        } else if (shapeType === 'polygon') {
+          return <Triangle className="h-3 w-3" />;
+        }
         return <Square className="h-3 w-3" />;
+      }
       case 'text':
         return <Type className="h-3 w-3" />;
       default:
@@ -212,12 +223,20 @@ function AssetPreviewContent({ asset }: { asset: IAsset }) {
           <Music className="h-8 w-8 text-purple-400/50" />
         </div>
       );
-    case 'shape':
+    case 'shape': {
+      const shapeType = asset.shapeData.shapeType;
+      let IconComp = Square;
+      if (shapeType === 'ellipse' || shapeType === 'circle') {
+        IconComp = Circle;
+      } else if (shapeType === 'polygon') {
+        IconComp = Triangle;
+      }
       return (
         <div className="w-full h-full flex justify-center items-center bg-linear-to-br from-blue-900/30 to-neutral-900">
-          <Square className="h-8 w-8 text-blue-400/50" />
+          <IconComp className="h-8 w-8 text-blue-400/50" />
         </div>
       );
+    }
     case 'text':
       return (
         <div className="w-full h-full flex justify-center items-center bg-linear-to-br from-indigo-900/30 to-neutral-900">
