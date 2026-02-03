@@ -87,7 +87,7 @@ export function ResourcePanel() {
   );
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col select-none">
       {/* Tab Selector */}
       <GradientScroll className="px-3 py-2">
         <ToggleGroup
