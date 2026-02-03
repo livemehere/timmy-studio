@@ -10,21 +10,21 @@ export function StudioApp() {
       <PanelGroup direction={'vertical'}>
         <Panel>
           <PanelGroup direction={'horizontal'}>
-            <Panel className={'bg-neutral-950'} defaultSize={30}>
+            <Panel defaultSize={30}>
               <ResourcePanel />
             </Panel>
             <PanelResizeHandle className={'w-1 bg-black'} />
-            <Panel className={'bg-neutral-950'}>
+            <Panel>
               <PreviewPanel />
             </Panel>
             <PanelResizeHandle className={'w-1 bg-black'} />
-            <Panel className={'bg-neutral-950'} defaultSize={25}>
+            <Panel defaultSize={25}>
               <PropertiesPanel />
             </Panel>
           </PanelGroup>
         </Panel>
         <PanelResizeHandle className={'h-1 bg-black'} />
-        <Panel className={'bg-neutral-950'} defaultSize={40}>
+        <Panel defaultSize={40}>
           <TimelinePanel />
         </Panel>
       </PanelGroup>

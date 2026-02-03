@@ -3,7 +3,7 @@ import { TimerActionBar } from '@/lib/studio/components/TimerActionBar';
 
 export function PreviewPanel() {
   return (
-    <div className="h-full flex flex-col bg-neutral-950">
+    <div className="h-full flex flex-col">
       {/* Preview Canvas Area */}
       <div className="flex-1 min-h-0 relative overflow-hidden">
         <div className="absolute inset-0 flex items-center justify-center">

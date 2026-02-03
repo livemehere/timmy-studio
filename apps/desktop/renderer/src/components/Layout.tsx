@@ -11,7 +11,7 @@ export default function Layout() {
   return (
     <>
       <header
-        className="h-9 flex items-center justify-center text-neutral-400 font-bold text-sm"
+        className="h-9 flex items-center justify-center text-neutral-300 font-bold text-sm bg-black"
         css={css`
           app-region: drag;
         `}
