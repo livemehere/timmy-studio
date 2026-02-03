@@ -115,11 +115,16 @@ export abstract class Clip<
   }
 
   private static createBaseClipFromAsset(asset: IAsset): IBaseClip {
+    const durationMs =
+      asset.type !== 'shape' && asset.type !== 'text'
+        ? (asset.metadata.durationMs ?? Clip.DEFAULT_CLIP_DURATION_MS)
+        : Clip.DEFAULT_CLIP_DURATION_MS;
+
     return {
       id: uid(8),
       name: asset.name,
       startTime: 0,
-      endTime: asset.metadata.durationMs ?? Clip.DEFAULT_CLIP_DURATION_MS,
+      endTime: durationMs,
       effects: [],
       animations: [],
       enabled: true,
@@ -129,11 +134,20 @@ export abstract class Clip<
   }
 
   private static createTransformFromAsset(asset: IAsset): ITransform {
+    const width =
+      asset.type !== 'shape' && asset.type !== 'text'
+        ? (asset.metadata.width ?? Clip.DEFAULT_TRANSFORM_SIZE.width)
+        : Clip.DEFAULT_TRANSFORM_SIZE.width;
+    const height =
+      asset.type !== 'shape' && asset.type !== 'text'
+        ? (asset.metadata.height ?? Clip.DEFAULT_TRANSFORM_SIZE.height)
+        : Clip.DEFAULT_TRANSFORM_SIZE.height;
+
     return {
       position: { x: 0, y: 0 },
       size: {
-        width: asset.metadata.width ?? Clip.DEFAULT_TRANSFORM_SIZE.width,
-        height: asset.metadata.height ?? Clip.DEFAULT_TRANSFORM_SIZE.height,
+        width,
+        height,
       },
       scaleX: 1,
       scaleY: 1,

@@ -13,10 +13,6 @@ export function AudioAssets({ searchText }: { searchText?: string }) {
     : audioAssets;
 
   return (
-    <AssetList
-      assets={filteredAssets}
-      emptyMessage="No audio files"
-      showImport
-    />
+    <AssetList assets={filteredAssets} emptyMessage="No audio" showImport />
   );
 }

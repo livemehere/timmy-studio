@@ -12,10 +12,6 @@ export function AllAssets({ searchText }: { searchText?: string }) {
     : assets;
 
   return (
-    <AssetList
-      assets={filteredAssets}
-      emptyMessage="No assets yet"
-      showImport
-    />
+    <AssetList assets={filteredAssets} emptyMessage="No assets" showImport />
   );
 }

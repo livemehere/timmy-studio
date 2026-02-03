@@ -54,7 +54,7 @@ export function ResourcePanel() {
     () => RESOURCE_TABS[activeTabIndex],
     [activeTabIndex]
   );
-
+  const handleSelectFiles = useSelectAssets();
   const handleSortBy = useCallback(
     (sort: string) => {
       setSortBy(sort);
@@ -85,8 +85,6 @@ export function ResourcePanel() {
     },
     [setAssets]
   );
-
-  const handleSelectFiles = useSelectAssets();
 
   return (
     <div className="h-full flex flex-col">

@@ -1,50 +1,33 @@
-import { Button } from '@/components/ui/button';
-import { useDocStore } from '@/lib/studio/hooks/useStudioStores';
-import { Track } from '@/lib/studio/domains/Track/Track';
-import { Clip } from '@/lib/studio/domains/Clip/Clip';
+import type { ITextData } from '@/lib/studio/types/text';
+import type { ITextAsset } from '@/lib/studio/domains/Asset/types';
+import { AssetList } from '@/lib/studio/domains/Asset/components/AssetList';
+import { uid } from 'uid';
 
-export function TextAssets() {
-  const addClip = useDocStore((state) => state.addClip);
-  const addTrack = useDocStore((state) => state.addTrack);
-  const tracks = useDocStore((state) => state.tracks);
+const createTextAsset = (textData: ITextData, name: string): ITextAsset => ({
+  id: uid(8),
+  name,
+  type: 'text',
+  textData,
+  metadata: { size: 0 },
+});
 
-  const handleAddDefaultText = () => {
-    // 1. 그래픽 트랙 찾기 또는 생성
-    let targetTrack = Track.findTopOrderTrack(tracks, 'graphic');
-
-    if (!targetTrack) {
-      const newTrack = Track.create('graphic');
-      addTrack(newTrack);
-      targetTrack = newTrack;
-    }
-
-    // 2. 텍스트 클립 생성
-    const newClip = Clip.createText({
+const TEXT_PRESETS: Array<{ name: string; data: ITextData }> = [
+  {
+    name: '기본 텍스트',
+    data: {
       content: '기본 텍스트',
       fontSize: 50,
       fontFamily: 'Arial',
       color: '#ffffff',
       align: 'left',
-    });
+    },
+  },
+];
 
-    // 3. 트랙의 마지막 위치에 추가 (겹치지 않게)
-    const lastEndTime = Track.getLastestClipEndTime(targetTrack);
-    newClip.startTime = lastEndTime;
-    newClip.endTime = lastEndTime + Clip.DEFAULT_CLIP_DURATION_MS;
-
-    addClip(targetTrack.id, newClip);
-  };
-
-  return (
-    <div className="p-4 grid grid-cols-2 gap-2">
-      <Button
-        variant="secondary"
-        className="h-24 flex flex-col gap-2"
-        onClick={handleAddDefaultText}
-      >
-        <span className="text-2xl font-bold">T</span>
-        <span className="text-xs text-neutral-400">기본 텍스트</span>
-      </Button>
-    </div>
+export function TextAssets() {
+  const textAssets = TEXT_PRESETS.map((preset) =>
+    createTextAsset(preset.data, preset.name)
   );
+
+  return <AssetList assets={textAssets} emptyMessage="No text available" />;
 }
