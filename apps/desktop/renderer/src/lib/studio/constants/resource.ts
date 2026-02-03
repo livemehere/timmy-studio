@@ -7,12 +7,12 @@ import {
   Pentagon,
   Type,
 } from 'lucide-react';
-import { AllAssets } from '@/lib/studio/domains/Asset/components/AllAssets';
-import { VideoAssets } from '@/lib/studio/domains/Asset/components/VideoAssets';
-import { ImageAssets } from '@/lib/studio/domains/Asset/components/ImageAssets';
-import { AudioAssets } from '@/lib/studio/domains/Asset/components/AudioAssets';
-import { TextAssets } from '@/lib/studio/domains/Asset/components/TextAssets';
-import { ShapeAssets } from '@/lib/studio/domains/Asset/components/ShapeAssets';
+import { AllAssets } from '@/lib/studio/domains/Asset/components/lists/AllAssets';
+import { VideoAssets } from '@/lib/studio/domains/Asset/components/lists/VideoAssets';
+import { ImageAssets } from '@/lib/studio/domains/Asset/components/lists/ImageAssets';
+import { AudioAssets } from '@/lib/studio/domains/Asset/components/lists/AudioAssets';
+import { TextAssets } from '@/lib/studio/domains/Asset/components/lists/TextAssets';
+import { ShapeAssets } from '@/lib/studio/domains/Asset/components/lists/ShapeAssets';
 
 export interface IResourceTab {
   name: string;

@@ -1,6 +1,6 @@
 import { filter } from 'lodash-es';
-import { useDocStore } from '../../../hooks/useStudioStores';
-import { AssetList } from './AssetList';
+import { useDocStore } from '../../../../hooks/useStudioStores';
+import { AssetList } from '../AssetList';
 
 export function ImageAssets({ searchText }: { searchText?: string }) {
   const assets = useDocStore((state) => state.assets);
