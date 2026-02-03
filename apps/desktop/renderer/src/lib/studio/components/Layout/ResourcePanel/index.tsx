@@ -1,24 +1,68 @@
-import { useMemo, useState } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  memo,
+  useEffectEvent,
+  useCallback,
+} from 'react';
 import { RESOURCE_TABS } from '@/lib/studio/constants/resource';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Button } from '@/components/ui/button';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Upload } from 'lucide-react';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { ArrowDownWideNarrow, FolderUp } from 'lucide-react';
 import { GradientScroll } from '@/components/GradientScroll';
 import { useSelectAssets } from '@/lib/studio/domains/Asset/hooks/useSelectAssets';
+import { useDocStore } from '@/lib/studio/hooks/useStudioStores';
+import { Input } from '@/components/ui/input';
+import { Field } from '@/components/ui/field';
+import { cn } from '@/lib/utils';
 
 export function ResourcePanel() {
+  const setAssets = useDocStore((s) => s.setAssets);
   const [activeTabIndex, setActiveTabIndex] = useState(0);
+  const [searchText, setSearchText] = useState('');
   const [sortBy, setSortBy] = useState('date');
   const activeTab = useMemo(
     () => RESOURCE_TABS[activeTabIndex],
     [activeTabIndex]
+  );
+
+  const handleSortBy = useCallback(
+    (sort: string) => {
+      setSortBy(sort);
+      setAssets((assets) => {
+        const sorted = [...assets];
+        switch (sort) {
+          case 'date':
+            sorted.sort((a, b) => {
+              const aDate = a.metadata.createdAt;
+              const bDate = b.metadata.createdAt;
+              if (!aDate && !bDate) return 0;
+              if (!aDate) return 1;
+              if (!bDate) return -1;
+              return bDate.localeCompare(aDate);
+            });
+            break;
+          case 'name':
+            sorted.sort((a, b) => a.name.localeCompare(b.name));
+            break;
+          case 'size':
+            sorted.sort(
+              (a, b) => (b.metadata.size || 0) - (a.metadata.size || 0)
+            );
+            break;
+        }
+        return sorted;
+      });
+    },
+    [setAssets]
   );
 
   const handleSelectFiles = useSelectAssets();
@@ -46,42 +90,95 @@ export function ResourcePanel() {
         </ToggleGroup>
       </GradientScroll>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex min-h-0">
-        {/* Right Content */}
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Toolbar */}
-          <div className="shrink-0 px-3 py-2 border-b border-neutral-800 flex items-center justify-between gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 px-3 gap-2 text-xs bg-transparent border-neutral-700 text-neutral-300 hover:bg-neutral-800 hover:text-white"
-              onClick={handleSelectFiles}
-            >
-              <Upload className="h-3.5 w-3.5" />
-              Import
-            </Button>
+      {/* Tab Content Area */}
+      <div className="flex-1 flex flex-col min-h-0">
+        <SearchAndSortBar
+          searchText={searchText}
+          onSearchChange={setSearchText}
+          sortBy={sortBy}
+          onSortChange={handleSortBy}
+        />
 
-            <div className="flex items-center gap-2">
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="h-8 w-24 text-xs bg-transparent border-neutral-700">
-                  <SelectValue placeholder="Sort" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="date">Date</SelectItem>
-                  <SelectItem value="name">Name</SelectItem>
-                  <SelectItem value="size">Size</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+        <button
+          className="flex justify-center items-center gap-2 text-sm py-4 m-2 rounded text-neutral-400 hover:bg-neutral-700/20 hover:text-white transition-colors cursor-pointer"
+          onClick={handleSelectFiles}
+        >
+          <FolderUp stroke="currentColor" size={20} />
+          <span>UPLOAD</span>
+        </button>
 
-          {/* Content Grid */}
-          <div className="flex-1 overflow-auto p-3">
-            <activeTab.ContentComp />
-          </div>
+        {/* Content Grid */}
+        <div className="flex-1 overflow-auto p-3">
+          <activeTab.ContentComp key={activeTabIndex} searchText={searchText} />
         </div>
       </div>
     </div>
   );
 }
+
+// 검색 및 정렬 바
+const SearchAndSortBar = ({
+  searchText,
+  onSearchChange,
+  sortBy,
+  onSortChange,
+}: {
+  searchText: string;
+  onSearchChange: (text: string) => void;
+  sortBy: string;
+  onSortChange: (sortBy: string) => void;
+}) => {
+  return (
+    <div className="shrink-0 px-3 py-2 border-b border-neutral-800 flex items-center justify-between gap-2">
+      <Input
+        placeholder="search..."
+        className=""
+        value={searchText}
+        onChange={(e) => onSearchChange(e.target.value)}
+      />
+      <SortBySelect sortBy={sortBy} onChange={onSortChange} />
+    </div>
+  );
+};
+
+// 정렬 버튼
+const SortBySelect = ({
+  sortBy,
+  onChange,
+}: {
+  sortBy: string;
+  onChange: (sortBy: string) => void;
+}) => {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="icon-sm">
+          <ArrowDownWideNarrow />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuCheckboxItem
+          checked={sortBy === 'date'}
+          onCheckedChange={() => onChange('date')}
+          className={cn('text-xs', sortBy === 'date' ? 'font-bold' : '')}
+        >
+          Date
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem
+          checked={sortBy === 'name'}
+          onCheckedChange={() => onChange('name')}
+          className={cn('text-xs', sortBy === 'name' ? 'font-bold' : '')}
+        >
+          Name
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem
+          checked={sortBy === 'size'}
+          onCheckedChange={() => onChange('size')}
+          className={cn('text-xs', sortBy === 'size' ? 'font-bold' : '')}
+        >
+          Size
+        </DropdownMenuCheckboxItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};

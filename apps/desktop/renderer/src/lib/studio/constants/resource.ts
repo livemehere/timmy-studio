@@ -17,7 +17,7 @@ import { ShapeAssets } from '@/lib/studio/domains/Asset/components/ShapeAssets';
 export interface IResourceTab {
   name: string;
   IconComp: LucideIcon;
-  ContentComp: React.ComponentType;
+  ContentComp: React.ComponentType<{ searchText?: string }>;
 }
 
 export const RESOURCE_TABS: IResourceTab[] = [

@@ -1,8 +1,18 @@
+import { filter } from 'lodash-es';
 import { useDocStore } from '../../../hooks/useStudioStores';
 import { AssetList } from './AssetList';
 
-export function VideoAssets() {
+export function VideoAssets({ searchText }: { searchText?: string }) {
   const assets = useDocStore((state) => state.assets);
   const videoAssets = assets.filter((asset) => asset.type === 'video');
-  return <AssetList assets={videoAssets} emptyMessage="No videos" showImport />;
+
+  const filteredAssets = searchText
+    ? filter(videoAssets, (asset) =>
+        asset.name.toLowerCase().includes(searchText.toLowerCase())
+      )
+    : videoAssets;
+
+  return (
+    <AssetList assets={filteredAssets} emptyMessage="No videos" showImport />
+  );
 }
