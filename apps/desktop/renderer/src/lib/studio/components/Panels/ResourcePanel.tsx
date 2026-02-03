@@ -1,5 +1,4 @@
 import { useMemo, useState, useCallback } from 'react';
-import { RESOURCE_TABS } from '@/lib/studio/constants/resource';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,12 +7,43 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ArrowDownWideNarrow, FolderUp } from 'lucide-react';
+import {
+  ArrowDownWideNarrow,
+  Box,
+  Clapperboard,
+  FolderUp,
+  Headphones,
+  Pentagon,
+  Type,
+  Image,
+  type LucideIcon,
+} from 'lucide-react';
 import { GradientScroll } from '@/components/GradientScroll';
 import { useSelectAssets } from '@/lib/studio/domains/Asset/hooks/useSelectAssets';
 import { useDocStore } from '@/lib/studio/hooks/useStudioStores';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { AllAssets } from '../../domains/Asset/components/lists/AllAssets';
+import { VideoAssets } from '../../domains/Asset/components/lists/VideoAssets';
+import { ImageAssets } from '../../domains/Asset/components/lists/ImageAssets';
+import { AudioAssets } from '../../domains/Asset/components/lists/AudioAssets';
+import { TextAssets } from '../../domains/Asset/components/lists/TextAssets';
+import { ShapeAssets } from '../../domains/Asset/components/lists/ShapeAssets';
+
+interface IResourceTab {
+  name: string;
+  IconComp: LucideIcon;
+  ContentComp: React.ComponentType<{ searchText?: string }>;
+}
+
+const RESOURCE_TABS: IResourceTab[] = [
+  { name: 'All', IconComp: Box, ContentComp: AllAssets },
+  { name: 'Video', IconComp: Clapperboard, ContentComp: VideoAssets },
+  { name: 'Image', IconComp: Image, ContentComp: ImageAssets },
+  { name: 'Audio', IconComp: Headphones, ContentComp: AudioAssets },
+  { name: 'Text', IconComp: Type, ContentComp: TextAssets },
+  { name: 'Shape', IconComp: Pentagon, ContentComp: ShapeAssets },
+];
 
 export function ResourcePanel() {
   const setAssets = useDocStore((s) => s.setAssets);
