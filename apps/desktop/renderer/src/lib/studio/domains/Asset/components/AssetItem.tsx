@@ -1,4 +1,5 @@
 import type { AssetStatus, IAsset } from '@/lib/studio/domains/Asset/types';
+import { Asset } from '@/lib/studio/domains/Asset/Asset';
 import { cn } from '@/lib/utils';
 import { formatTime } from '@/lib/studio/utils/time';
 import { toFilePath } from '@/lib/studio/utils/toFilePath';
@@ -37,8 +38,7 @@ export function AssetItem({ asset, onAddToTrack, onDelete }: AssetItemProps) {
   const { status } = useAsset(asset);
 
   const isDisabled =
-    (asset.type !== 'shape' && asset.type !== 'text' && status.isError) ||
-    (asset.type !== 'shape' && asset.type !== 'text' && !status.isReady);
+    Asset.isMediaAsset(asset) && (status.isError || !status.isReady);
 
   return (
     <ContextMenu>
@@ -112,29 +112,24 @@ function AssetPreview({
       </Badge>
 
       {/* Duration Badge */}
-      {asset.type !== 'shape' &&
-        asset.type !== 'text' &&
-        asset.metadata.durationMs != null && (
-          <span className="absolute top-1 right-1 text-[9px] bg-black/60 px-1 py-0.5 rounded leading-none text-white">
-            {formatTime(asset.metadata.durationMs, {
-              style: 'short',
-              unit: 'ms',
-            })}
-          </span>
-        )}
+      {Asset.hasMetadata(asset) && asset.metadata.durationMs != null && (
+        <span className="absolute top-1 right-1 text-[9px] bg-black/60 px-1 py-0.5 rounded leading-none text-white">
+          {formatTime(asset.metadata.durationMs, {
+            style: 'short',
+            unit: 'ms',
+          })}
+        </span>
+      )}
 
       {/* Loading Overlay */}
-      {asset.type !== 'shape' &&
-        asset.type !== 'text' &&
-        !status.isReady &&
-        !status.isError && (
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center">
-            <Spinner />
-          </div>
-        )}
+      {Asset.isMediaAsset(asset) && !status.isReady && !status.isError && (
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center">
+          <Spinner />
+        </div>
+      )}
 
       {/* Error Overlay */}
-      {asset.type !== 'shape' && asset.type !== 'text' && status.isError && (
+      {Asset.isMediaAsset(asset) && status.isError && (
         <div className="absolute inset-0 bg-red-900/70 flex flex-col justify-center items-center gap-1">
           <span className="text-red-200 text-[10px] font-bold">ERROR</span>
         </div>
@@ -149,7 +144,7 @@ function AssetPreview({
           )}
           disabled={isDisabled}
           onClick={() => {
-            onAddToTrack(asset, { position: 'endOfTrack' });
+            onAddToTrack(asset, { position: 'currentTime' });
           }}
         >
           <Plus className="text-white h-3 w-3" />
@@ -157,13 +152,11 @@ function AssetPreview({
       </div>
 
       {/* File Size */}
-      {asset.type !== 'shape' &&
-        asset.type !== 'text' &&
-        asset.metadata.size != null && (
-          <span className="absolute bottom-1 left-1 text-[9px] bg-black/60 px-1 py-0.5 rounded leading-none text-neutral-300">
-            {formatFileSize(asset.metadata.size)}
-          </span>
-        )}
+      {Asset.hasMetadata(asset) && asset.metadata.size != null && (
+        <span className="absolute bottom-1 left-1 text-[9px] bg-black/60 px-1 py-0.5 rounded leading-none text-neutral-300">
+          {formatFileSize(asset.metadata.size)}
+        </span>
+      )}
     </div>
   );
 }

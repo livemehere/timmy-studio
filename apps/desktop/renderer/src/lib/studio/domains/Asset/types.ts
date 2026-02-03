@@ -9,8 +9,8 @@ export interface IBaseAssetMetadata {
 
 export interface IMediaAssetMetadata extends IBaseAssetMetadata {
   durationMs?: number;
-  width?: number;
-  height?: number;
+  width: number;
+  height: number;
   frameRate?: number;
   codec?: string;
 }

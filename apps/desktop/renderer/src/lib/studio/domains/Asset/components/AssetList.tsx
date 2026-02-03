@@ -5,7 +5,7 @@ import { useDocStore } from '@/lib/studio/hooks/useStudioStores';
 import { useEngineStore } from '@/lib/studio/hooks/useStudioStores';
 import { Track } from '@/lib/studio/domains/Track/Track';
 import { Clip } from '@/lib/studio/domains/Clip/Clip';
-import type { ITrack, TrackType } from '@/lib/studio/domains/Track/types';
+import type { ITrack } from '@/lib/studio/domains/Track/types';
 import type { IClip } from '@/lib/studio/domains/Clip/types';
 import { motion } from 'motion/react';
 
@@ -25,11 +25,7 @@ export function AssetList({
   const addTrack = useDocStore((state) => state.addTrack);
   const tracks = useDocStore((state) => state.tracks);
   const removeAsset = useDocStore((state) => state.removeAsset);
-  const timer = useEngineStore((state) => state.timer);
-
-  const handleDelete = (asset: IAsset) => {
-    removeAsset(asset.id);
-  };
+  const timer = useEngineStore((state) => state.timer)!;
 
   const handleAddToTrack = (
     asset: IAsset,
@@ -38,7 +34,10 @@ export function AssetList({
     const { position } = options;
 
     // 트랙 타입 결정
-    const trackType: TrackType = asset.type === 'audio' ? 'audio' : 'graphic';
+    const trackType = Track.convertAssetTypeToTrackType(asset.type);
+    const candidateTracks = tracks
+      .filter((t) => t.type === trackType)
+      .sort((a, b) => a.zIndex - b.zIndex);
 
     // 클립 생성
     let newClip: IClip;
@@ -60,16 +59,17 @@ export function AssetList({
         return;
     }
 
+    const duration = newClip.endTime - newClip.startTime;
+
     if (position === 'currentTime') {
       // currentTime 위치에 배치
-      const currentTime = timer?.currentMs ?? 0;
+      const currentTime = timer.currentMs;
+
+      // startTime 을 바꾸면서, endTime 을 duration 만큼 같이 바꿔줌
       newClip.startTime = currentTime;
-      newClip.endTime = currentTime + Clip.DEFAULT_CLIP_DURATION_MS;
+      newClip.endTime = currentTime + duration;
 
       // 같은 타입의 트랙을 zIndex 낮은 순서대로 찾기
-      const candidateTracks = tracks
-        .filter((t) => t.type === trackType)
-        .sort((a, b) => a.zIndex - b.zIndex);
 
       let targetTrack: ITrack | undefined;
 
@@ -97,11 +97,6 @@ export function AssetList({
 
       addClip(targetTrack.id, newClip);
     } else {
-      // endOfTrack 위치에 배치
-      const candidateTracks = tracks
-        .filter((t) => t.type === trackType)
-        .sort((a, b) => a.zIndex - b.zIndex);
-
       let targetTrack: ITrack | undefined;
       let maxEndTime = 0;
 
@@ -119,19 +114,17 @@ export function AssetList({
             targetTrack = track;
           }
         }
-
-        if (!targetTrack) {
-          targetTrack = candidateTracks[0];
-        }
+        // candidateTracks가 비어있지 않으면 항상 targetTrack이 할당됨
       }
 
-      const endTime = Track.getLastestClipEndTime(targetTrack);
+      const endTime = Track.getLastestClipEndTime(targetTrack!);
       newClip.startTime = endTime;
-      newClip.endTime = endTime + Clip.DEFAULT_CLIP_DURATION_MS;
+      newClip.endTime = endTime + duration;
 
-      addClip(targetTrack.id, newClip);
+      addClip(targetTrack!.id, newClip);
     }
   };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header with optional import button */}
@@ -163,7 +156,7 @@ export function AssetList({
               key={asset.id}
               asset={asset}
               onAddToTrack={handleAddToTrack}
-              onDelete={handleDelete}
+              onDelete={() => removeAsset(asset.id)}
             />
           ))}
         </motion.div>

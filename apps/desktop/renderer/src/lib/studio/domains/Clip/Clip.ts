@@ -27,7 +27,7 @@ export abstract class Clip<
 > implements Dirtyable
 {
   static DEBUG_LIFECYCLE = false;
-  static readonly DEFAULT_CLIP_DURATION_MS = 3000; //ms
+  static readonly DEFAULT_CLIP_DURATION_MS = 5000; //ms
   static readonly DEFAULT_TRANSFORM_SIZE = {
     width: 150,
     height: 150,
@@ -136,11 +136,11 @@ export abstract class Clip<
   private static createTransformFromAsset(asset: IAsset): ITransform {
     const width =
       asset.type !== 'shape' && asset.type !== 'text'
-        ? (asset.metadata.width ?? Clip.DEFAULT_TRANSFORM_SIZE.width)
+        ? asset.metadata.width
         : Clip.DEFAULT_TRANSFORM_SIZE.width;
     const height =
       asset.type !== 'shape' && asset.type !== 'text'
-        ? (asset.metadata.height ?? Clip.DEFAULT_TRANSFORM_SIZE.height)
+        ? asset.metadata.height
         : Clip.DEFAULT_TRANSFORM_SIZE.height;
 
     return {
