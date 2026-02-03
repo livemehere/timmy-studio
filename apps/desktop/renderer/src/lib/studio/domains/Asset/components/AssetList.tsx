@@ -129,9 +129,7 @@ export function AssetList({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header with optional import button */}
-
-      {/* Content */}
+      {/* no content */}
       {assets.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-3 text-neutral-500">
           <div className="w-12 h-12 rounded-xl bg-neutral-800/50 flex items-center justify-center">

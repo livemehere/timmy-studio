@@ -88,7 +88,7 @@ export function AssetItem({ asset, onAddToTrack, onDelete }: AssetItemProps) {
             )}
             {asset.metadata.frameRate != null && (
               <ContextMenuItem disabled>
-                FPS: {asset.metadata.frameRate} fps
+                FPS: {asset.metadata.frameRate.toFixed(2)} fps
               </ContextMenuItem>
             )}
           </>
@@ -142,16 +142,6 @@ function AssetPreview({
       >
         {getTypeIcon()}
       </Badge>
-
-      {/* Duration Badge */}
-      {Asset.hasMetadata(asset) && asset.metadata.durationMs != null && (
-        <span className="absolute top-1 right-1 text-[9px] bg-black/60 px-1 py-0.5 rounded leading-none text-white">
-          {formatTime(asset.metadata.durationMs, {
-            style: 'short',
-            unit: 'ms',
-          })}
-        </span>
-      )}
 
       {/* Loading Overlay */}
       {Asset.isMediaAsset(asset) && !status.isReady && !status.isError && (

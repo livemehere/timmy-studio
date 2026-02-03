@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 const AUTO_SAVE_KEY = 'autosave-doc';
 
 export default function VideoEditorPage() {
-  // TODO: if there is no auto-saved data, open dialog to create new project
+  // TODO: audo save 데이터가 없다면, 새로운 프로젝트 생성 dialog 띄우기
   const initialProject = useMemo(() => {
     let autoSaved: IProject | null = null;
     try {
