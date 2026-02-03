@@ -1,11 +1,4 @@
-import {
-  useEffect,
-  useMemo,
-  useState,
-  memo,
-  useEffectEvent,
-  useCallback,
-} from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { RESOURCE_TABS } from '@/lib/studio/constants/resource';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Button } from '@/components/ui/button';
@@ -13,7 +6,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ArrowDownWideNarrow, FolderUp } from 'lucide-react';
@@ -21,7 +13,6 @@ import { GradientScroll } from '@/components/GradientScroll';
 import { useSelectAssets } from '@/lib/studio/domains/Asset/hooks/useSelectAssets';
 import { useDocStore } from '@/lib/studio/hooks/useStudioStores';
 import { Input } from '@/components/ui/input';
-import { Field } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 
 export function ResourcePanel() {
@@ -99,8 +90,9 @@ export function ResourcePanel() {
           onSortChange={handleSortBy}
         />
 
+        {/* Upload Button */}
         <button
-          className="flex justify-center items-center gap-2 text-sm py-4 m-2 rounded text-neutral-400 hover:bg-neutral-700/20 hover:text-white transition-colors cursor-pointer"
+          className="flex justify-center items-center gap-2 text-sm py-4 m-2 rounded text-neutral-400 hover:bg-neutral-700/20 hover:text-white transition-colors cursor-pointer border border-dashed border-neutral-700/40"
           onClick={handleSelectFiles}
         >
           <FolderUp stroke="currentColor" size={20} />

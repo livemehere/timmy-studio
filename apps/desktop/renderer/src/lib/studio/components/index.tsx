@@ -1,8 +1,8 @@
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { PreviewPanel } from '@/lib/studio/components/Layout/PreviewPanel';
-import { PropertiesPanel } from '@/lib/studio/components/Layout/PropertiesPanel';
-import { TimelinePanel } from '@/lib/studio/components/Layout/TimelinePanel';
-import { ResourcePanel } from '@/lib/studio/components/Layout/ResourcePanel';
+import { PreviewPanel } from '@/lib/studio/components/Panels/PreviewPanel';
+import { PropertiesPanel } from '@/lib/studio/components/Panels/PropertiesPanel';
+import { TimelinePanel } from '@/lib/studio/components/Panels/TimelinePanel';
+import { ResourcePanel } from '@/lib/studio/components/Panels/ResourcePanel';
 
 export function StudioApp() {
   return (
