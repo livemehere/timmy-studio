@@ -8,7 +8,8 @@ import { uid } from 'uid';
 import type { Clip } from '../Clip';
 
 // 기본 트랙의 zIndex (위/아래로 최대 50개씩 트랙 추가 가능)
-export const DEFAULT_TRACK_Z_INDEX = 50;
+export const DEFAULT_GRAPHIC_TRACK_Z_INDEX = 0;
+export const DEFAULT_AUDIO_TRACK_Z_INDEX = -1;
 
 export abstract class Track<
   TTrackData extends ITrack = ITrack,
@@ -159,12 +160,33 @@ export abstract class Track<
     return 'graphic';
   }
 
-  static create(type: TrackType) {
+  static getNextTrackZIndex(tracks: ITrack[], type: TrackType): number {
+    const sameTypeTracks = tracks
+      .filter((t) => t.type === type)
+      .sort((a, b) => a.zIndex - b.zIndex);
+    if (sameTypeTracks.length === 0) {
+      return type === 'graphic'
+        ? DEFAULT_GRAPHIC_TRACK_Z_INDEX
+        : DEFAULT_AUDIO_TRACK_Z_INDEX;
+    }
+
+    // 오디오 트랙은 zIndex가 영향이 없음으로, 가장 아래에 추가
+    if (type === 'audio') {
+      const bottomTrack = sameTypeTracks[0];
+      return bottomTrack.zIndex - 1;
+    }
+
+    // 그래픽 트랙은 zIndex가 높을수록 위에 위치
+    const topTrack = sameTypeTracks[sameTypeTracks.length - 1];
+    return topTrack.zIndex + 1;
+  }
+
+  static create(type: TrackType, zIndex?: number): ITrack {
     if (type === 'graphic') {
       const track: IGraphicTrack = {
         id: uid(8),
         name: 'G-Track',
-        zIndex: DEFAULT_TRACK_Z_INDEX,
+        zIndex: zIndex ?? DEFAULT_GRAPHIC_TRACK_Z_INDEX,
         type: 'graphic',
         enabled: true,
         locked: false,
@@ -176,7 +198,7 @@ export abstract class Track<
       const track: IAudioTrack = {
         id: uid(8),
         name: 'A-Track',
-        zIndex: DEFAULT_TRACK_Z_INDEX,
+        zIndex: zIndex ?? DEFAULT_AUDIO_TRACK_Z_INDEX,
         type: 'audio',
         enabled: true,
         locked: false,

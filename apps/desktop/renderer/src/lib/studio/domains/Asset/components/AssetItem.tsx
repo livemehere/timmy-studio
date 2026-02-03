@@ -3,7 +3,6 @@ import { Asset } from '@/lib/studio/domains/Asset/Asset';
 import { cn } from '@/lib/utils';
 import { formatTime } from '@/lib/studio/utils/time';
 import { toFilePath } from '@/lib/studio/utils/toFilePath';
-import { useAsset } from '@/lib/studio/domains/Asset/hooks/useAsset';
 import {
   Plus,
   Film,
@@ -37,7 +36,7 @@ export interface AssetItemProps {
 }
 
 export function AssetItem({ asset, onAddToTrack, onDelete }: AssetItemProps) {
-  const { status } = useAsset(asset);
+  const status = Asset.getStatus(asset);
 
   const isDisabled =
     Asset.isMediaAsset(asset) && (status.isError || !status.isReady);

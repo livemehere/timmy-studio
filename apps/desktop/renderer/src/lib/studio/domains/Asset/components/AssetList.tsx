@@ -90,7 +90,8 @@ export function AssetList({
 
       // 충돌하지 않는 트랙이 없으면 새로 생성
       if (!targetTrack) {
-        const newTrack = Track.create(trackType);
+        const zIndex = Track.getNextTrackZIndex(tracks, trackType);
+        const newTrack = Track.create(trackType, zIndex);
         addTrack(newTrack);
         targetTrack = newTrack;
       }
@@ -102,7 +103,8 @@ export function AssetList({
 
       if (candidateTracks.length === 0) {
         // 트랙이 없으면 새로 생성
-        const newTrack = Track.create(trackType);
+        const zIndex = Track.getNextTrackZIndex(tracks, trackType);
+        const newTrack = Track.create(trackType, zIndex);
         addTrack(newTrack);
         targetTrack = newTrack;
       } else {
