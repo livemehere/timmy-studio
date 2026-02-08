@@ -1,6 +1,6 @@
-import { useMotionValue, useMotionValueEvent } from 'motion/react';
+import { useMotionValue } from 'motion/react';
 import { useEffect } from 'react';
-import { MotionNumberInput } from '@/components/motion-number-input';
+import { MotionNumberInput } from '@/lib/motion-input';
 import { Play, Square } from 'lucide-react';
 
 interface RangePropertyProps {
@@ -9,6 +9,9 @@ interface RangePropertyProps {
   onChangeStartTime: (value: number) => void;
   onChangeEndTime: (value: number) => void;
   onChanged?: () => void;
+  onLiveStartTimeChange?: (value: number) => void;
+  onLiveEndTimeChange?: (value: number) => void;
+  onInteractionStart?: () => void;
 }
 
 export function RangeProperty({
@@ -17,6 +20,9 @@ export function RangeProperty({
   onChangeStartTime,
   onChangeEndTime,
   onChanged,
+  onLiveStartTimeChange,
+  onLiveEndTimeChange,
+  onInteractionStart,
 }: RangePropertyProps) {
   const startTimeValue = useMotionValue(startTime);
   const endTimeValue = useMotionValue(endTime);
@@ -29,22 +35,16 @@ export function RangeProperty({
     endTimeValue.set(endTime);
   }, [endTime]);
 
-  useMotionValueEvent(startTimeValue, 'change', (v) => {
-    onChangeStartTime(v);
-  });
-
-  useMotionValueEvent(endTimeValue, 'change', (v) => {
-    onChangeEndTime(v);
-  });
-
-  const handleStartTimeChange = (v: number) => {
+  const handleStartTimeCommit = (v: number) => {
     onChangeStartTime(v);
     onChanged?.();
+    // TODO: undo history push
   };
 
-  const handleEndTimeChange = (v: number) => {
+  const handleEndTimeCommit = (v: number) => {
     onChangeEndTime(v);
     onChanged?.();
+    // TODO: undo history push
   };
 
   return (
@@ -53,7 +53,9 @@ export function RangeProperty({
         <MotionNumberInput
           value={startTimeValue}
           map={(v) => Math.max(0, Number(v.toFixed(2)))}
-          onChange={handleStartTimeChange}
+          onLiveChange={onLiveStartTimeChange}
+          onCommit={handleStartTimeCommit}
+          onInteractionStart={onInteractionStart}
           min={0}
           step={0.1}
           icon={<Play size={14} />}
@@ -61,7 +63,9 @@ export function RangeProperty({
         <MotionNumberInput
           value={endTimeValue}
           map={(v) => Math.max(startTimeValue.get(), Number(v.toFixed(2)))}
-          onChange={handleEndTimeChange}
+          onLiveChange={onLiveEndTimeChange}
+          onCommit={handleEndTimeCommit}
+          onInteractionStart={onInteractionStart}
           min={startTimeValue.get()}
           step={0.1}
           icon={<Square size={14} />}

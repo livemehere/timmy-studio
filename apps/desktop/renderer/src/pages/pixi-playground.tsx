@@ -24,7 +24,7 @@ import {
   Link2,
   TriangleRight,
 } from 'lucide-react';
-import { MotionNumberInput } from '@/components/motion-number-input';
+import { MotionNumberInput } from '@/lib/motion-input';
 import { BlurFilter, Graphics, NoiseFilter } from 'pixi.js';
 import { css } from '@emotion/react';
 import { animate } from 'motion';

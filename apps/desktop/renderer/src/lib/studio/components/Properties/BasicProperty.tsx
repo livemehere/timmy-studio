@@ -1,25 +1,29 @@
 import { TextField, ToggleField } from '../inputs';
 
 interface BasicPropertyProps {
-  name: string;
-  enabled: boolean;
-  onChangeName: (value: string) => void;
-  onChangeEnabled: (checked: boolean) => void;
+  defaultName: string;
+  defaultEnabled: boolean;
+  onCommitName: (value: string) => void;
+  onCommitEnabled: (checked: boolean) => void;
 }
 
 export function BasicProperty({
-  name,
-  enabled,
-  onChangeName,
-  onChangeEnabled,
+  defaultName,
+  defaultEnabled,
+  onCommitName,
+  onCommitEnabled,
 }: BasicPropertyProps) {
   return (
     <div className="space-y-3">
-      <TextField label="Name" value={name} onChange={onChangeName} />
+      <TextField
+        label="Name"
+        defaultValue={defaultName}
+        onCommit={onCommitName}
+      />
       <ToggleField
         label="Enabled"
-        checked={enabled}
-        onChange={onChangeEnabled}
+        checked={defaultEnabled}
+        onChange={onCommitEnabled}
       />
     </div>
   );

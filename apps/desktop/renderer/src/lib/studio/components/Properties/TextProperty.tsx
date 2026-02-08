@@ -28,8 +28,8 @@ export function TextProperty({
 
       <TextField
         label="Font Family"
-        value={textData.fontFamily}
-        onChange={(value) => handleChange({ fontFamily: value })}
+        defaultValue={textData.fontFamily}
+        onCommit={(value) => handleChange({ fontFamily: value })}
       />
 
       <NumberField

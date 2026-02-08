@@ -1,9 +1,9 @@
 import { AlignPresetButtons } from '../inputs';
 import type { ITransform } from '../../domains/Clip/types';
 import type { JsonPath, JsonPrimitive } from '../../utils/transformHelpers';
-import { useMotionValue, useMotionValueEvent } from 'motion/react';
+import { useMotionValue } from 'motion/react';
 import { useEffect } from 'react';
-import { MotionNumberInput } from '@/components/motion-number-input';
+import { MotionNumberInput } from '@/lib/motion-input';
 
 interface TransformPropertyProps {
   transforms: ITransform;
@@ -14,6 +14,7 @@ interface TransformPropertyProps {
   isTextClip?: boolean;
   canvasWidth?: number;
   canvasHeight?: number;
+  onInteractionStart?: () => void;
 }
 
 export function TransformProperty({
@@ -25,6 +26,7 @@ export function TransformProperty({
   isTextClip = false,
   canvasWidth = 1920,
   canvasHeight = 1080,
+  onInteractionStart,
 }: TransformPropertyProps) {
   const positionX = useMotionValue(transforms?.position?.x ?? 0);
   const positionY = useMotionValue(transforms?.position?.y ?? 0);
@@ -50,54 +52,6 @@ export function TransformProperty({
     opacity.set(transforms?.opacity ?? 1);
   }, [transforms]);
 
-  useMotionValueEvent(positionX, 'change', (v) => {
-    if (onLiveChange) {
-      onLiveChange(['position', 'x'], v);
-    }
-  });
-
-  useMotionValueEvent(positionY, 'change', (v) => {
-    if (onLiveChange) {
-      onLiveChange(['position', 'y'], v);
-    }
-  });
-
-  useMotionValueEvent(sizeWidth, 'change', (v) => {
-    if (onLiveChange) {
-      onLiveChange(['size', 'width'], v);
-    }
-  });
-
-  useMotionValueEvent(sizeHeight, 'change', (v) => {
-    if (onLiveChange) {
-      onLiveChange(['size', 'height'], v);
-    }
-  });
-
-  useMotionValueEvent(scaleX, 'change', (v) => {
-    if (onLiveChange) {
-      onLiveChange(['scaleX'], v);
-    }
-  });
-
-  useMotionValueEvent(scaleY, 'change', (v) => {
-    if (onLiveChange) {
-      onLiveChange(['scaleY'], v);
-    }
-  });
-
-  useMotionValueEvent(rotation, 'change', (v) => {
-    if (onLiveChange) {
-      onLiveChange(['rotation'], (v * Math.PI) / 180);
-    }
-  });
-
-  useMotionValueEvent(opacity, 'change', (v) => {
-    if (onLiveChange) {
-      onLiveChange(['opacity'], v);
-    }
-  });
-
   const handleAlignX = (alignX: 'left' | 'center' | 'right') => {
     const xValue =
       alignX === 'left'
@@ -115,9 +69,11 @@ export function TransformProperty({
       updates.position!.x = xValue;
       onBatchChange(updates);
       onChanged?.();
+      // TODO: undo history push
     } else {
       onChange(['position', 'x'], xValue);
       onChanged?.();
+      // TODO: undo history push
     }
   };
 
@@ -138,50 +94,108 @@ export function TransformProperty({
       updates.position!.y = yValue;
       onBatchChange(updates);
       onChanged?.();
+      // TODO: undo history push
     } else {
       onChange(['position', 'y'], yValue);
       onChanged?.();
+      // TODO: undo history push
     }
   };
 
-  const handlePositionXChange = (v: number) => {
+  const handlePositionXCommit = (v: number) => {
     onChange(['position', 'x'], v);
     onChanged?.();
+    // TODO: undo history push
   };
 
-  const handlePositionYChange = (v: number) => {
+  const handlePositionYCommit = (v: number) => {
     onChange(['position', 'y'], v);
     onChanged?.();
+    // TODO: undo history push
   };
 
-  const handleSizeWidthChange = (v: number) => {
+  const handlePositionXLive = (v: number) => {
+    if (onLiveChange) {
+      onLiveChange(['position', 'x'], v);
+    }
+  };
+
+  const handlePositionYLive = (v: number) => {
+    if (onLiveChange) {
+      onLiveChange(['position', 'y'], v);
+    }
+  };
+
+  const handleSizeWidthCommit = (v: number) => {
     onChange(['size', 'width'], v);
     onChanged?.();
+    // TODO: undo history push
   };
 
-  const handleSizeHeightChange = (v: number) => {
+  const handleSizeHeightCommit = (v: number) => {
     onChange(['size', 'height'], v);
     onChanged?.();
+    // TODO: undo history push
   };
 
-  const handleScaleXChange = (v: number) => {
+  const handleSizeWidthLive = (v: number) => {
+    if (onLiveChange) {
+      onLiveChange(['size', 'width'], v);
+    }
+  };
+
+  const handleSizeHeightLive = (v: number) => {
+    if (onLiveChange) {
+      onLiveChange(['size', 'height'], v);
+    }
+  };
+
+  const handleScaleXCommit = (v: number) => {
     onChange(['scaleX'], v);
     onChanged?.();
+    // TODO: undo history push
   };
 
-  const handleScaleYChange = (v: number) => {
+  const handleScaleYCommit = (v: number) => {
     onChange(['scaleY'], v);
     onChanged?.();
+    // TODO: undo history push
   };
 
-  const handleRotationChange = (v: number) => {
+  const handleScaleXLive = (v: number) => {
+    if (onLiveChange) {
+      onLiveChange(['scaleX'], v);
+    }
+  };
+
+  const handleScaleYLive = (v: number) => {
+    if (onLiveChange) {
+      onLiveChange(['scaleY'], v);
+    }
+  };
+
+  const handleRotationCommit = (v: number) => {
     onChange(['rotation'], (v * Math.PI) / 180);
     onChanged?.();
+    // TODO: undo history push
   };
 
-  const handleOpacityChange = (v: number) => {
+  const handleRotationLive = (v: number) => {
+    if (onLiveChange) {
+      onLiveChange(['rotation'], (v * Math.PI) / 180);
+    }
+  };
+
+  const handleOpacityCommit = (v: number) => {
     onChange(['opacity'], v);
     onChanged?.();
+    // TODO: undo history push
+  };
+
+  const handleOpacityLive = (v: number) => {
+    if (onLiveChange) {
+      onLiveChange(['opacity'], v);
+    }
   };
 
   return (
@@ -191,7 +205,9 @@ export function TransformProperty({
         <MotionNumberInput
           value={positionX}
           map={(v) => Number(v.toFixed(2))}
-          onChange={handlePositionXChange}
+          onLiveChange={handlePositionXLive}
+          onCommit={handlePositionXCommit}
+          onInteractionStart={onInteractionStart}
           min={0}
           max={canvasWidth * 2}
           icon={<div className={'text-sm opacity-50'}>X</div>}
@@ -199,7 +215,9 @@ export function TransformProperty({
         <MotionNumberInput
           value={positionY}
           map={(v) => Number(v.toFixed(2))}
-          onChange={handlePositionYChange}
+          onLiveChange={handlePositionYLive}
+          onCommit={handlePositionYCommit}
+          onInteractionStart={onInteractionStart}
           min={0}
           max={canvasHeight * 2}
           icon={<div className={'text-sm opacity-50'}>Y</div>}
@@ -213,13 +231,17 @@ export function TransformProperty({
             <MotionNumberInput
               value={sizeWidth}
               map={(v) => Math.max(0, Number(v.toFixed(2)))}
-              onChange={handleSizeWidthChange}
+              onLiveChange={handleSizeWidthLive}
+              onCommit={handleSizeWidthCommit}
+              onInteractionStart={onInteractionStart}
               icon={<div className={'text-sm opacity-50'}>W</div>}
             />
             <MotionNumberInput
               value={sizeHeight}
               map={(v) => Math.max(0, Number(v.toFixed(2)))}
-              onChange={handleSizeHeightChange}
+              onLiveChange={handleSizeHeightLive}
+              onCommit={handleSizeHeightCommit}
+              onInteractionStart={onInteractionStart}
               icon={<div className={'text-sm opacity-50'}>H</div>}
             />
           </div>
@@ -231,7 +253,9 @@ export function TransformProperty({
         <MotionNumberInput
           value={scaleX}
           map={(v) => Number(v.toFixed(2))}
-          onChange={handleScaleXChange}
+          onLiveChange={handleScaleXLive}
+          onCommit={handleScaleXCommit}
+          onInteractionStart={onInteractionStart}
           min={0.1}
           max={5}
           step={0.1}
@@ -241,7 +265,9 @@ export function TransformProperty({
         <MotionNumberInput
           value={scaleY}
           map={(v) => Number(v.toFixed(2))}
-          onChange={handleScaleYChange}
+          onLiveChange={handleScaleYLive}
+          onCommit={handleScaleYCommit}
+          onInteractionStart={onInteractionStart}
           min={0.1}
           max={5}
           step={0.1}
@@ -254,7 +280,9 @@ export function TransformProperty({
       <MotionNumberInput
         value={rotation}
         map={(v) => Number(v.toFixed(2))}
-        onChange={handleRotationChange}
+        onLiveChange={handleRotationLive}
+        onCommit={handleRotationCommit}
+        onInteractionStart={onInteractionStart}
         min={0}
         max={360}
         step={0.1}
@@ -266,7 +294,9 @@ export function TransformProperty({
       <MotionNumberInput
         value={opacity}
         map={(v) => Math.max(0, Math.min(1, Number(v.toFixed(2))))}
-        onChange={handleOpacityChange}
+        onLiveChange={handleOpacityLive}
+        onCommit={handleOpacityCommit}
+        onInteractionStart={onInteractionStart}
         min={0}
         max={1}
         step={0.01}

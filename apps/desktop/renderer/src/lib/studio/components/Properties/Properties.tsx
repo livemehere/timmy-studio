@@ -137,12 +137,12 @@ export function Properties({ clipId }: PropertiesProps) {
           icon={Settings2}
           content={
             <BasicProperty
-              name={clip.name}
-              enabled={clip.enabled}
-              onChangeName={(value) => {
+              defaultName={clip.name}
+              defaultEnabled={clip.enabled}
+              onCommitName={(value) => {
                 updateClip({ name: value });
               }}
-              onChangeEnabled={(checked) => {
+              onCommitEnabled={(checked) => {
                 updateClip({ enabled: checked });
               }}
             />
@@ -163,7 +163,9 @@ export function Properties({ clipId }: PropertiesProps) {
               onChangeEndTime={(value) => {
                 updateClip({ endTime: value });
               }}
-              onChanged={() => {}}
+              onInteractionStart={() => {
+                // TODO: undo history begin
+              }}
             />
           }
         />
@@ -218,7 +220,9 @@ export function Properties({ clipId }: PropertiesProps) {
                 isTextClip={clip.type === 'text'}
                 canvasWidth={canvasWidth}
                 canvasHeight={canvasHeight}
-                onChanged={() => {}}
+                onInteractionStart={() => {
+                  // TODO: undo history begin
+                }}
               />
             }
           />
