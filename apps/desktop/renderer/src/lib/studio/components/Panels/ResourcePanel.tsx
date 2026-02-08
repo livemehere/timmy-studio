@@ -180,21 +180,27 @@ const SortBySelect = ({
         <DropdownMenuCheckboxItem
           checked={sortBy === 'date'}
           onCheckedChange={() => onChange('date')}
-          className={cn('text-xs', sortBy === 'date' ? 'font-bold' : '')}
+          className={cn('text-xs', {
+            'bg-neutral-800': sortBy === 'date',
+          })}
         >
           Date
         </DropdownMenuCheckboxItem>
         <DropdownMenuCheckboxItem
           checked={sortBy === 'name'}
           onCheckedChange={() => onChange('name')}
-          className={cn('text-xs', sortBy === 'name' ? 'font-bold' : '')}
+          className={cn('text-xs', {
+            'bg-neutral-800': sortBy === 'name',
+          })}
         >
           Name
         </DropdownMenuCheckboxItem>
         <DropdownMenuCheckboxItem
           checked={sortBy === 'size'}
           onCheckedChange={() => onChange('size')}
-          className={cn('text-xs', sortBy === 'size' ? 'font-bold' : '')}
+          className={cn('text-xs', {
+            'bg-neutral-800': sortBy === 'size',
+          })}
         >
           Size
         </DropdownMenuCheckboxItem>

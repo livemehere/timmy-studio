@@ -6,7 +6,6 @@ import type {
   AssetType,
   IAsset,
   IMediaAssetMetadata,
-  IBaseAsset,
   IMediaAsset,
 } from '@/lib/studio/domains/Asset/types';
 import { uid } from 'uid';
