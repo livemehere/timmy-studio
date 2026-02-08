@@ -15,7 +15,6 @@ import { TransformsSection } from '../Properties/TransformsSection';
 import { TextPropertiesSection } from '../Properties/TextPropertiesSection';
 import { ShapePropertiesSection } from '../Properties/ShapePropertiesSection';
 import { EffectsSection } from '../Properties/EffectsSection';
-import { findClipInTracks } from '../../utils/clipHelpers';
 import {
   updateTransformAtPath,
   type JsonPath,
@@ -30,12 +29,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
   Settings2,
   Clock,
   Scissors,
@@ -47,6 +40,7 @@ import {
 } from 'lucide-react';
 import { useRef } from 'react';
 import { Empty } from '../Properties/Empty';
+import { Track } from '../../domains/Track/Track';
 
 export function PropertiesPanel() {
   const selectedClipIds = useInteractionStore((state) => state.selectedClipIds);
@@ -63,7 +57,7 @@ export function PropertiesPanel() {
     return <Empty />;
   }
 
-  const result = findClipInTracks(tracks, selectedClipId);
+  const result = Track.findClip(tracks, selectedClipId);
   if (!result) {
     return (
       <div className="h-full flex flex-col gap-3 p-4">
@@ -121,254 +115,244 @@ export function PropertiesPanel() {
   };
 
   return (
-    <TooltipProvider>
-      <div className="flex flex-col h-full overflow-y-auto p-3">
-        {/* Header with clip info */}
-        <div className="flex items-center justify-between mb-3 pb-2 border-b border-neutral-800">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-neutral-200 truncate max-w-[120px]">
-              {clip.name}
-            </span>
-            <Badge variant="secondary" className="text-[10px]">
-              {clip.type}
-            </Badge>
-          </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="text-[10px] text-neutral-500 font-mono cursor-help">
-                {clip.id.slice(0, 8)}
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="font-mono text-xs">{clip.id}</p>
-            </TooltipContent>
-          </Tooltip>
+    <div className="flex flex-col h-full overflow-y-auto p-3">
+      {/* Header with clip info */}
+      <div className="flex items-center justify-between mb-3 pb-2 border-b border-neutral-800">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-neutral-200 truncate max-w-[120px]">
+            {clip.name}
+          </span>
+          <Badge variant="secondary" className="text-[10px]">
+            {clip.type}
+          </Badge>
         </div>
+        <div className="text-[10px] text-neutral-500 font-mono">
+          {clip.id.slice(0, 8)}
+        </div>
+      </div>
 
-        <Accordion
-          type="multiple"
-          defaultValue={['basic', 'timing', 'transform']}
-          className="w-full space-y-1"
-        >
-          {/* Basic Section */}
-          <AccordionItem value="basic" className="border-neutral-800">
+      <Accordion
+        type="multiple"
+        defaultValue={['basic', 'timing', 'transform']}
+        className="w-full space-y-1"
+      >
+        {/* Basic Section */}
+        <AccordionItem value="basic" className="border-neutral-800">
+          <AccordionTrigger className="py-2 text-xs">
+            <span className="flex items-center gap-2">
+              <Settings2 size={14} />
+              Basic
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="pt-2 pb-3">
+            <div className="space-y-2">
+              <InputField
+                label="Name"
+                value={clip.name}
+                onChange={(value) => updateClip({ name: value })}
+              />
+              <ToggleField
+                label="Enabled"
+                checked={clip.enabled}
+                onChange={(checked) => updateClip({ enabled: checked })}
+              />
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Timing Section */}
+        <AccordionItem value="timing" className="border-neutral-800">
+          <AccordionTrigger className="py-2 text-xs">
+            <span className="flex items-center gap-2">
+              <Clock size={14} />
+              Timing
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="pt-2 pb-3">
+            <div className="space-y-2">
+              <NumberField
+                label="Start"
+                value={clip.startTime}
+                onChange={(value) => updateClip({ startTime: value })}
+                min={0}
+                step={0.1}
+              />
+              <NumberField
+                label="End"
+                value={clip.endTime}
+                onChange={(value) => updateClip({ endTime: value })}
+                min={clip.startTime}
+                step={0.1}
+              />
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Trim Section */}
+        <AccordionItem value="trim" className="border-neutral-800">
+          <AccordionTrigger className="py-2 text-xs">
+            <span className="flex items-center gap-2">
+              <Scissors size={14} />
+              Trim
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="pt-2 pb-3">
+            <div className="space-y-2">
+              <NumberField
+                label="Start"
+                value={clip.trimStart}
+                onChange={(value) => updateClip({ trimStart: value })}
+                min={0}
+                step={0.1}
+              />
+              <NumberField
+                label="End"
+                value={clip.trimEnd}
+                onChange={(value) => updateClip({ trimEnd: value })}
+                min={0}
+                step={0.1}
+              />
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Audio Volume Section */}
+        {audioClip && (
+          <AccordionItem value="audio" className="border-neutral-800">
             <AccordionTrigger className="py-2 text-xs">
               <span className="flex items-center gap-2">
-                <Settings2 size={14} />
-                Basic
+                <Volume2 size={14} />
+                Audio
               </span>
             </AccordionTrigger>
             <AccordionContent className="pt-2 pb-3">
-              <div className="space-y-2">
-                <InputField
-                  label="Name"
-                  value={clip.name}
-                  onChange={(value) => updateClip({ name: value })}
-                />
-                <ToggleField
-                  label="Enabled"
-                  checked={clip.enabled}
-                  onChange={(checked) => updateClip({ enabled: checked })}
-                />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* Timing Section */}
-          <AccordionItem value="timing" className="border-neutral-800">
-            <AccordionTrigger className="py-2 text-xs">
-              <span className="flex items-center gap-2">
-                <Clock size={14} />
-                Timing
-              </span>
-            </AccordionTrigger>
-            <AccordionContent className="pt-2 pb-3">
-              <div className="space-y-2">
-                <NumberField
-                  label="Start"
-                  value={clip.startTime}
-                  onChange={(value) => updateClip({ startTime: value })}
-                  min={0}
-                  step={0.1}
-                />
-                <NumberField
-                  label="End"
-                  value={clip.endTime}
-                  onChange={(value) => updateClip({ endTime: value })}
-                  min={clip.startTime}
-                  step={0.1}
-                />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* Trim Section */}
-          <AccordionItem value="trim" className="border-neutral-800">
-            <AccordionTrigger className="py-2 text-xs">
-              <span className="flex items-center gap-2">
-                <Scissors size={14} />
-                Trim
-              </span>
-            </AccordionTrigger>
-            <AccordionContent className="pt-2 pb-3">
-              <div className="space-y-2">
-                <NumberField
-                  label="Start"
-                  value={clip.trimStart}
-                  onChange={(value) => updateClip({ trimStart: value })}
-                  min={0}
-                  step={0.1}
-                />
-                <NumberField
-                  label="End"
-                  value={clip.trimEnd}
-                  onChange={(value) => updateClip({ trimEnd: value })}
-                  min={0}
-                  step={0.1}
-                />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* Audio Volume Section */}
-          {audioClip && (
-            <AccordionItem value="audio" className="border-neutral-800">
-              <AccordionTrigger className="py-2 text-xs">
-                <span className="flex items-center gap-2">
-                  <Volume2 size={14} />
-                  Audio
-                </span>
-              </AccordionTrigger>
-              <AccordionContent className="pt-2 pb-3">
-                <NumberField
-                  label="Volume"
-                  value={audioClip.volume}
-                  onChange={(value) => updateClip({ volume: value })}
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  showRange
-                />
-              </AccordionContent>
-            </AccordionItem>
-          )}
-
-          {/* Transform Section (for graphic clips) */}
-          {graphicClip && (
-            <AccordionItem value="transform" className="border-neutral-800">
-              <AccordionTrigger className="py-2 text-xs">
-                <span className="flex items-center gap-2">
-                  <Move3D size={14} />
-                  Transform
-                </span>
-              </AccordionTrigger>
-              <AccordionContent className="pt-2 pb-3">
-                <TransformsSection
-                  transforms={graphicClip.transforms}
-                  onChange={(path: JsonPath, value: JsonPrimitive) => {
-                    const newTransforms = updateTransformAtPath(
-                      graphicClip.transforms,
-                      path,
-                      value
-                    );
-                    updateClip({
-                      transforms:
-                        newTransforms as typeof graphicClip.transforms,
-                    });
-                  }}
-                  onLiveChange={handleLiveTransformChange}
-                  onBatchChange={(updates) => {
-                    updateClip({
-                      transforms: { ...graphicClip.transforms, ...updates },
-                    });
-                  }}
-                  isTextClip={clip.type === 'text'}
-                  canvasWidth={canvasWidth}
-                  canvasHeight={canvasHeight}
-                />
-              </AccordionContent>
-            </AccordionItem>
-          )}
-
-          {/* Text Properties Section */}
-          {textClip && (
-            <AccordionItem value="text" className="border-neutral-800">
-              <AccordionTrigger className="py-2 text-xs">
-                <span className="flex items-center gap-2">
-                  <Type size={14} />
-                  Text Properties
-                </span>
-              </AccordionTrigger>
-              <AccordionContent className="pt-2 pb-3">
-                <TextPropertiesSection
-                  textData={textClip.textData}
-                  onChange={(updates) =>
-                    updateClip({
-                      textData: { ...textClip.textData, ...updates },
-                    })
-                  }
-                />
-              </AccordionContent>
-            </AccordionItem>
-          )}
-
-          {/* Shape Properties Section */}
-          {shapeClip && (
-            <AccordionItem value="shape" className="border-neutral-800">
-              <AccordionTrigger className="py-2 text-xs">
-                <span className="flex items-center gap-2">
-                  <Hexagon size={14} />
-                  Shape Properties
-                </span>
-              </AccordionTrigger>
-              <AccordionContent className="pt-2 pb-3">
-                <ShapePropertiesSection
-                  shapeData={shapeClip.shapeData}
-                  onChange={(updatedShapeData) => {
-                    const sizeChanged =
-                      updatedShapeData.width !== shapeClip.shapeData.width ||
-                      updatedShapeData.height !== shapeClip.shapeData.height;
-
-                    updateClip({
-                      shapeData: updatedShapeData,
-                      ...(sizeChanged && {
-                        transforms: {
-                          ...shapeClip.transforms,
-                          size: {
-                            width: updatedShapeData.width,
-                            height: updatedShapeData.height,
-                          },
-                        },
-                      }),
-                    });
-                  }}
-                />
-              </AccordionContent>
-            </AccordionItem>
-          )}
-
-          {/* Effects Section */}
-          <AccordionItem value="effects" className="border-neutral-800">
-            <AccordionTrigger className="py-2 text-xs">
-              <span className="flex items-center gap-2">
-                <Sparkles size={14} />
-                Effects
-                {clip.effects && clip.effects.length > 0 && (
-                  <Badge variant="secondary" className="text-[10px] ml-1">
-                    {clip.effects.length}
-                  </Badge>
-                )}
-              </span>
-            </AccordionTrigger>
-            <AccordionContent className="pt-2 pb-3">
-              <EffectsSection
-                effects={clip.effects}
-                onChange={(effects) => updateClip({ effects })}
+              <NumberField
+                label="Volume"
+                value={audioClip.volume}
+                onChange={(value) => updateClip({ volume: value })}
+                min={0}
+                max={1}
+                step={0.01}
+                showRange
               />
             </AccordionContent>
           </AccordionItem>
-        </Accordion>
-      </div>
-    </TooltipProvider>
+        )}
+
+        {/* Transform Section (for graphic clips) */}
+        {graphicClip && (
+          <AccordionItem value="transform" className="border-neutral-800">
+            <AccordionTrigger className="py-2 text-xs">
+              <span className="flex items-center gap-2">
+                <Move3D size={14} />
+                Transform
+              </span>
+            </AccordionTrigger>
+            <AccordionContent className="pt-2 pb-3">
+              <TransformsSection
+                transforms={graphicClip.transforms}
+                onChange={(path: JsonPath, value: JsonPrimitive) => {
+                  const newTransforms = updateTransformAtPath(
+                    graphicClip.transforms,
+                    path,
+                    value
+                  );
+                  updateClip({
+                    transforms: newTransforms as typeof graphicClip.transforms,
+                  });
+                }}
+                onLiveChange={handleLiveTransformChange}
+                onBatchChange={(updates) => {
+                  updateClip({
+                    transforms: { ...graphicClip.transforms, ...updates },
+                  });
+                }}
+                isTextClip={clip.type === 'text'}
+                canvasWidth={canvasWidth}
+                canvasHeight={canvasHeight}
+              />
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
+        {/* Text Properties Section */}
+        {textClip && (
+          <AccordionItem value="text" className="border-neutral-800">
+            <AccordionTrigger className="py-2 text-xs">
+              <span className="flex items-center gap-2">
+                <Type size={14} />
+                Text Properties
+              </span>
+            </AccordionTrigger>
+            <AccordionContent className="pt-2 pb-3">
+              <TextPropertiesSection
+                textData={textClip.textData}
+                onChange={(updates) =>
+                  updateClip({
+                    textData: { ...textClip.textData, ...updates },
+                  })
+                }
+              />
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
+        {/* Shape Properties Section */}
+        {shapeClip && (
+          <AccordionItem value="shape" className="border-neutral-800">
+            <AccordionTrigger className="py-2 text-xs">
+              <span className="flex items-center gap-2">
+                <Hexagon size={14} />
+                Shape Properties
+              </span>
+            </AccordionTrigger>
+            <AccordionContent className="pt-2 pb-3">
+              <ShapePropertiesSection
+                shapeData={shapeClip.shapeData}
+                onChange={(updatedShapeData) => {
+                  const sizeChanged =
+                    updatedShapeData.width !== shapeClip.shapeData.width ||
+                    updatedShapeData.height !== shapeClip.shapeData.height;
+
+                  updateClip({
+                    shapeData: updatedShapeData,
+                    ...(sizeChanged && {
+                      transforms: {
+                        ...shapeClip.transforms,
+                        size: {
+                          width: updatedShapeData.width,
+                          height: updatedShapeData.height,
+                        },
+                      },
+                    }),
+                  });
+                }}
+              />
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
+        {/* Effects Section */}
+        <AccordionItem value="effects" className="border-neutral-800">
+          <AccordionTrigger className="py-2 text-xs">
+            <span className="flex items-center gap-2">
+              <Sparkles size={14} />
+              Effects
+              {clip.effects && clip.effects.length > 0 && (
+                <Badge variant="secondary" className="text-[10px] ml-1">
+                  {clip.effects.length}
+                </Badge>
+              )}
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="pt-2 pb-3">
+            <EffectsSection
+              effects={clip.effects}
+              onChange={(effects) => updateClip({ effects })}
+            />
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+    </div>
   );
 }

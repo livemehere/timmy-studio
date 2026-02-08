@@ -4,10 +4,10 @@ import {
   useInteractionStore,
   useEngineStore,
 } from '../../hooks/useStudioStores';
-import { findClipInTracks } from '../../utils/clipHelpers';
 import type { CanvasScaleInfo } from '../../hooks/useCanvasScale';
 import { DOMToCanvas } from '../../hooks/useCanvasScale';
 import type { IGraphicClip, ITransform } from '../../domains/Clip/types';
+import { Track } from '../../domains/Track/Track';
 
 type HandleType =
   | 'move'
@@ -56,7 +56,7 @@ export function TransformOverlay({
   const selectedClipId = selectedClipIds[0];
   const clipInfo = useMemo(() => {
     if (!selectedClipId) return null;
-    const result = findClipInTracks(tracks, selectedClipId);
+    const result = Track.findClip(tracks, selectedClipId);
     if (!result) return null;
     if (result.clip.type === 'audio') return null;
     return {

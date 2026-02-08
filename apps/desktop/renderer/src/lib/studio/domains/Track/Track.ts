@@ -138,6 +138,14 @@ export abstract class Track<
     }
   }
 
+  static findClip(tracks: ITrack[], clipId: string) {
+    for (const track of tracks) {
+      const clip = track.clips.find((c) => c.id === clipId);
+      if (clip) return { trackId: track.id, clip };
+    }
+    return null;
+  }
+
   static findTopOrderTrack(
     tracks: ITrack[],
     type: TrackType
