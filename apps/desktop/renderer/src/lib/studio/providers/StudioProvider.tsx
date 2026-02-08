@@ -7,6 +7,8 @@ import { StudioContext, type StudioStores } from '../hooks/useStudioStores';
 import type { IProject } from '../types/project';
 import { StudioErrorContext } from '../hooks/useStudioError';
 import { Spinner } from '@/components/ui/spinner';
+import { devtools } from '@/lib/zustand-devtools/registry';
+import { ZustandDevtools } from '@/lib/zustand-devtools/ZustandDevtools';
 
 export function StudioProvider({
   children,
@@ -47,7 +49,10 @@ export function StudioProvider({
     try {
       const docStore = createDocStore(initialProject);
       const engineStore = createEngineStore(() => docStore.getState());
-      const interactionStore = createInteractionStore();
+      const interactionStore = devtools(
+        createInteractionStore(),
+        'InteractionStore'
+      );
 
       storesRef.current = {
         docStore,
@@ -129,6 +134,7 @@ export function StudioProvider({
     <StudioContext.Provider value={storesRef.current}>
       <StudioErrorContext.Provider value={false}>
         {children}
+        <ZustandDevtools />
       </StudioErrorContext.Provider>
     </StudioContext.Provider>
   );

@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import { AppRoutes } from './routes';
 import { Toaster } from './components/ui/sonner';
 import { Spinner } from './components/ui/spinner';
+import { ZustandDevtools } from './lib/zustand-devtools';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,6 +27,7 @@ export default function App() {
         }
       >
         <Toaster />
+        <ZustandDevtools />
         <AppRoutes />
       </Suspense>
     </QueryClientProvider>
