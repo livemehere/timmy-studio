@@ -89,7 +89,7 @@ export interface DocActions {
   removeAsset: (assetId: string | string[]) => void;
   updateAsset: (assetId: string, updates: Partial<IAsset>) => void;
   setAssets: (cb: (assets: IAsset[]) => IAsset[]) => void;
-  getAssetById: AssetGetter;
+  getAssetById: <T extends IAsset = IAsset>(assetId: string) => T | undefined;
 
   // UI actions
   setActiveTrackId: (trackId: string | null) => void;

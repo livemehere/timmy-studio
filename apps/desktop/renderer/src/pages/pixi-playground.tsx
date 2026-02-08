@@ -12,7 +12,6 @@ import {
   FieldSeparator,
   FieldSet,
 } from '@/components/ui/field';
-import { useMotionValue } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { Z_INDEX } from '@/lib/studio/constants/zIndex';
 import {
@@ -24,7 +23,7 @@ import {
   Link2,
   TriangleRight,
 } from 'lucide-react';
-import { MotionNumberInput } from '@/lib/motion-input';
+import { RtNumberInput } from '@/lib/motion-input';
 import { BlurFilter, Graphics, NoiseFilter } from 'pixi.js';
 import { css } from '@emotion/react';
 import { animate } from 'motion';
@@ -177,13 +176,6 @@ export default function PixiPlaygroundPage() {
 
   const itemRef = useRef<Item | null>(null);
 
-  // sprite values
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const width = useMotionValue(0);
-  const height = useMotionValue(0);
-  const rotation = useMotionValue(0);
-  const opacity = useMotionValue(1);
   const [aspectRatio, setAspectRatio] = useState<number | null>(null);
   const [visible, setVisible] = useState(true);
 
@@ -287,13 +279,6 @@ export default function PixiPlaygroundPage() {
     item.h = item.texture.height / 2;
     item.x = (getApp().renderer.width - item.w) / 2;
     item.y = (getApp().renderer.height - item.h) / 2;
-
-    x.set(item.x);
-    y.set(item.y);
-    width.set(item.w);
-    height.set(item.h);
-    rotation.set(item.rotation);
-    opacity.set(item.opacity);
 
     /* masking */
     // const rect = new Graphics();
@@ -541,9 +526,6 @@ export default function PixiPlaygroundPage() {
     // 크기 조정
     itemRef.current!.w = itemRef.current!.texture.width / 2;
     itemRef.current!.h = itemRef.current!.texture.height / 2;
-
-    width.set(itemRef.current!.w);
-    height.set(itemRef.current!.h);
   };
 
   const umount = () => {
@@ -684,7 +666,6 @@ export default function PixiPlaygroundPage() {
                       })}
                       onClick={() => {
                         itemRef.current!.x = 0;
-                        x.set(itemRef.current!.x);
                         setHorizontalAlign('left');
                       }}
                     >
@@ -698,7 +679,6 @@ export default function PixiPlaygroundPage() {
                       })}
                       onClick={() => {
                         itemRef.current!.x = getApp().renderer.width / 2;
-                        x.set(itemRef.current!.x);
                         setHorizontalAlign('center');
                       }}
                     >
@@ -712,7 +692,6 @@ export default function PixiPlaygroundPage() {
                       })}
                       onClick={() => {
                         itemRef.current!.x = getApp().renderer.width;
-                        x.set(itemRef.current!.x);
                         setHorizontalAlign('right');
                       }}
                     >
@@ -723,16 +702,16 @@ export default function PixiPlaygroundPage() {
                 <Field>
                   <FieldLabel>Position</FieldLabel>
                   <div className={'flex gap-2'}>
-                    <MotionNumberInput
-                      value={x}
+                    <RtNumberInput
+                      defaultValue={itemRef.current?.x ?? 0}
                       map={(v) => Number(v.toFixed(2))}
                       onChange={(v) => {
                         itemRef.current!.x = v;
                       }}
                       icon={<div className={'text-sm opacity-50'}>X</div>}
                     />
-                    <MotionNumberInput
-                      value={y}
+                    <RtNumberInput
+                      defaultValue={itemRef.current?.y ?? 0}
                       map={(v) => Number(v.toFixed(2))}
                       onChange={(v) => {
                         itemRef.current!.y = v;
@@ -743,8 +722,8 @@ export default function PixiPlaygroundPage() {
                 </Field>
                 <Field>
                   <FieldLabel>Rotation</FieldLabel>
-                  <MotionNumberInput
-                    value={rotation}
+                  <RtNumberInput
+                    defaultValue={itemRef.current?.rotation ?? 0}
                     map={(v) => Number(v.toFixed(2))}
                     step={0.01}
                     sensitivity={0.5}
@@ -775,15 +754,17 @@ export default function PixiPlaygroundPage() {
                         if (aspectRatio !== null) {
                           setAspectRatio(null);
                         } else {
-                          const currentAspectRatio = width.get() / height.get();
+                          const currentAspectRatio =
+                            (itemRef.current?.w ?? 0) /
+                            (itemRef.current?.h ?? 1);
                           setAspectRatio(currentAspectRatio);
                         }
                       }}
                     >
                       <Link2 size={16} />
                     </Button>
-                    <MotionNumberInput
-                      value={width}
+                    <RtNumberInput
+                      defaultValue={itemRef.current?.w ?? 0}
                       map={(v) => Math.max(0, Number(v.toFixed(2)))}
                       onChange={(v) => {
                         itemRef.current!.w = v;
@@ -791,13 +772,12 @@ export default function PixiPlaygroundPage() {
                         if (aspectRatio !== null) {
                           const newHeight = v / aspectRatio;
                           itemRef.current!.h = newHeight;
-                          height.set(newHeight);
                         }
                       }}
                       icon={<div className={'text-sm opacity-50'}>W</div>}
                     />
-                    <MotionNumberInput
-                      value={height}
+                    <RtNumberInput
+                      defaultValue={itemRef.current?.h ?? 0}
                       map={(v) => Math.max(0, Number(v.toFixed(2)))}
                       onChange={(v) => {
                         itemRef.current!.h = v;
@@ -805,7 +785,6 @@ export default function PixiPlaygroundPage() {
                         if (aspectRatio !== null) {
                           const newWidth = v * aspectRatio;
                           itemRef.current!.w = newWidth;
-                          width.set(newWidth);
                         }
                       }}
                       icon={<div className={'text-sm opacity-50'}>H</div>}
@@ -822,13 +801,12 @@ export default function PixiPlaygroundPage() {
               <FieldGroup>
                 <Field>
                   <FieldLabel>Opacity</FieldLabel>
-                  <MotionNumberInput
-                    value={opacity}
+                  <RtNumberInput
+                    defaultValue={itemRef.current?.opacity ?? 1}
                     map={(v) => Math.max(0, Math.min(1, Number(v.toFixed(2))))}
                     onChange={(v) => {
                       const clampedValue = Math.max(0, Math.min(1, v));
                       itemRef.current!.opacity = clampedValue;
-                      opacity.set(clampedValue);
                     }}
                     icon={<div className={'text-sm opacity-50'}>%</div>}
                   />

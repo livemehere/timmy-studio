@@ -1,4 +1,4 @@
-import { useDocStore, useEngineStore } from '../../hooks/useStudioStores';
+import { useDocStore } from '../../hooks/useStudioStores';
 import type {
   IClip,
   IGraphicClip,
@@ -6,11 +6,7 @@ import type {
   IShapeClip,
   IAudioClip,
 } from '@/lib/studio/domains/Clip/types';
-import {
-  updateTransformAtPath,
-  type JsonPath,
-  type JsonPrimitive,
-} from '../../utils/transformHelpers';
+import { Track } from '../../domains/Track/Track';
 import {
   Accordion,
   AccordionContent,
@@ -29,8 +25,6 @@ import {
   Volume2,
   type LucideIcon,
 } from 'lucide-react';
-import { useRef } from 'react';
-import { Track } from '../../domains/Track/Track';
 import { BasicProperty } from './BasicProperty';
 import { RangeProperty } from './RangeProperty';
 import { TrimProperty } from './TrimProperty';
@@ -40,6 +34,11 @@ import { TextProperty } from './TextProperty';
 import { ShapeProperty } from './ShapeProperty';
 import { EffectProperty } from './EffectProperty';
 import { toast } from 'sonner';
+import {
+  updateTransformAtPath,
+  type JsonPath,
+  type JsonPrimitive,
+} from '../../utils/transformHelpers';
 
 interface PropertiesProps {
   clipId: string;
@@ -48,11 +47,7 @@ interface PropertiesProps {
 export function Properties({ clipId }: PropertiesProps) {
   const tracks = useDocStore((state) => state.tracks);
   const settings = useDocStore((state) => state.settings);
-  const renderer = useEngineStore((state) => state.renderer);
-
   const updateClipInTrack = useDocStore((state) => state.updateClip);
-
-  const liveTransformsRef = useRef<IGraphicClip['transforms'] | null>(null);
 
   const result = Track.findClip(tracks, clipId);
   if (!result) {
@@ -68,7 +63,6 @@ export function Properties({ clipId }: PropertiesProps) {
   const canvasHeight = settings.height;
 
   const updateClip = (updates: Partial<IClip>) => {
-    liveTransformsRef.current = null;
     updateClipInTrack(trackId, clip.id, updates);
   };
 
@@ -77,31 +71,7 @@ export function Properties({ clipId }: PropertiesProps) {
   const textClip = clip.type === 'text' ? (clip as ITextClip) : null;
   const shapeClip = clip.type === 'shape' ? (clip as IShapeClip) : null;
   const audioClip = clip.type === 'audio' ? (clip as IAudioClip) : null;
-
-  const handleLiveTransformChange = (path: JsonPath, value: JsonPrimitive) => {
-    if (!renderer || !graphicClip) return;
-
-    const graphicTrack = renderer.tracks.get(trackId);
-    if (!graphicTrack) return;
-
-    const clipInstance = graphicTrack.clips.get(clip.id);
-    if (!clipInstance) return;
-
-    if (!liveTransformsRef.current) {
-      liveTransformsRef.current = JSON.parse(
-        JSON.stringify(graphicClip.transforms)
-      );
-    }
-
-    const newTransforms = updateTransformAtPath(
-      liveTransformsRef.current,
-      path,
-      value
-    );
-    liveTransformsRef.current = newTransforms as IGraphicClip['transforms'];
-
-    clipInstance.applyTransform(liveTransformsRef.current);
-  };
+  const durationMs = settings.duration;
 
   const handleTransformChange = (path: JsonPath, value: JsonPrimitive) => {
     if (!graphicClip) return;
@@ -128,7 +98,7 @@ export function Properties({ clipId }: PropertiesProps) {
 
       <Accordion
         type="multiple"
-        defaultValue={['basic', 'range', 'transform']}
+        defaultValue={['range']}
         className="w-full space-y-1"
       >
         <PropertyItem
@@ -155,16 +125,14 @@ export function Properties({ clipId }: PropertiesProps) {
           icon={Clock}
           content={
             <RangeProperty
-              startTime={clip.startTime}
-              endTime={clip.endTime}
-              onChangeStartTime={(value) => {
+              durationMs={durationMs}
+              defaultStartTime={clip.startTime}
+              defaultEndTime={clip.endTime}
+              onCommitStartTime={(value) => {
                 updateClip({ startTime: value });
               }}
-              onChangeEndTime={(value) => {
+              onCommitEndTime={(value) => {
                 updateClip({ endTime: value });
-              }}
-              onInteractionStart={() => {
-                // TODO: undo history begin
               }}
             />
           }
@@ -178,6 +146,7 @@ export function Properties({ clipId }: PropertiesProps) {
             <TrimProperty
               trimStart={clip.trimStart}
               trimEnd={clip.trimEnd}
+              maxTrimMs={Math.max(0, clip.endTime - clip.startTime)}
               onChangeTrimStart={(value) => {
                 updateClip({ trimStart: value });
               }}
@@ -215,7 +184,6 @@ export function Properties({ clipId }: PropertiesProps) {
               <TransformProperty
                 transforms={graphicClip.transforms}
                 onChange={handleTransformChange}
-                onLiveChange={handleLiveTransformChange}
                 onBatchChange={handleBatchTransformChange}
                 isTextClip={clip.type === 'text'}
                 canvasWidth={canvasWidth}

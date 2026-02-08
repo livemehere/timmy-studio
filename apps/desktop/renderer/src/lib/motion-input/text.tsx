@@ -1,29 +1,16 @@
 import { motion } from 'motion/react';
 import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
+import type { RealTimeInputProps } from './types';
 
-interface Props {
-  icon?: React.ReactNode;
-  defaultValue: string;
-  onChange?: (value: string) => void;
-  readOnly?: boolean;
-  onInteractionStart?: () => void;
-  onLiveChange?: (v: string) => void;
-  onCommit?: (v: string) => void;
-  className?: string;
-}
+type Props = RealTimeInputProps<string>;
 
-/**
- * @param param0
- * @returns
- */
-export function MotionTextInput({
+export function RtTextInput({
   icon,
   defaultValue,
   onChange,
   readOnly = false,
   onInteractionStart,
-  onLiveChange,
   onCommit,
   //  ---
   className,
@@ -37,7 +24,6 @@ export function MotionTextInput({
   const handleBlur = () => {
     const finalValue = ref.current!.value;
     if (defaultValue !== finalValue) {
-      onChange?.(finalValue);
       onCommit?.(finalValue);
     }
   };
@@ -46,7 +32,6 @@ export function MotionTextInput({
     if (e.key === 'Enter') {
       e.preventDefault();
       const finalValue = ref.current!.value;
-      onChange?.(finalValue);
       onCommit?.(finalValue);
       ref.current!.blur();
     } else if (e.key === 'Escape') {
@@ -57,7 +42,7 @@ export function MotionTextInput({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    onLiveChange?.(newValue);
+    onChange?.(newValue);
   };
 
   const cancelEdit = () => {

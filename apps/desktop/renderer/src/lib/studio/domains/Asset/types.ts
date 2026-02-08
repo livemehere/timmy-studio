@@ -67,6 +67,7 @@ export type AssetType =
 export type IAsset =
   | IVideoAsset
   | IAudioAsset
+  | IMediaAsset
   | IImageAsset
   | IAnimatedImageAsset
   | IShapeAsset

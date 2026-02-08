@@ -1,47 +1,64 @@
-import { motion, type MotionValue, useMotionValueEvent } from 'motion/react';
+import { motion, useMotionValue, useMotionValueEvent } from 'motion/react';
 import { useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import type { RealTimeInputProps } from './types';
 
-interface MotionNumberInputProps {
-  icon?: React.ReactNode;
-  value: MotionValue<number>;
+interface Props {
   map?: (v: number) => number;
   min?: number;
   max?: number;
   step?: number;
   sensitivity?: number;
-  onInteractionStart?: () => void;
-  onLiveChange?: (v: number) => void;
-  onCommit?: (v: number) => void;
 }
 
-export function MotionNumberInput({
+export function RtNumberInput({
   icon,
-  value,
+  defaultValue,
   map = (v) => v,
   min = -Infinity,
   max = Infinity,
   step = 1,
   sensitivity = 1,
+  onChange,
   onInteractionStart,
-  onLiveChange,
   onCommit,
-}: MotionNumberInputProps) {
+  className,
+}: Props & RealTimeInputProps<number>) {
   const ref = useRef<HTMLInputElement>(null);
-
+  const value = useMotionValue(defaultValue);
   const dragStartValue = useRef(0);
   const dragAccumulated = useRef(0);
   const isDraggingRef = useRef(false);
+  const lastCommittedValue = useRef(defaultValue);
+
+  const clampValue = (v: number) => Math.min(max, Math.max(min, v));
+
+  const parseInputValue = (rawValue: string) => {
+    if (rawValue.trim() === '') return null;
+    const parsedValue = Number(rawValue);
+    if (Number.isNaN(parsedValue)) return null;
+    return clampValue(parsedValue);
+  };
 
   const commitValue = (v: number) => {
-    const clampedValue = Math.min(max, Math.max(min, v));
+    const clampedValue = clampValue(v);
     value.set(clampedValue);
+    onChange?.(clampedValue);
     onCommit?.(clampedValue);
+    lastCommittedValue.current = clampedValue;
+  };
+
+  const cancelEdit = () => {
+    const originalValue = lastCommittedValue.current;
+    value.set(originalValue);
+    ref.current!.value = String(map(originalValue));
+    ref.current!.blur();
   };
 
   useMotionValueEvent(value, 'change', (v) => {
     if (!isDraggingRef.current) {
       ref.current!.value = String(map(v));
+      lastCommittedValue.current = v;
     }
   });
 
@@ -63,13 +80,14 @@ export function MotionNumberInput({
     value.set(next);
     ref.current!.value = String(map(next));
 
-    onLiveChange?.(next);
+    onChange?.(next);
   };
 
   const handleDragEnd = () => {
     isDraggingRef.current = false;
     const finalValue = value.get();
     onCommit?.(finalValue);
+    lastCommittedValue.current = finalValue;
   };
 
   const handleFocus = () => {
@@ -77,39 +95,47 @@ export function MotionNumberInput({
   };
 
   const handleBlur = () => {
-    const inputValue = ref.current!.value;
-    if (inputValue !== '') {
-      const parsedValue = map(Number(inputValue));
-      commitValue(parsedValue);
+    const parsedValue = parseInputValue(ref.current!.value);
+    if (parsedValue !== null) {
+      commitValue(map(parsedValue));
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      const inputValue = ref.current!.value;
-      const parsedValue = map(Number(inputValue));
-      commitValue(parsedValue);
+      const parsedValue = parseInputValue(ref.current!.value);
+      if (parsedValue !== null) {
+        commitValue(map(parsedValue));
+      }
       ref.current!.blur();
     } else if (e.key === 'Escape') {
       e.preventDefault();
-      const originalValue = value.get();
-      value.set(originalValue);
-      ref.current!.value = String(map(originalValue));
-      ref.current!.blur();
+      cancelEdit();
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
     ref.current!.value = inputValue;
+    const parsedValue = parseInputValue(inputValue);
+    if (parsedValue !== null) {
+      onChange?.(parsedValue);
+    }
   };
+
+  useEffect(() => {
+    value.set(defaultValue);
+    ref.current!.value = String(map(defaultValue));
+    lastCommittedValue.current = defaultValue;
+  }, [defaultValue, map, value]);
 
   return (
     <div
       className={cn(
         'flex items-center gap-2 focus-within:outline-1 px-2 py-1 border hover:border-neutral-600 rounded bg-neutral-900',
-        { 'border-neutral-500': ref.current === document.activeElement }
+        { 'border-neutral-500': ref.current === document.activeElement },
+        className
       )}
     >
       <motion.div
@@ -129,7 +155,7 @@ export function MotionNumberInput({
         min={min}
         max={max}
         step={step}
-        defaultValue={value.get()}
+        defaultValue={defaultValue}
         onFocus={handleFocus}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
