@@ -52,5 +52,5 @@ function ClipNameTab({ clipId }: { clipId: string }) {
     return <span className="text-neutral-500">Unknown</span>;
   }
 
-  return <span className="truncate max-w-[80px]">{result.clip.name}</span>;
+  return <span className="truncate max-w-20">{result.clip.name}</span>;
 }

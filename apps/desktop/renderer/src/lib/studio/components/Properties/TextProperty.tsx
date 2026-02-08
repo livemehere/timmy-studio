@@ -1,34 +1,41 @@
-import { Section, InputField, NumberField, ToggleField } from '../inputs';
-import { TextAreaField } from '@/lib/studio/components/inputs/TextAreaField';
+import { InputField, NumberField, ToggleField } from '../inputs';
+import { TextAreaField } from '../inputs/TextAreaField';
 import type { ITextData } from '../../types/text';
 
-interface TextPropertiesSectionProps {
+interface TextPropertyProps {
   textData: ITextData;
   onChange: (updates: Partial<ITextData>) => void;
+  onChanged?: () => void;
 }
 
-export function TextPropertiesSection({
+export function TextProperty({
   textData,
   onChange,
-}: TextPropertiesSectionProps) {
+  onChanged,
+}: TextPropertyProps) {
+  const handleChange = (updates: Partial<ITextData>) => {
+    onChange(updates);
+    onChanged?.();
+  };
+
   return (
-    <Section title="Text Properties">
+    <div className="space-y-2">
       <TextAreaField
         label="Content"
         value={textData.content}
-        onChange={(value) => onChange({ content: value })}
+        onChange={(value) => handleChange({ content: value })}
       />
 
       <InputField
         label="Font Family"
         value={textData.fontFamily}
-        onChange={(value) => onChange({ fontFamily: value })}
+        onChange={(value) => handleChange({ fontFamily: value })}
       />
 
       <NumberField
         label="Font Size"
         value={textData.fontSize}
-        onChange={(value) => onChange({ fontSize: value })}
+        onChange={(value) => handleChange({ fontSize: value })}
         min={8}
         max={200}
         showRange
@@ -37,7 +44,7 @@ export function TextPropertiesSection({
       <InputField
         label="Color"
         value={String(textData.color)}
-        onChange={(value) => onChange({ color: value })}
+        onChange={(value) => handleChange({ color: value })}
         type="color"
       />
 
@@ -47,7 +54,7 @@ export function TextPropertiesSection({
           {(['left', 'center', 'right'] as const).map((align) => (
             <button
               key={align}
-              onClick={() => onChange({ align })}
+              onClick={() => handleChange({ align })}
               className={`flex-1 px-3 py-1.5 rounded text-xs transition-colors ${
                 textData.align === align
                   ? 'bg-blue-600 text-white'
@@ -65,24 +72,24 @@ export function TextPropertiesSection({
         <ToggleField
           label="Bold"
           checked={textData.bold ?? false}
-          onChange={(checked) => onChange({ bold: checked })}
+          onChange={(checked) => handleChange({ bold: checked })}
         />
         <ToggleField
           label="Italic"
           checked={textData.italic ?? false}
-          onChange={(checked) => onChange({ italic: checked })}
+          onChange={(checked) => handleChange({ italic: checked })}
         />
         <ToggleField
           label="Underline"
           checked={textData.underline ?? false}
-          onChange={(checked) => onChange({ underline: checked })}
+          onChange={(checked) => handleChange({ underline: checked })}
         />
       </div>
 
       <NumberField
         label="Letter Spacing"
         value={textData.letterSpacing ?? 0}
-        onChange={(value) => onChange({ letterSpacing: value })}
+        onChange={(value) => handleChange({ letterSpacing: value })}
         min={-10}
         max={50}
         step={0.5}
@@ -91,13 +98,12 @@ export function TextPropertiesSection({
       <NumberField
         label="Line Height"
         value={textData.lineHeight ?? 1}
-        onChange={(value) => onChange({ lineHeight: value })}
+        onChange={(value) => handleChange({ lineHeight: value })}
         min={0.5}
         max={3}
         step={0.1}
       />
 
-      {/* Background */}
       <div className="flex flex-col gap-2 mt-4">
         <div className="text-xs text-neutral-400 mb-1">Background</div>
         <ToggleField
@@ -105,7 +111,7 @@ export function TextPropertiesSection({
           checked={!!textData.background}
           onChange={(checked) => {
             if (checked) {
-              onChange({
+              handleChange({
                 background: {
                   color: '#000000',
                   paddingX: 10,
@@ -115,7 +121,7 @@ export function TextPropertiesSection({
                 },
               });
             } else {
-              onChange({ background: undefined });
+              handleChange({ background: undefined });
             }
           }}
         />
@@ -125,7 +131,7 @@ export function TextPropertiesSection({
               label="Color"
               value={textData.background.color}
               onChange={(value) =>
-                onChange({
+                handleChange({
                   background: { ...textData.background!, color: value },
                 })
               }
@@ -135,7 +141,7 @@ export function TextPropertiesSection({
               label="Padding X"
               value={textData.background.paddingX}
               onChange={(value) =>
-                onChange({
+                handleChange({
                   background: { ...textData.background!, paddingX: value },
                 })
               }
@@ -146,7 +152,7 @@ export function TextPropertiesSection({
               label="Padding Y"
               value={textData.background.paddingY}
               onChange={(value) =>
-                onChange({
+                handleChange({
                   background: { ...textData.background!, paddingY: value },
                 })
               }
@@ -157,7 +163,7 @@ export function TextPropertiesSection({
               label="Radius"
               value={textData.background.radius}
               onChange={(value) =>
-                onChange({
+                handleChange({
                   background: { ...textData.background!, radius: value },
                 })
               }
@@ -168,7 +174,7 @@ export function TextPropertiesSection({
               label="Alpha"
               value={textData.background.alpha ?? 1}
               onChange={(value) =>
-                onChange({
+                handleChange({
                   background: { ...textData.background!, alpha: value },
                 })
               }
@@ -181,7 +187,6 @@ export function TextPropertiesSection({
         )}
       </div>
 
-      {/* Shadow */}
       <div className="flex flex-col gap-2 mt-4">
         <div className="text-xs text-neutral-400 mb-1">Shadow</div>
         <ToggleField
@@ -189,7 +194,7 @@ export function TextPropertiesSection({
           checked={!!textData.shadow}
           onChange={(checked) => {
             if (checked) {
-              onChange({
+              handleChange({
                 shadow: {
                   color: '#000000',
                   blur: 4,
@@ -199,7 +204,7 @@ export function TextPropertiesSection({
                 },
               });
             } else {
-              onChange({ shadow: undefined });
+              handleChange({ shadow: undefined });
             }
           }}
         />
@@ -209,7 +214,7 @@ export function TextPropertiesSection({
               label="Color"
               value={textData.shadow.color}
               onChange={(value) =>
-                onChange({
+                handleChange({
                   shadow: { ...textData.shadow!, color: value },
                 })
               }
@@ -219,7 +224,7 @@ export function TextPropertiesSection({
               label="Blur"
               value={textData.shadow.blur}
               onChange={(value) =>
-                onChange({
+                handleChange({
                   shadow: { ...textData.shadow!, blur: value },
                 })
               }
@@ -230,7 +235,7 @@ export function TextPropertiesSection({
               label="Offset X"
               value={textData.shadow.offsetX}
               onChange={(value) =>
-                onChange({
+                handleChange({
                   shadow: { ...textData.shadow!, offsetX: value },
                 })
               }
@@ -241,7 +246,7 @@ export function TextPropertiesSection({
               label="Offset Y"
               value={textData.shadow.offsetY}
               onChange={(value) =>
-                onChange({
+                handleChange({
                   shadow: { ...textData.shadow!, offsetY: value },
                 })
               }
@@ -252,7 +257,7 @@ export function TextPropertiesSection({
               label="Alpha"
               value={textData.shadow.alpha ?? 1}
               onChange={(value) =>
-                onChange({
+                handleChange({
                   shadow: { ...textData.shadow!, alpha: value },
                 })
               }
@@ -265,7 +270,6 @@ export function TextPropertiesSection({
         )}
       </div>
 
-      {/* Border */}
       <div className="flex flex-col gap-2 mt-4">
         <div className="text-xs text-neutral-400 mb-1">Border</div>
         <ToggleField
@@ -273,7 +277,7 @@ export function TextPropertiesSection({
           checked={!!textData.border}
           onChange={(checked) => {
             if (checked) {
-              onChange({
+              handleChange({
                 border: {
                   color: '#ffffff',
                   width: 1,
@@ -281,7 +285,7 @@ export function TextPropertiesSection({
                 },
               });
             } else {
-              onChange({ border: undefined });
+              handleChange({ border: undefined });
             }
           }}
         />
@@ -291,7 +295,7 @@ export function TextPropertiesSection({
               label="Color"
               value={String(textData.border.color)}
               onChange={(value) =>
-                onChange({
+                handleChange({
                   border: { ...textData.border!, color: value },
                 })
               }
@@ -301,7 +305,7 @@ export function TextPropertiesSection({
               label="Width"
               value={textData.border.width}
               onChange={(value) =>
-                onChange({
+                handleChange({
                   border: { ...textData.border!, width: value },
                 })
               }
@@ -312,7 +316,7 @@ export function TextPropertiesSection({
               label="Radius"
               value={textData.border.radius ?? 0}
               onChange={(value) =>
-                onChange({
+                handleChange({
                   border: { ...textData.border!, radius: value },
                 })
               }
@@ -322,6 +326,6 @@ export function TextPropertiesSection({
           </>
         )}
       </div>
-    </Section>
+    </div>
   );
 }

@@ -1,27 +1,28 @@
-import { Section, NumberField, AlignPresetButtons } from '../inputs';
+import { NumberField, AlignPresetButtons } from '../inputs';
 import type { ITransform } from '../../domains/Clip/types';
 import type { JsonPath, JsonPrimitive } from '../../utils/transformHelpers';
 
-interface TransformsSectionProps {
+interface TransformPropertyProps {
   transforms: ITransform;
   onChange: (path: JsonPath, value: JsonPrimitive) => void;
-  /** 🔥 드래그 중 실시간 미리보기용 - store 거치지 않고 직접 clip에 적용 */
   onLiveChange?: (path: JsonPath, value: JsonPrimitive) => void;
+  onChanged?: () => void;
   onBatchChange?: (updates: Partial<ITransform>) => void;
   isTextClip?: boolean;
   canvasWidth?: number;
   canvasHeight?: number;
 }
 
-export function TransformsSection({
+export function TransformProperty({
   transforms,
   onChange,
   onLiveChange,
+  onChanged,
   onBatchChange,
   isTextClip = false,
   canvasWidth = 1920,
   canvasHeight = 1080,
-}: TransformsSectionProps) {
+}: TransformPropertyProps) {
   const getPosition = () => transforms?.position;
   const getSize = () => transforms?.size;
   const getScale = () => ({
@@ -31,7 +32,6 @@ export function TransformsSection({
   const getRotation = () => transforms?.rotation ?? 0;
   const getOpacity = () => transforms?.opacity ?? 1;
 
-  // Anchor와 Position을 함께 조정하는 정렬 핸들러
   const handleAlignX = (alignX: 'left' | 'center' | 'right') => {
     if (onBatchChange) {
       const updates: Partial<ITransform> = {
@@ -47,8 +47,8 @@ export function TransformsSection({
       }
 
       onBatchChange(updates);
+      onChanged?.();
     } else {
-      // Fallback: position만 변경
       if (alignX === 'left') {
         onChange(['position', 'x'], 0);
       } else if (alignX === 'center') {
@@ -56,6 +56,7 @@ export function TransformsSection({
       } else {
         onChange(['position', 'x'], canvasWidth);
       }
+      onChanged?.();
     }
   };
 
@@ -74,8 +75,8 @@ export function TransformsSection({
       }
 
       onBatchChange(updates);
+      onChanged?.();
     } else {
-      // Fallback: position만 변경
       if (alignY === 'top') {
         onChange(['position', 'y'], 0);
       } else if (alignY === 'center') {
@@ -83,16 +84,20 @@ export function TransformsSection({
       } else {
         onChange(['position', 'y'], canvasHeight);
       }
+      onChanged?.();
     }
   };
 
   return (
-    <Section title="Transform">
+    <div className="space-y-2">
       <div className="text-xs text-neutral-400 mb-1">Position</div>
       <NumberField
         label="X"
         value={getPosition()?.x ?? 0}
-        onChange={(value) => onChange(['position', 'x'], value)}
+        onChange={(value) => {
+          onChange(['position', 'x'], value);
+          onChanged?.();
+        }}
         onLiveChange={
           onLiveChange
             ? (value) => onLiveChange(['position', 'x'], value)
@@ -104,7 +109,10 @@ export function TransformsSection({
       <NumberField
         label="Y"
         value={getPosition()?.y ?? 0}
-        onChange={(value) => onChange(['position', 'y'], value)}
+        onChange={(value) => {
+          onChange(['position', 'y'], value);
+          onChanged?.();
+        }}
         onLiveChange={
           onLiveChange
             ? (value) => onLiveChange(['position', 'y'], value)
@@ -120,7 +128,10 @@ export function TransformsSection({
           <NumberField
             label="Width"
             value={getSize()?.width ?? 0}
-            onChange={(value) => onChange(['size', 'width'], value)}
+            onChange={(value) => {
+              onChange(['size', 'width'], value);
+              onChanged?.();
+            }}
             onLiveChange={
               onLiveChange
                 ? (value) => onLiveChange(['size', 'width'], value)
@@ -131,7 +142,10 @@ export function TransformsSection({
           <NumberField
             label="Height"
             value={getSize()?.height ?? 0}
-            onChange={(value) => onChange(['size', 'height'], value)}
+            onChange={(value) => {
+              onChange(['size', 'height'], value);
+              onChanged?.();
+            }}
             onLiveChange={
               onLiveChange
                 ? (value) => onLiveChange(['size', 'height'], value)
@@ -146,7 +160,10 @@ export function TransformsSection({
       <NumberField
         label="X"
         value={getScale().x}
-        onChange={(value) => onChange(['scaleX'], value)}
+        onChange={(value) => {
+          onChange(['scaleX'], value);
+          onChanged?.();
+        }}
         onLiveChange={
           onLiveChange ? (value) => onLiveChange(['scaleX'], value) : undefined
         }
@@ -158,7 +175,10 @@ export function TransformsSection({
       <NumberField
         label="Y"
         value={getScale().y}
-        onChange={(value) => onChange(['scaleY'], value)}
+        onChange={(value) => {
+          onChange(['scaleY'], value);
+          onChanged?.();
+        }}
         onLiveChange={
           onLiveChange ? (value) => onLiveChange(['scaleY'], value) : undefined
         }
@@ -172,7 +192,10 @@ export function TransformsSection({
       <NumberField
         label="Degrees"
         value={Math.round((getRotation() * 180) / Math.PI)}
-        onChange={(value) => onChange(['rotation'], (value * Math.PI) / 180)}
+        onChange={(value) => {
+          onChange(['rotation'], (value * Math.PI) / 180);
+          onChanged?.();
+        }}
         onLiveChange={
           onLiveChange
             ? (value) => onLiveChange(['rotation'], (value * Math.PI) / 180)
@@ -187,7 +210,10 @@ export function TransformsSection({
       <NumberField
         label="Opacity"
         value={getOpacity()}
-        onChange={(value) => onChange(['opacity'], value)}
+        onChange={(value) => {
+          onChange(['opacity'], value);
+          onChanged?.();
+        }}
         onLiveChange={
           onLiveChange ? (value) => onLiveChange(['opacity'], value) : undefined
         }
@@ -203,6 +229,6 @@ export function TransformsSection({
         onAlignX={handleAlignX}
         onAlignY={handleAlignY}
       />
-    </Section>
+    </div>
   );
 }

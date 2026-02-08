@@ -6,11 +6,6 @@ import type {
   IShapeClip,
   IAudioClip,
 } from '@/lib/studio/domains/Clip/types';
-import { InputField, NumberField, ToggleField } from '../inputs';
-import { TransformsSection } from '../Properties/TransformsSection';
-import { TextPropertiesSection } from '../Properties/TextPropertiesSection';
-import { ShapePropertiesSection } from '../Properties/ShapePropertiesSection';
-import { EffectsSection } from '../Properties/EffectsSection';
 import {
   updateTransformAtPath,
   type JsonPath,
@@ -23,7 +18,6 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Settings2,
   Clock,
@@ -36,6 +30,14 @@ import {
 } from 'lucide-react';
 import { useRef } from 'react';
 import { Track } from '../../domains/Track/Track';
+import { BasicProperty } from './BasicProperty';
+import { RangeProperty } from './RangeProperty';
+import { TrimProperty } from './TrimProperty';
+import { VolumeProperty } from './VolumeProperty';
+import { TransformProperty } from './TransformProperty';
+import { TextProperty } from './TextProperty';
+import { ShapeProperty } from './ShapeProperty';
+import { EffectProperty } from './EffectProperty';
 
 interface PropertiesProps {
   clipId: string;
@@ -53,9 +55,7 @@ export function Properties({ clipId }: PropertiesProps) {
   if (!result) {
     return (
       <div className="h-full flex flex-col gap-3 p-4">
-        <Skeleton className="h-8 w-full" />
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-24 w-full" />
+        Can't find Clip ID: {clipId}
       </div>
     );
   }
@@ -100,6 +100,25 @@ export function Properties({ clipId }: PropertiesProps) {
     clipInstance.applyTransform(liveTransformsRef.current);
   };
 
+  const handleTransformChange = (path: JsonPath, value: JsonPrimitive) => {
+    if (!graphicClip) return;
+    const newTransforms = updateTransformAtPath(
+      graphicClip.transforms,
+      path,
+      value
+    );
+    updateClip({
+      transforms: newTransforms as typeof graphicClip.transforms,
+    });
+  };
+
+  const handleBatchTransformChange = (updates: any) => {
+    if (!graphicClip) return;
+    updateClip({
+      transforms: { ...graphicClip.transforms, ...updates },
+    });
+  };
+
   return (
     <div className="flex flex-col h-full overflow-y-auto p-3">
       <div className="flex items-center justify-between mb-3 pb-2 border-b border-neutral-800">
@@ -118,7 +137,7 @@ export function Properties({ clipId }: PropertiesProps) {
 
       <Accordion
         type="multiple"
-        defaultValue={['basic', 'timing', 'transform']}
+        defaultValue={['basic', 'range', 'transform']}
         className="w-full space-y-1"
       >
         <AccordionItem value="basic" className="border-neutral-800">
@@ -129,45 +148,39 @@ export function Properties({ clipId }: PropertiesProps) {
             </span>
           </AccordionTrigger>
           <AccordionContent className="pt-2 pb-3">
-            <div className="space-y-2">
-              <InputField
-                label="Name"
-                value={clip.name}
-                onChange={(value) => updateClip({ name: value })}
-              />
-              <ToggleField
-                label="Enabled"
-                checked={clip.enabled}
-                onChange={(checked) => updateClip({ enabled: checked })}
-              />
-            </div>
+            <BasicProperty
+              name={clip.name}
+              enabled={clip.enabled}
+              onChangeName={(value) => {
+                updateClip({ name: value });
+              }}
+              onChangeEnabled={(checked) => {
+                updateClip({ enabled: checked });
+              }}
+              onChanged={() => {}}
+            />
           </AccordionContent>
         </AccordionItem>
 
-        <AccordionItem value="timing" className="border-neutral-800">
+        <AccordionItem value="range" className="border-neutral-800">
           <AccordionTrigger className="py-2 text-xs">
             <span className="flex items-center gap-2">
               <Clock size={14} />
-              Timing
+              Range
             </span>
           </AccordionTrigger>
           <AccordionContent className="pt-2 pb-3">
-            <div className="space-y-2">
-              <NumberField
-                label="Start"
-                value={clip.startTime}
-                onChange={(value) => updateClip({ startTime: value })}
-                min={0}
-                step={0.1}
-              />
-              <NumberField
-                label="End"
-                value={clip.endTime}
-                onChange={(value) => updateClip({ endTime: value })}
-                min={clip.startTime}
-                step={0.1}
-              />
-            </div>
+            <RangeProperty
+              startTime={clip.startTime}
+              endTime={clip.endTime}
+              onChangeStartTime={(value) => {
+                updateClip({ startTime: value });
+              }}
+              onChangeEndTime={(value) => {
+                updateClip({ endTime: value });
+              }}
+              onChanged={() => {}}
+            />
           </AccordionContent>
         </AccordionItem>
 
@@ -179,22 +192,17 @@ export function Properties({ clipId }: PropertiesProps) {
             </span>
           </AccordionTrigger>
           <AccordionContent className="pt-2 pb-3">
-            <div className="space-y-2">
-              <NumberField
-                label="Start"
-                value={clip.trimStart}
-                onChange={(value) => updateClip({ trimStart: value })}
-                min={0}
-                step={0.1}
-              />
-              <NumberField
-                label="End"
-                value={clip.trimEnd}
-                onChange={(value) => updateClip({ trimEnd: value })}
-                min={0}
-                step={0.1}
-              />
-            </div>
+            <TrimProperty
+              trimStart={clip.trimStart}
+              trimEnd={clip.trimEnd}
+              onChangeTrimStart={(value) => {
+                updateClip({ trimStart: value });
+              }}
+              onChangeTrimEnd={(value) => {
+                updateClip({ trimEnd: value });
+              }}
+              onChanged={() => {}}
+            />
           </AccordionContent>
         </AccordionItem>
 
@@ -207,14 +215,12 @@ export function Properties({ clipId }: PropertiesProps) {
               </span>
             </AccordionTrigger>
             <AccordionContent className="pt-2 pb-3">
-              <NumberField
-                label="Volume"
-                value={audioClip.volume}
-                onChange={(value) => updateClip({ volume: value })}
-                min={0}
-                max={1}
-                step={0.01}
-                showRange
+              <VolumeProperty
+                volume={audioClip.volume}
+                onChangeVolume={(value) => {
+                  updateClip({ volume: value });
+                }}
+                onChanged={() => {}}
               />
             </AccordionContent>
           </AccordionItem>
@@ -229,27 +235,15 @@ export function Properties({ clipId }: PropertiesProps) {
               </span>
             </AccordionTrigger>
             <AccordionContent className="pt-2 pb-3">
-              <TransformsSection
+              <TransformProperty
                 transforms={graphicClip.transforms}
-                onChange={(path: JsonPath, value: JsonPrimitive) => {
-                  const newTransforms = updateTransformAtPath(
-                    graphicClip.transforms,
-                    path,
-                    value
-                  );
-                  updateClip({
-                    transforms: newTransforms as typeof graphicClip.transforms,
-                  });
-                }}
+                onChange={handleTransformChange}
                 onLiveChange={handleLiveTransformChange}
-                onBatchChange={(updates) => {
-                  updateClip({
-                    transforms: { ...graphicClip.transforms, ...updates },
-                  });
-                }}
+                onBatchChange={handleBatchTransformChange}
                 isTextClip={clip.type === 'text'}
                 canvasWidth={canvasWidth}
                 canvasHeight={canvasHeight}
+                onChanged={() => {}}
               />
             </AccordionContent>
           </AccordionItem>
@@ -264,13 +258,14 @@ export function Properties({ clipId }: PropertiesProps) {
               </span>
             </AccordionTrigger>
             <AccordionContent className="pt-2 pb-3">
-              <TextPropertiesSection
+              <TextProperty
                 textData={textClip.textData}
-                onChange={(updates) =>
+                onChange={(updates) => {
                   updateClip({
                     textData: { ...textClip.textData, ...updates },
-                  })
-                }
+                  });
+                }}
+                onChanged={() => {}}
               />
             </AccordionContent>
           </AccordionItem>
@@ -285,7 +280,7 @@ export function Properties({ clipId }: PropertiesProps) {
               </span>
             </AccordionTrigger>
             <AccordionContent className="pt-2 pb-3">
-              <ShapePropertiesSection
+              <ShapeProperty
                 shapeData={shapeClip.shapeData}
                 onChange={(updatedShapeData) => {
                   const sizeChanged =
@@ -305,6 +300,7 @@ export function Properties({ clipId }: PropertiesProps) {
                     }),
                   });
                 }}
+                onChanged={() => {}}
               />
             </AccordionContent>
           </AccordionItem>
@@ -323,9 +319,10 @@ export function Properties({ clipId }: PropertiesProps) {
             </span>
           </AccordionTrigger>
           <AccordionContent className="pt-2 pb-3">
-            <EffectsSection
+            <EffectProperty
               effects={clip.effects}
               onChange={(effects) => updateClip({ effects })}
+              onChanged={() => {}}
             />
           </AccordionContent>
         </AccordionItem>

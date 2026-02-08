@@ -1,4 +1,4 @@
-import { Section, InputField, NumberField, ToggleField } from '../inputs';
+import { InputField, NumberField, ToggleField } from '../inputs';
 import type {
   IShapeData,
   IFill,
@@ -6,25 +6,29 @@ import type {
   IRadialGradientFill,
 } from '../../types/shape';
 
-interface ShapePropertiesSectionProps {
+interface ShapePropertyProps {
   shapeData: IShapeData;
   onChange: (updates: IShapeData) => void;
+  onChanged?: () => void;
 }
 
-export function ShapePropertiesSection({
+export function ShapeProperty({
   shapeData,
   onChange,
-}: ShapePropertiesSectionProps) {
+  onChanged,
+}: ShapePropertyProps) {
   const handleUpdate = (updates: Partial<IShapeData>) => {
     onChange({ ...shapeData, ...updates } as IShapeData);
+    onChanged?.();
   };
 
   const handleFillUpdate = (fill: IFill) => {
     onChange({ ...shapeData, fill } as IShapeData);
+    onChanged?.();
   };
 
   return (
-    <Section title="Shape Properties">
+    <div className="space-y-2">
       <div className="flex flex-col gap-2">
         <div className="text-xs text-neutral-400 mb-1">Shape Type</div>
         <div className="grid grid-cols-3 gap-2">
@@ -64,6 +68,7 @@ export function ShapePropertiesSection({
                     shapeType: type,
                   } as IShapeData);
                 }
+                onChanged?.();
               }}
               className={`px-2 py-1.5 rounded text-xs transition-colors ${
                 shapeData.shapeType === type
@@ -97,7 +102,6 @@ export function ShapePropertiesSection({
         showRange
       />
 
-      {/* Fill Type Selector */}
       <div className="flex flex-col gap-2 mt-2">
         <div className="text-xs text-neutral-400 mb-1">Fill Type</div>
         <div className="grid grid-cols-3 gap-2">
@@ -159,7 +163,6 @@ export function ShapePropertiesSection({
           )}
         </div>
 
-        {/* Solid Fill */}
         {shapeData.fill.type === 'solid' && (
           <>
             <InputField
@@ -202,7 +205,6 @@ export function ShapePropertiesSection({
           </>
         )}
 
-        {/* Linear Gradient Fill */}
         {shapeData.fill.type === 'linear-gradient' && (
           <>
             <div className="text-xs text-neutral-400 mt-2">
@@ -309,7 +311,6 @@ export function ShapePropertiesSection({
           </>
         )}
 
-        {/* Radial Gradient Fill */}
         {shapeData.fill.type === 'radial-gradient' && (
           <>
             <div className="text-xs text-neutral-400 mt-2">Inner Circle</div>
@@ -446,7 +447,6 @@ export function ShapePropertiesSection({
         )}
       </div>
 
-      {/* Rounded Rectangle Corner Radius */}
       {shapeData.shapeType === 'rounded-rectangle' && (
         <NumberField
           label="Corner Radius"
@@ -459,7 +459,6 @@ export function ShapePropertiesSection({
         />
       )}
 
-      {/* Polygon Sides */}
       {shapeData.shapeType === 'polygon' && (
         <NumberField
           label="Sides"
@@ -472,7 +471,6 @@ export function ShapePropertiesSection({
         />
       )}
 
-      {/* Stroke */}
       <div className="flex flex-col gap-2 mt-4">
         <div className="text-xs text-neutral-400 mb-1">Stroke</div>
         <ToggleField
@@ -531,6 +529,6 @@ export function ShapePropertiesSection({
           </>
         )}
       </div>
-    </Section>
+    </div>
   );
 }
