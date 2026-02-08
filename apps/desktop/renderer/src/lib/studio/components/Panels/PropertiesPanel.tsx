@@ -1,358 +1,56 @@
-import {
-  useDocStore,
-  useInteractionStore,
-  useEngineStore,
-} from '../../hooks/useStudioStores';
-import type {
-  IClip,
-  IGraphicClip,
-  ITextClip,
-  IShapeClip,
-  IAudioClip,
-} from '@/lib/studio/domains/Clip/types';
-import { InputField, NumberField, ToggleField } from '../inputs';
-import { TransformsSection } from '../Properties/TransformsSection';
-import { TextPropertiesSection } from '../Properties/TextPropertiesSection';
-import { ShapePropertiesSection } from '../Properties/ShapePropertiesSection';
-import { EffectsSection } from '../Properties/EffectsSection';
-import {
-  updateTransformAtPath,
-  type JsonPath,
-  type JsonPrimitive,
-} from '../../utils/transformHelpers';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Settings2,
-  Clock,
-  Scissors,
-  Move3D,
-  Type,
-  Hexagon,
-  Sparkles,
-  Volume2,
-} from 'lucide-react';
-import { useRef } from 'react';
+import { useState } from 'react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Empty } from '../Properties/Empty';
+import { Properties } from '../Properties/Properties';
+import { useInteractionStore, useDocStore } from '../../hooks/useStudioStores';
+import { GradientScroll } from '@/components/GradientScroll';
 import { Track } from '../../domains/Track/Track';
 
 export function PropertiesPanel() {
   const selectedClipIds = useInteractionStore((state) => state.selectedClipIds);
-  const tracks = useDocStore((state) => state.tracks);
-  const updateClipInTrack = useDocStore((state) => state.updateClip);
-  const settings = useDocStore((state) => state.settings);
-  const renderer = useEngineStore((state) => state.renderer);
+  const [activeClipIndex, setActiveClipIndex] = useState(0);
 
-  // 🔥 드래그 중 로컬 transforms 상태 (store 거치지 않고 직접 적용용)
-  const liveTransformsRef = useRef<IGraphicClip['transforms'] | null>(null);
-
-  const selectedClipId = selectedClipIds[0];
-  if (!selectedClipId) {
+  if (selectedClipIds.length === 0) {
     return <Empty />;
   }
 
-  const result = Track.findClip(tracks, selectedClipId);
-  if (!result) {
-    return (
-      <div className="h-full flex flex-col gap-3 p-4">
-        <Skeleton className="h-8 w-full" />
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-24 w-full" />
-      </div>
-    );
-  }
-
-  const { clip, trackId } = result;
-  const canvasWidth = settings.width;
-  const canvasHeight = settings.height;
-
-  const updateClip = (updates: Partial<IClip>) => {
-    // 🔥 드래그 끝나면 liveTransforms 리셋
-    liveTransformsRef.current = null;
-    updateClipInTrack(trackId, clip.id, updates);
-  };
-
-  const isGraphicClip = clip.type !== 'audio';
-  const graphicClip = isGraphicClip ? (clip as IGraphicClip) : null;
-  const textClip = clip.type === 'text' ? (clip as ITextClip) : null;
-  const shapeClip = clip.type === 'shape' ? (clip as IShapeClip) : null;
-  const audioClip = clip.type === 'audio' ? (clip as IAudioClip) : null;
-
-  // 🔥 드래그 중 GraphicClip에 직접 applyTransform 호출 (store 거치지 않음)
-  const handleLiveTransformChange = (path: JsonPath, value: JsonPrimitive) => {
-    if (!renderer || !graphicClip) return;
-
-    // GraphicTrack에서 GraphicClip 인스턴스 가져오기
-    const graphicTrack = renderer.tracks.get(trackId);
-    if (!graphicTrack) return;
-
-    const clipInstance = graphicTrack.clips.get(clip.id);
-    if (!clipInstance) return;
-
-    // liveTransforms가 없으면 현재 transforms 복사
-    if (!liveTransformsRef.current) {
-      liveTransformsRef.current = JSON.parse(
-        JSON.stringify(graphicClip.transforms)
-      );
-    }
-
-    // path에 따라 liveTransforms 업데이트
-    const newTransforms = updateTransformAtPath(
-      liveTransformsRef.current,
-      path,
-      value
-    );
-    liveTransformsRef.current = newTransforms as IGraphicClip['transforms'];
-
-    // 🔥 GraphicClip에 직접 applyTransform 호출 (store 거치지 않음!)
-    clipInstance.applyTransform(liveTransformsRef.current);
-  };
+  const activeClipId = selectedClipIds[activeClipIndex];
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto p-3">
-      {/* Header with clip info */}
-      <div className="flex items-center justify-between mb-3 pb-2 border-b border-neutral-800">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-neutral-200 truncate max-w-[120px]">
-            {clip.name}
-          </span>
-          <Badge variant="secondary" className="text-[10px]">
-            {clip.type}
-          </Badge>
-        </div>
-        <div className="text-[10px] text-neutral-500 font-mono">
-          {clip.id.slice(0, 8)}
-        </div>
+    <div className="h-full flex flex-col select-none">
+      <GradientScroll className="px-3 py-2">
+        <ToggleGroup
+          type="single"
+          value={String(activeClipIndex)}
+          onValueChange={(v) => v && setActiveClipIndex(Number(v))}
+        >
+          {selectedClipIds.map((clipId, i) => (
+            <ToggleGroupItem
+              key={clipId}
+              value={String(i)}
+              size="lg"
+              className="text-xs data-[state=off]:text-neutral-400"
+            >
+              <ClipNameTab clipId={clipId} />
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      </GradientScroll>
+
+      <div className="flex-1 min-h-0">
+        {activeClipId && <Properties clipId={activeClipId} />}
       </div>
-
-      <Accordion
-        type="multiple"
-        defaultValue={['basic', 'timing', 'transform']}
-        className="w-full space-y-1"
-      >
-        {/* Basic Section */}
-        <AccordionItem value="basic" className="border-neutral-800">
-          <AccordionTrigger className="py-2 text-xs">
-            <span className="flex items-center gap-2">
-              <Settings2 size={14} />
-              Basic
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="pt-2 pb-3">
-            <div className="space-y-2">
-              <InputField
-                label="Name"
-                value={clip.name}
-                onChange={(value) => updateClip({ name: value })}
-              />
-              <ToggleField
-                label="Enabled"
-                checked={clip.enabled}
-                onChange={(checked) => updateClip({ enabled: checked })}
-              />
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        {/* Timing Section */}
-        <AccordionItem value="timing" className="border-neutral-800">
-          <AccordionTrigger className="py-2 text-xs">
-            <span className="flex items-center gap-2">
-              <Clock size={14} />
-              Timing
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="pt-2 pb-3">
-            <div className="space-y-2">
-              <NumberField
-                label="Start"
-                value={clip.startTime}
-                onChange={(value) => updateClip({ startTime: value })}
-                min={0}
-                step={0.1}
-              />
-              <NumberField
-                label="End"
-                value={clip.endTime}
-                onChange={(value) => updateClip({ endTime: value })}
-                min={clip.startTime}
-                step={0.1}
-              />
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        {/* Trim Section */}
-        <AccordionItem value="trim" className="border-neutral-800">
-          <AccordionTrigger className="py-2 text-xs">
-            <span className="flex items-center gap-2">
-              <Scissors size={14} />
-              Trim
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="pt-2 pb-3">
-            <div className="space-y-2">
-              <NumberField
-                label="Start"
-                value={clip.trimStart}
-                onChange={(value) => updateClip({ trimStart: value })}
-                min={0}
-                step={0.1}
-              />
-              <NumberField
-                label="End"
-                value={clip.trimEnd}
-                onChange={(value) => updateClip({ trimEnd: value })}
-                min={0}
-                step={0.1}
-              />
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        {/* Audio Volume Section */}
-        {audioClip && (
-          <AccordionItem value="audio" className="border-neutral-800">
-            <AccordionTrigger className="py-2 text-xs">
-              <span className="flex items-center gap-2">
-                <Volume2 size={14} />
-                Audio
-              </span>
-            </AccordionTrigger>
-            <AccordionContent className="pt-2 pb-3">
-              <NumberField
-                label="Volume"
-                value={audioClip.volume}
-                onChange={(value) => updateClip({ volume: value })}
-                min={0}
-                max={1}
-                step={0.01}
-                showRange
-              />
-            </AccordionContent>
-          </AccordionItem>
-        )}
-
-        {/* Transform Section (for graphic clips) */}
-        {graphicClip && (
-          <AccordionItem value="transform" className="border-neutral-800">
-            <AccordionTrigger className="py-2 text-xs">
-              <span className="flex items-center gap-2">
-                <Move3D size={14} />
-                Transform
-              </span>
-            </AccordionTrigger>
-            <AccordionContent className="pt-2 pb-3">
-              <TransformsSection
-                transforms={graphicClip.transforms}
-                onChange={(path: JsonPath, value: JsonPrimitive) => {
-                  const newTransforms = updateTransformAtPath(
-                    graphicClip.transforms,
-                    path,
-                    value
-                  );
-                  updateClip({
-                    transforms: newTransforms as typeof graphicClip.transforms,
-                  });
-                }}
-                onLiveChange={handleLiveTransformChange}
-                onBatchChange={(updates) => {
-                  updateClip({
-                    transforms: { ...graphicClip.transforms, ...updates },
-                  });
-                }}
-                isTextClip={clip.type === 'text'}
-                canvasWidth={canvasWidth}
-                canvasHeight={canvasHeight}
-              />
-            </AccordionContent>
-          </AccordionItem>
-        )}
-
-        {/* Text Properties Section */}
-        {textClip && (
-          <AccordionItem value="text" className="border-neutral-800">
-            <AccordionTrigger className="py-2 text-xs">
-              <span className="flex items-center gap-2">
-                <Type size={14} />
-                Text Properties
-              </span>
-            </AccordionTrigger>
-            <AccordionContent className="pt-2 pb-3">
-              <TextPropertiesSection
-                textData={textClip.textData}
-                onChange={(updates) =>
-                  updateClip({
-                    textData: { ...textClip.textData, ...updates },
-                  })
-                }
-              />
-            </AccordionContent>
-          </AccordionItem>
-        )}
-
-        {/* Shape Properties Section */}
-        {shapeClip && (
-          <AccordionItem value="shape" className="border-neutral-800">
-            <AccordionTrigger className="py-2 text-xs">
-              <span className="flex items-center gap-2">
-                <Hexagon size={14} />
-                Shape Properties
-              </span>
-            </AccordionTrigger>
-            <AccordionContent className="pt-2 pb-3">
-              <ShapePropertiesSection
-                shapeData={shapeClip.shapeData}
-                onChange={(updatedShapeData) => {
-                  const sizeChanged =
-                    updatedShapeData.width !== shapeClip.shapeData.width ||
-                    updatedShapeData.height !== shapeClip.shapeData.height;
-
-                  updateClip({
-                    shapeData: updatedShapeData,
-                    ...(sizeChanged && {
-                      transforms: {
-                        ...shapeClip.transforms,
-                        size: {
-                          width: updatedShapeData.width,
-                          height: updatedShapeData.height,
-                        },
-                      },
-                    }),
-                  });
-                }}
-              />
-            </AccordionContent>
-          </AccordionItem>
-        )}
-
-        {/* Effects Section */}
-        <AccordionItem value="effects" className="border-neutral-800">
-          <AccordionTrigger className="py-2 text-xs">
-            <span className="flex items-center gap-2">
-              <Sparkles size={14} />
-              Effects
-              {clip.effects && clip.effects.length > 0 && (
-                <Badge variant="secondary" className="text-[10px] ml-1">
-                  {clip.effects.length}
-                </Badge>
-              )}
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="pt-2 pb-3">
-            <EffectsSection
-              effects={clip.effects}
-              onChange={(effects) => updateClip({ effects })}
-            />
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
     </div>
   );
+}
+
+function ClipNameTab({ clipId }: { clipId: string }) {
+  const tracks = useDocStore((state) => state.tracks);
+  const result = Track.findClip(tracks, clipId);
+
+  if (!result) {
+    return <span className="text-neutral-500">Unknown</span>;
+  }
+
+  return <span className="truncate max-w-[80px]">{result.clip.name}</span>;
 }
