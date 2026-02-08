@@ -1,11 +1,10 @@
-import { InputField, ToggleField } from '../inputs';
+import { TextField, ToggleField } from '../inputs';
 
 interface BasicPropertyProps {
   name: string;
   enabled: boolean;
   onChangeName: (value: string) => void;
   onChangeEnabled: (checked: boolean) => void;
-  onChanged?: () => void;
 }
 
 export function BasicProperty({
@@ -13,25 +12,14 @@ export function BasicProperty({
   enabled,
   onChangeName,
   onChangeEnabled,
-  onChanged,
 }: BasicPropertyProps) {
   return (
-    <div className="space-y-2">
-      <InputField
-        label="Name"
-        value={name}
-        onChange={(value) => {
-          onChangeName(value);
-          onChanged?.();
-        }}
-      />
+    <div className="space-y-3">
+      <TextField label="Name" value={name} onChange={onChangeName} />
       <ToggleField
         label="Enabled"
         checked={enabled}
-        onChange={(checked) => {
-          onChangeEnabled(checked);
-          onChanged?.();
-        }}
+        onChange={onChangeEnabled}
       />
     </div>
   );

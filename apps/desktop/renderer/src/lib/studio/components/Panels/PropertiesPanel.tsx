@@ -38,7 +38,9 @@ export function PropertiesPanel() {
       </GradientScroll>
 
       <div className="flex-1 min-h-0">
-        {activeClipId && <Properties clipId={activeClipId} />}
+        {activeClipId && (
+          <Properties key={activeClipId} clipId={activeClipId} />
+        )}
       </div>
     </div>
   );

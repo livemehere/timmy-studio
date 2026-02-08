@@ -1,4 +1,4 @@
-import { InputField, NumberField, ToggleField } from '../inputs';
+import { ColorField, NumberField, ToggleField } from '../inputs';
 import type {
   IShapeData,
   IFill,
@@ -165,7 +165,7 @@ export function ShapeProperty({
 
         {shapeData.fill.type === 'solid' && (
           <>
-            <InputField
+            <ColorField
               label="Color"
               value={String(shapeData.fill.color)}
               onChange={(value) => {
@@ -178,7 +178,6 @@ export function ShapeProperty({
                   });
                 }
               }}
-              type="color"
             />
             <NumberField
               label="Opacity"
@@ -290,7 +289,7 @@ export function ShapeProperty({
                     max={1}
                     step={0.01}
                   />
-                  <InputField
+                  <ColorField
                     label="Color"
                     value={String(stop.color)}
                     onChange={(value) => {
@@ -304,7 +303,6 @@ export function ShapeProperty({
                         });
                       }
                     }}
-                    type="color"
                   />
                 </div>
               ))}
@@ -425,7 +423,7 @@ export function ShapeProperty({
                     max={1}
                     step={0.01}
                   />
-                  <InputField
+                  <ColorField
                     label="Color"
                     value={String(stop.color)}
                     onChange={(value) => {
@@ -439,7 +437,6 @@ export function ShapeProperty({
                         });
                       }
                     }}
-                    type="color"
                   />
                 </div>
               ))}
@@ -492,7 +489,7 @@ export function ShapeProperty({
         />
         {shapeData.stroke && (
           <>
-            <InputField
+            <ColorField
               label="Color"
               value={String(shapeData.stroke.color)}
               onChange={(value) =>
@@ -500,7 +497,6 @@ export function ShapeProperty({
                   stroke: { ...shapeData.stroke!, color: value },
                 })
               }
-              type="color"
             />
             <NumberField
               label="Width"

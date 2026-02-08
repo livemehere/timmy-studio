@@ -1,6 +1,9 @@
-import { NumberField, AlignPresetButtons } from '../inputs';
+import { AlignPresetButtons } from '../inputs';
 import type { ITransform } from '../../domains/Clip/types';
 import type { JsonPath, JsonPrimitive } from '../../utils/transformHelpers';
+import { useMotionValue, useMotionValueEvent } from 'motion/react';
+import { useEffect } from 'react';
+import { MotionNumberInput } from '@/components/motion-number-input';
 
 interface TransformPropertyProps {
   transforms: ITransform;
@@ -23,205 +26,254 @@ export function TransformProperty({
   canvasWidth = 1920,
   canvasHeight = 1080,
 }: TransformPropertyProps) {
-  const getPosition = () => transforms?.position;
-  const getSize = () => transforms?.size;
-  const getScale = () => ({
-    x: transforms?.scaleX ?? 1,
-    y: transforms?.scaleY ?? 1,
+  const positionX = useMotionValue(transforms?.position?.x ?? 0);
+  const positionY = useMotionValue(transforms?.position?.y ?? 0);
+  const sizeWidth = useMotionValue(transforms?.size?.width ?? 0);
+  const sizeHeight = useMotionValue(transforms?.size?.height ?? 0);
+  const scaleX = useMotionValue(transforms?.scaleX ?? 1);
+  const scaleY = useMotionValue(transforms?.scaleY ?? 1);
+  const rotation = useMotionValue(
+    transforms?.rotation ? (transforms.rotation * 180) / Math.PI : 0
+  );
+  const opacity = useMotionValue(transforms?.opacity ?? 1);
+
+  useEffect(() => {
+    positionX.set(transforms?.position?.x ?? 0);
+    positionY.set(transforms?.position?.y ?? 0);
+    sizeWidth.set(transforms?.size?.width ?? 0);
+    sizeHeight.set(transforms?.size?.height ?? 0);
+    scaleX.set(transforms?.scaleX ?? 1);
+    scaleY.set(transforms?.scaleY ?? 1);
+    rotation.set(
+      transforms?.rotation ? (transforms.rotation * 180) / Math.PI : 0
+    );
+    opacity.set(transforms?.opacity ?? 1);
+  }, [transforms]);
+
+  useMotionValueEvent(positionX, 'change', (v) => {
+    if (onLiveChange) {
+      onLiveChange(['position', 'x'], v);
+    }
   });
-  const getRotation = () => transforms?.rotation ?? 0;
-  const getOpacity = () => transforms?.opacity ?? 1;
+
+  useMotionValueEvent(positionY, 'change', (v) => {
+    if (onLiveChange) {
+      onLiveChange(['position', 'y'], v);
+    }
+  });
+
+  useMotionValueEvent(sizeWidth, 'change', (v) => {
+    if (onLiveChange) {
+      onLiveChange(['size', 'width'], v);
+    }
+  });
+
+  useMotionValueEvent(sizeHeight, 'change', (v) => {
+    if (onLiveChange) {
+      onLiveChange(['size', 'height'], v);
+    }
+  });
+
+  useMotionValueEvent(scaleX, 'change', (v) => {
+    if (onLiveChange) {
+      onLiveChange(['scaleX'], v);
+    }
+  });
+
+  useMotionValueEvent(scaleY, 'change', (v) => {
+    if (onLiveChange) {
+      onLiveChange(['scaleY'], v);
+    }
+  });
+
+  useMotionValueEvent(rotation, 'change', (v) => {
+    if (onLiveChange) {
+      onLiveChange(['rotation'], (v * Math.PI) / 180);
+    }
+  });
+
+  useMotionValueEvent(opacity, 'change', (v) => {
+    if (onLiveChange) {
+      onLiveChange(['opacity'], v);
+    }
+  });
 
   const handleAlignX = (alignX: 'left' | 'center' | 'right') => {
+    const xValue =
+      alignX === 'left'
+        ? 0
+        : alignX === 'center'
+          ? canvasWidth / 2
+          : canvasWidth;
+
+    positionX.set(xValue);
+
     if (onBatchChange) {
       const updates: Partial<ITransform> = {
         position: { ...transforms.position } as { x: number; y: number },
       };
-
-      if (alignX === 'left') {
-        updates.position!.x = 0;
-      } else if (alignX === 'center') {
-        updates.position!.x = canvasWidth / 2;
-      } else {
-        updates.position!.x = canvasWidth;
-      }
-
+      updates.position!.x = xValue;
       onBatchChange(updates);
       onChanged?.();
     } else {
-      if (alignX === 'left') {
-        onChange(['position', 'x'], 0);
-      } else if (alignX === 'center') {
-        onChange(['position', 'x'], canvasWidth / 2);
-      } else {
-        onChange(['position', 'x'], canvasWidth);
-      }
+      onChange(['position', 'x'], xValue);
       onChanged?.();
     }
   };
 
   const handleAlignY = (alignY: 'top' | 'center' | 'bottom') => {
+    const yValue =
+      alignY === 'top'
+        ? 0
+        : alignY === 'center'
+          ? canvasHeight / 2
+          : canvasHeight;
+
+    positionY.set(yValue);
+
     if (onBatchChange) {
       const updates: Partial<ITransform> = {
         position: { ...transforms.position } as { x: number; y: number },
       };
-
-      if (alignY === 'top') {
-        updates.position!.y = 0;
-      } else if (alignY === 'center') {
-        updates.position!.y = canvasHeight / 2;
-      } else {
-        updates.position!.y = canvasHeight;
-      }
-
+      updates.position!.y = yValue;
       onBatchChange(updates);
       onChanged?.();
     } else {
-      if (alignY === 'top') {
-        onChange(['position', 'y'], 0);
-      } else if (alignY === 'center') {
-        onChange(['position', 'y'], canvasHeight / 2);
-      } else {
-        onChange(['position', 'y'], canvasHeight);
-      }
+      onChange(['position', 'y'], yValue);
       onChanged?.();
     }
+  };
+
+  const handlePositionXChange = (v: number) => {
+    onChange(['position', 'x'], v);
+    onChanged?.();
+  };
+
+  const handlePositionYChange = (v: number) => {
+    onChange(['position', 'y'], v);
+    onChanged?.();
+  };
+
+  const handleSizeWidthChange = (v: number) => {
+    onChange(['size', 'width'], v);
+    onChanged?.();
+  };
+
+  const handleSizeHeightChange = (v: number) => {
+    onChange(['size', 'height'], v);
+    onChanged?.();
+  };
+
+  const handleScaleXChange = (v: number) => {
+    onChange(['scaleX'], v);
+    onChanged?.();
+  };
+
+  const handleScaleYChange = (v: number) => {
+    onChange(['scaleY'], v);
+    onChanged?.();
+  };
+
+  const handleRotationChange = (v: number) => {
+    onChange(['rotation'], (v * Math.PI) / 180);
+    onChanged?.();
+  };
+
+  const handleOpacityChange = (v: number) => {
+    onChange(['opacity'], v);
+    onChanged?.();
   };
 
   return (
     <div className="space-y-2">
       <div className="text-xs text-neutral-400 mb-1">Position</div>
-      <NumberField
-        label="X"
-        value={getPosition()?.x ?? 0}
-        onChange={(value) => {
-          onChange(['position', 'x'], value);
-          onChanged?.();
-        }}
-        onLiveChange={
-          onLiveChange
-            ? (value) => onLiveChange(['position', 'x'], value)
-            : undefined
-        }
-        max={canvasWidth * 2}
-        showRange
-      />
-      <NumberField
-        label="Y"
-        value={getPosition()?.y ?? 0}
-        onChange={(value) => {
-          onChange(['position', 'y'], value);
-          onChanged?.();
-        }}
-        onLiveChange={
-          onLiveChange
-            ? (value) => onLiveChange(['position', 'y'], value)
-            : undefined
-        }
-        max={canvasHeight * 2}
-        showRange
-      />
+      <div className={'flex gap-2'}>
+        <MotionNumberInput
+          value={positionX}
+          map={(v) => Number(v.toFixed(2))}
+          onChange={handlePositionXChange}
+          min={0}
+          max={canvasWidth * 2}
+          icon={<div className={'text-sm opacity-50'}>X</div>}
+        />
+        <MotionNumberInput
+          value={positionY}
+          map={(v) => Number(v.toFixed(2))}
+          onChange={handlePositionYChange}
+          min={0}
+          max={canvasHeight * 2}
+          icon={<div className={'text-sm opacity-50'}>Y</div>}
+        />
+      </div>
 
       {!isTextClip && (
         <>
           <div className="text-xs text-neutral-400 mb-1 mt-4">Size</div>
-          <NumberField
-            label="Width"
-            value={getSize()?.width ?? 0}
-            onChange={(value) => {
-              onChange(['size', 'width'], value);
-              onChanged?.();
-            }}
-            onLiveChange={
-              onLiveChange
-                ? (value) => onLiveChange(['size', 'width'], value)
-                : undefined
-            }
-            showRange
-          />
-          <NumberField
-            label="Height"
-            value={getSize()?.height ?? 0}
-            onChange={(value) => {
-              onChange(['size', 'height'], value);
-              onChanged?.();
-            }}
-            onLiveChange={
-              onLiveChange
-                ? (value) => onLiveChange(['size', 'height'], value)
-                : undefined
-            }
-            showRange
-          />
+          <div className={'flex gap-2'}>
+            <MotionNumberInput
+              value={sizeWidth}
+              map={(v) => Math.max(0, Number(v.toFixed(2)))}
+              onChange={handleSizeWidthChange}
+              icon={<div className={'text-sm opacity-50'}>W</div>}
+            />
+            <MotionNumberInput
+              value={sizeHeight}
+              map={(v) => Math.max(0, Number(v.toFixed(2)))}
+              onChange={handleSizeHeightChange}
+              icon={<div className={'text-sm opacity-50'}>H</div>}
+            />
+          </div>
         </>
       )}
 
       <div className="text-xs text-neutral-400 mb-1 mt-4">Scale</div>
-      <NumberField
-        label="X"
-        value={getScale().x}
-        onChange={(value) => {
-          onChange(['scaleX'], value);
-          onChanged?.();
-        }}
-        onLiveChange={
-          onLiveChange ? (value) => onLiveChange(['scaleX'], value) : undefined
-        }
-        min={0.1}
-        max={5}
-        step={0.1}
-        showRange
-      />
-      <NumberField
-        label="Y"
-        value={getScale().y}
-        onChange={(value) => {
-          onChange(['scaleY'], value);
-          onChanged?.();
-        }}
-        onLiveChange={
-          onLiveChange ? (value) => onLiveChange(['scaleY'], value) : undefined
-        }
-        min={0.1}
-        max={5}
-        step={0.1}
-        showRange
-      />
+      <div className={'flex gap-2'}>
+        <MotionNumberInput
+          value={scaleX}
+          map={(v) => Number(v.toFixed(2))}
+          onChange={handleScaleXChange}
+          min={0.1}
+          max={5}
+          step={0.1}
+          sensitivity={0.1}
+          icon={<div className={'text-sm opacity-50'}>X</div>}
+        />
+        <MotionNumberInput
+          value={scaleY}
+          map={(v) => Number(v.toFixed(2))}
+          onChange={handleScaleYChange}
+          min={0.1}
+          max={5}
+          step={0.1}
+          sensitivity={0.1}
+          icon={<div className={'text-sm opacity-50'}>Y</div>}
+        />
+      </div>
 
       <div className="text-xs text-neutral-400 mb-1 mt-4">Rotation</div>
-      <NumberField
-        label="Degrees"
-        value={Math.round((getRotation() * 180) / Math.PI)}
-        onChange={(value) => {
-          onChange(['rotation'], (value * Math.PI) / 180);
-          onChanged?.();
-        }}
-        onLiveChange={
-          onLiveChange
-            ? (value) => onLiveChange(['rotation'], (value * Math.PI) / 180)
-            : undefined
-        }
+      <MotionNumberInput
+        value={rotation}
+        map={(v) => Number(v.toFixed(2))}
+        onChange={handleRotationChange}
         min={0}
         max={360}
-        showRange
+        step={0.1}
+        sensitivity={0.5}
+        icon={<div className={'text-sm opacity-50'}>°</div>}
       />
 
       <div className="text-xs text-neutral-400 mb-1 mt-4">Opacity</div>
-      <NumberField
-        label="Opacity"
-        value={getOpacity()}
-        onChange={(value) => {
-          onChange(['opacity'], value);
-          onChanged?.();
-        }}
-        onLiveChange={
-          onLiveChange ? (value) => onLiveChange(['opacity'], value) : undefined
-        }
+      <MotionNumberInput
+        value={opacity}
+        map={(v) => Math.max(0, Math.min(1, Number(v.toFixed(2))))}
+        onChange={handleOpacityChange}
         min={0}
         max={1}
-        step={0.1}
-        showRange
+        step={0.01}
+        sensitivity={0.01}
+        icon={<div className={'text-sm opacity-50'}>%</div>}
       />
+
       <div className="text-xs text-neutral-400 mb-1 mt-4">Alignment</div>
       <AlignPresetButtons
         currentAlignX="center"

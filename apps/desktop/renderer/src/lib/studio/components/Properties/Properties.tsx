@@ -27,6 +27,7 @@ import {
   Hexagon,
   Sparkles,
   Volume2,
+  type LucideIcon,
 } from 'lucide-react';
 import { useRef } from 'react';
 import { Track } from '../../domains/Track/Track';
@@ -38,6 +39,7 @@ import { TransformProperty } from './TransformProperty';
 import { TextProperty } from './TextProperty';
 import { ShapeProperty } from './ShapeProperty';
 import { EffectProperty } from './EffectProperty';
+import { toast } from 'sonner';
 
 interface PropertiesProps {
   clipId: string;
@@ -45,9 +47,10 @@ interface PropertiesProps {
 
 export function Properties({ clipId }: PropertiesProps) {
   const tracks = useDocStore((state) => state.tracks);
-  const updateClipInTrack = useDocStore((state) => state.updateClip);
   const settings = useDocStore((state) => state.settings);
   const renderer = useEngineStore((state) => state.renderer);
+
+  const updateClipInTrack = useDocStore((state) => state.updateClip);
 
   const liveTransformsRef = useRef<IGraphicClip['transforms'] | null>(null);
 
@@ -120,34 +123,19 @@ export function Properties({ clipId }: PropertiesProps) {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto p-3">
-      <div className="flex items-center justify-between mb-3 pb-2 border-b border-neutral-800">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-neutral-200 truncate max-w-[120px]">
-            {clip.name}
-          </span>
-          <Badge variant="secondary" className="text-[10px]">
-            {clip.type}
-          </Badge>
-        </div>
-        <div className="text-[10px] text-neutral-500 font-mono">
-          {clip.id.slice(0, 8)}
-        </div>
-      </div>
+    <div className="flex flex-col h-full overflow-y-auto">
+      <BaseClipInfo clip={clip} />
 
       <Accordion
         type="multiple"
         defaultValue={['basic', 'range', 'transform']}
         className="w-full space-y-1"
       >
-        <AccordionItem value="basic" className="border-neutral-800">
-          <AccordionTrigger className="py-2 text-xs">
-            <span className="flex items-center gap-2">
-              <Settings2 size={14} />
-              Basic
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="pt-2 pb-3">
+        <PropertyItem
+          value="basic"
+          name="Basic"
+          icon={Settings2}
+          content={
             <BasicProperty
               name={clip.name}
               enabled={clip.enabled}
@@ -157,19 +145,15 @@ export function Properties({ clipId }: PropertiesProps) {
               onChangeEnabled={(checked) => {
                 updateClip({ enabled: checked });
               }}
-              onChanged={() => {}}
             />
-          </AccordionContent>
-        </AccordionItem>
+          }
+        />
 
-        <AccordionItem value="range" className="border-neutral-800">
-          <AccordionTrigger className="py-2 text-xs">
-            <span className="flex items-center gap-2">
-              <Clock size={14} />
-              Range
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="pt-2 pb-3">
+        <PropertyItem
+          value="range"
+          name="Range"
+          icon={Clock}
+          content={
             <RangeProperty
               startTime={clip.startTime}
               endTime={clip.endTime}
@@ -181,17 +165,14 @@ export function Properties({ clipId }: PropertiesProps) {
               }}
               onChanged={() => {}}
             />
-          </AccordionContent>
-        </AccordionItem>
+          }
+        />
 
-        <AccordionItem value="trim" className="border-neutral-800">
-          <AccordionTrigger className="py-2 text-xs">
-            <span className="flex items-center gap-2">
-              <Scissors size={14} />
-              Trim
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="pt-2 pb-3">
+        <PropertyItem
+          value="trim"
+          name="Trim"
+          icon={Scissors}
+          content={
             <TrimProperty
               trimStart={clip.trimStart}
               trimEnd={clip.trimEnd}
@@ -203,18 +184,15 @@ export function Properties({ clipId }: PropertiesProps) {
               }}
               onChanged={() => {}}
             />
-          </AccordionContent>
-        </AccordionItem>
+          }
+        />
 
         {audioClip && (
-          <AccordionItem value="audio" className="border-neutral-800">
-            <AccordionTrigger className="py-2 text-xs">
-              <span className="flex items-center gap-2">
-                <Volume2 size={14} />
-                Audio
-              </span>
-            </AccordionTrigger>
-            <AccordionContent className="pt-2 pb-3">
+          <PropertyItem
+            value="audio"
+            name="Audio"
+            icon={Volume2}
+            content={
               <VolumeProperty
                 volume={audioClip.volume}
                 onChangeVolume={(value) => {
@@ -222,19 +200,16 @@ export function Properties({ clipId }: PropertiesProps) {
                 }}
                 onChanged={() => {}}
               />
-            </AccordionContent>
-          </AccordionItem>
+            }
+          />
         )}
 
         {graphicClip && (
-          <AccordionItem value="transform" className="border-neutral-800">
-            <AccordionTrigger className="py-2 text-xs">
-              <span className="flex items-center gap-2">
-                <Move3D size={14} />
-                Transform
-              </span>
-            </AccordionTrigger>
-            <AccordionContent className="pt-2 pb-3">
+          <PropertyItem
+            value="transform"
+            name="Transform"
+            icon={Move3D}
+            content={
               <TransformProperty
                 transforms={graphicClip.transforms}
                 onChange={handleTransformChange}
@@ -245,19 +220,16 @@ export function Properties({ clipId }: PropertiesProps) {
                 canvasHeight={canvasHeight}
                 onChanged={() => {}}
               />
-            </AccordionContent>
-          </AccordionItem>
+            }
+          />
         )}
 
         {textClip && (
-          <AccordionItem value="text" className="border-neutral-800">
-            <AccordionTrigger className="py-2 text-xs">
-              <span className="flex items-center gap-2">
-                <Type size={14} />
-                Text Properties
-              </span>
-            </AccordionTrigger>
-            <AccordionContent className="pt-2 pb-3">
+          <PropertyItem
+            value="text"
+            name="Text Properties"
+            icon={Type}
+            content={
               <TextProperty
                 textData={textClip.textData}
                 onChange={(updates) => {
@@ -267,19 +239,16 @@ export function Properties({ clipId }: PropertiesProps) {
                 }}
                 onChanged={() => {}}
               />
-            </AccordionContent>
-          </AccordionItem>
+            }
+          />
         )}
 
         {shapeClip && (
-          <AccordionItem value="shape" className="border-neutral-800">
-            <AccordionTrigger className="py-2 text-xs">
-              <span className="flex items-center gap-2">
-                <Hexagon size={14} />
-                Shape Properties
-              </span>
-            </AccordionTrigger>
-            <AccordionContent className="pt-2 pb-3">
+          <PropertyItem
+            value="shape"
+            name="Shape Properties"
+            icon={Hexagon}
+            content={
               <ShapeProperty
                 shapeData={shapeClip.shapeData}
                 onChange={(updatedShapeData) => {
@@ -302,31 +271,84 @@ export function Properties({ clipId }: PropertiesProps) {
                 }}
                 onChanged={() => {}}
               />
-            </AccordionContent>
-          </AccordionItem>
+            }
+          />
         )}
 
-        <AccordionItem value="effects" className="border-neutral-800">
-          <AccordionTrigger className="py-2 text-xs">
-            <span className="flex items-center gap-2">
-              <Sparkles size={14} />
-              Effects
-              {clip.effects && clip.effects.length > 0 && (
-                <Badge variant="secondary" className="text-[10px] ml-1">
-                  {clip.effects.length}
-                </Badge>
-              )}
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="pt-2 pb-3">
+        <PropertyItem
+          value="effects"
+          name="Effects"
+          icon={Sparkles}
+          badge={
+            clip.effects &&
+            clip.effects.length > 0 && (
+              <Badge variant="secondary" className="text-[10px] ml-1">
+                {clip.effects.length}
+              </Badge>
+            )
+          }
+          content={
             <EffectProperty
               effects={clip.effects}
               onChange={(effects) => updateClip({ effects })}
               onChanged={() => {}}
             />
-          </AccordionContent>
-        </AccordionItem>
+          }
+        />
       </Accordion>
     </div>
+  );
+}
+
+function BaseClipInfo({ clip }: { clip: IClip }) {
+  return (
+    <div className="flex items-center justify-between mb-3 pb-2 border-b border-neutral-800 p-2">
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <Badge variant="secondary" className="text-[10px] shrink-0">
+          {clip.type}
+        </Badge>
+        <span className="flex-1 text-sm font-medium text-neutral-200 truncate">
+          {clip.name}
+        </span>
+      </div>
+      {import.meta.env.DEV && (
+        <div
+          className="text-[10px] text-neutral-500 font-mono shrink-0 hover:bg-neutral-800 cursor-pointer px-1 rounded"
+          onClick={() => {
+            navigator.clipboard.writeText(clip.id);
+            toast.success(`copied ${clip.id}`);
+          }}
+        >
+          {clip.id}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PropertyItem({
+  value,
+  name,
+  icon: LucideIcon,
+  content,
+  badge,
+}: {
+  value: string;
+  name: string;
+  icon: LucideIcon;
+  content: React.ReactNode;
+  badge?: React.ReactNode;
+}) {
+  return (
+    <AccordionItem value={value} className="border-neutral-800">
+      <AccordionTrigger className="p-2 pb-3 text-xs">
+        <span className="flex items-center gap-2 text-neutral-400">
+          <LucideIcon size={14} />
+          {name}
+          {badge}
+        </span>
+      </AccordionTrigger>
+      <AccordionContent className="pt-2 pb-3 px-2">{content}</AccordionContent>
+    </AccordionItem>
   );
 }

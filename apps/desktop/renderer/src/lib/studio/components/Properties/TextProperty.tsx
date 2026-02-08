@@ -1,4 +1,4 @@
-import { InputField, NumberField, ToggleField } from '../inputs';
+import { TextField, ColorField, NumberField, ToggleField } from '../inputs';
 import { TextAreaField } from '../inputs/TextAreaField';
 import type { ITextData } from '../../types/text';
 
@@ -26,7 +26,7 @@ export function TextProperty({
         onChange={(value) => handleChange({ content: value })}
       />
 
-      <InputField
+      <TextField
         label="Font Family"
         value={textData.fontFamily}
         onChange={(value) => handleChange({ fontFamily: value })}
@@ -41,11 +41,10 @@ export function TextProperty({
         showRange
       />
 
-      <InputField
+      <ColorField
         label="Color"
         value={String(textData.color)}
         onChange={(value) => handleChange({ color: value })}
-        type="color"
       />
 
       <div className="flex flex-col gap-2 mt-2">
@@ -127,7 +126,7 @@ export function TextProperty({
         />
         {textData.background && (
           <>
-            <InputField
+            <ColorField
               label="Color"
               value={textData.background.color}
               onChange={(value) =>
@@ -135,7 +134,6 @@ export function TextProperty({
                   background: { ...textData.background!, color: value },
                 })
               }
-              type="color"
             />
             <NumberField
               label="Padding X"
@@ -210,7 +208,7 @@ export function TextProperty({
         />
         {textData.shadow && (
           <>
-            <InputField
+            <ColorField
               label="Color"
               value={textData.shadow.color}
               onChange={(value) =>
@@ -218,7 +216,6 @@ export function TextProperty({
                   shadow: { ...textData.shadow!, color: value },
                 })
               }
-              type="color"
             />
             <NumberField
               label="Blur"
@@ -291,7 +288,7 @@ export function TextProperty({
         />
         {textData.border && (
           <>
-            <InputField
+            <ColorField
               label="Color"
               value={String(textData.border.color)}
               onChange={(value) =>
@@ -299,7 +296,6 @@ export function TextProperty({
                   border: { ...textData.border!, color: value },
                 })
               }
-              type="color"
             />
             <NumberField
               label="Width"

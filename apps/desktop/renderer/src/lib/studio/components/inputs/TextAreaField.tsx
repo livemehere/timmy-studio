@@ -1,4 +1,3 @@
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
@@ -19,14 +18,14 @@ export function TextAreaField({
 }: TextAreaFieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      <Label className="text-neutral-400 text-sm">{label}</Label>
+      <span className="text-neutral-400 text-xs">{label}</span>
       <Textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
         className={cn(
-          'bg-neutral-800/50 border-neutral-700 min-h-20 resize-y',
+          'bg-neutral-800/50 border-neutral-700 min-h-20 resize-y text-sm',
           'focus-visible:border-neutral-500 focus-visible:ring-0'
         )}
       />
