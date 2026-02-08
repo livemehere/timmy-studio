@@ -46,6 +46,7 @@ import {
   Volume2,
 } from 'lucide-react';
 import { useRef } from 'react';
+import { Empty } from '../Properties/Empty';
 
 export function PropertiesPanel() {
   const selectedClipIds = useInteractionStore((state) => state.selectedClipIds);
@@ -59,35 +60,7 @@ export function PropertiesPanel() {
 
   const selectedClipId = selectedClipIds[0];
   if (!selectedClipId) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center gap-4 p-6 text-neutral-500">
-        <div className="w-16 h-16 rounded-2xl bg-neutral-800/30 flex items-center justify-center">
-          <Settings2 size={28} className="text-neutral-600" />
-        </div>
-        <div className="text-center">
-          <p className="text-sm font-medium text-neutral-400">
-            No clip selected
-          </p>
-          <p className="text-xs text-neutral-500 mt-1">
-            Click a clip in the timeline to edit its properties
-          </p>
-        </div>
-        <div className="flex flex-col items-center gap-1 text-[10px] text-neutral-600 mt-2">
-          <span className="flex items-center gap-1.5">
-            <kbd className="px-1.5 py-0.5 bg-neutral-800 rounded text-neutral-400">
-              Click
-            </kbd>
-            Select clip
-          </span>
-          <span className="flex items-center gap-1.5">
-            <kbd className="px-1.5 py-0.5 bg-neutral-800 rounded text-neutral-400">
-              ⌘+Click
-            </kbd>
-            Multi-select
-          </span>
-        </div>
-      </div>
-    );
+    return <Empty />;
   }
 
   const result = findClipInTracks(tracks, selectedClipId);
