@@ -1,7 +1,7 @@
 import { spawn } from 'child_process';
-import ffmpeg from '@ffmpeg-installer/ffmpeg';
+import { getExtraResourcePath } from '@timmy-studio/electron-utils/utils/main';
 
-export const FFMPEG_PATH = ffmpeg.path;
+const FFMPEG_PATH = getExtraResourcePath('ffmpeg');
 
 /**
  * ffmpeg 진행률 정보를 파싱하는 인터페이스

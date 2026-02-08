@@ -1,23 +1,26 @@
 import path from 'node:path';
 import { app } from 'electron';
 import FfmpegCmd, { type FfprobeData, type FfprobeStream } from 'fluent-ffmpeg';
-import ffmpeg from '@ffmpeg-installer/ffmpeg';
-import ffprobe from '@ffprobe-installer/ffprobe';
 import { FileUtils } from '@main/utils/FileUtils';
 import type {
   AssetType,
   IAsset,
-  IAssetMetadata,
+  IMediaAssetMetadata,
   IBaseAsset,
+  IMediaAsset,
 } from '@/lib/studio/domains/Asset/types';
 import { uid } from 'uid';
 import fs from 'node:fs';
+import { getExtraResourcePath } from '@timmy-studio/electron-utils/utils/main';
 
-FileUtils.ensureExecutable(ffmpeg.path);
-FileUtils.ensureExecutable(ffprobe.path);
+const FFMPEG_PATH = getExtraResourcePath('ffmpeg');
+const FFPROBE_PATH = getExtraResourcePath('ffprobe');
 
-FfmpegCmd.setFfmpegPath(ffmpeg.path);
-FfmpegCmd.setFfprobePath(ffprobe.path);
+FileUtils.ensureExecutable(FFMPEG_PATH);
+FileUtils.ensureExecutable(FFPROBE_PATH);
+
+FfmpegCmd.setFfmpegPath(FFMPEG_PATH);
+FfmpegCmd.setFfprobePath(FFPROBE_PATH);
 
 const APP_DATA_DIR = app.getPath('userData');
 
@@ -53,8 +56,6 @@ export class MediaUtils {
   /** 애니메이션 이미지 포맷 힌트 */
   static ANIMATED_FORMAT_HINTS = ['gif', 'apng', 'webp'];
 
-  static ffmpegPath = ffmpeg.path;
-  static ffprobePath = ffprobe.path;
   static ffmpeg = FfmpegCmd;
   static ffprobe = (filePath: string) => {
     return new Promise<FfprobeData>((resolve, reject) => {
@@ -99,36 +100,85 @@ export class MediaUtils {
     return path.join(MediaUtils.PROXIES_DIR, proxyFilename);
   }
 
-  /** 프록시 비디오 생성 */
+  /** 프록시 비디오 생성 (macOS 최적화) */
   static createProxyVideo(originFilePath: string): Promise<string> {
     return new Promise((resolve, reject) => {
       const proxyPath = MediaUtils.getProxyFilePath(originFilePath);
 
+      // 이미 있으면 바로 리턴(경합 방지)
+      if (fs.existsSync(proxyPath)) {
+        resolve(proxyPath);
+        return;
+      }
+
+      // 디렉토리 보장
+      fs.mkdirSync(MediaUtils.PROXIES_DIR, { recursive: true });
+
+      // 프록시 타깃 파라미터
+      const TARGET_HEIGHT = 360;
+      // const TARGET_FPS = 30; // 60fps 원본도 프록시는 30으로 고정(체감 성능↑)
+      // const GOP = TARGET_FPS; // 1초 GOP (스크러빙/탐색 유리)
+      const BITRATE = '800k';
+      const BUFSIZE = '1600k';
+
+      // ⚠️ null spread 같은 실수를 원천 차단
+      const inputOpts: string[] = [
+        // macOS HW decode 시도 (ffmpeg 4.4에서는 "output_format videotoolbox" 쓰면 안 됨)
+        '-hwaccel',
+        'videotoolbox',
+
+        // iPhone rotate 메타를 프록시 단계에서 처리하지 말기 (CPU 필터 체인 폭발 방지)
+        '-noautorotate',
+      ];
+
+      const outputOpts: string[] = [
+        // 불필요한 스트림 제거 (특히 mov의 data stream들)
+        '-map',
+        '0:v:0',
+
+        // VideoToolbox HW encode
+        '-c:v',
+        'h264_videotoolbox',
+
+        // rate control (고정 비트레이트 느낌으로)
+        '-b:v',
+        BITRATE,
+        '-maxrate',
+        BITRATE,
+        '-bufsize',
+        BUFSIZE,
+
+        // 스케일만 (최소 필터)
+        '-vf',
+        `scale=-2:${TARGET_HEIGHT}`,
+
+        // 프록시는 4:2:0로 통일(호환성/디코드 안정)
+        '-pix_fmt',
+        'yuv420p',
+
+        // 프록시 fps 고정 (원본이 59.94여도 30으로 내림)
+        // '-r',
+        // String(TARGET_FPS),
+
+        // // 스크러빙/탐색 최적
+        // '-g',
+        // String(GOP),
+        '-bf',
+        '0',
+        '-flags',
+        '+cgop',
+
+        // 프록시는 faststart 불필요 (2nd pass 제거)
+        // '-movflags', '+faststart',
+      ];
+
       MediaUtils.ffmpeg(originFilePath)
+        .on('start', (cmd) => console.log('[ffmpeg]', cmd))
+        .on('stderr', (line) => console.log('[ffmpeg stderr]', line))
         .on('end', () => resolve(proxyPath))
-        .on('error', reject)
-        // 기존(내가한거)
-        // .outputOptions([
-        //   '-c:v libx264',
-        //   '-preset veryfast',
-        //   '-crf 40',
-        //   '-movflags +faststart',
-        // ])
-        .outputOptions([
-          '-c:v libx264',
-          '-preset veryfast',
-          '-crf 28', // 40은 너무 낮은 품질이라 디테일 깨짐/블록이 심할 수 있음(탐색 자체엔 영향 적지만 실사용에 영향)
-          '-pix_fmt yuv420p',
-          '-movflags +faststart',
-
-          '-vf scale=-2:540', // 프록시 핵심(원하는 해상도로 조절)
-          '-r 30', // 필요 시
-
-          '-g 30', // 30fps 기준 1초 GOP
-          '-keyint_min 30',
-          '-sc_threshold 0',
-          '-bf 0', // 디코드 단순화(스크러빙 유리)
-        ])
+        .on('error', (err) => reject(err))
+        .inputOptions(inputOpts)
+        .outputOptions(outputOpts)
         .noAudio()
         .save(proxyPath);
     });
@@ -254,7 +304,7 @@ export class MediaUtils {
   }
 
   /** 에셋 메타데이터 생성 */
-  static createAssetMetadata(data: FfprobeData): IAssetMetadata {
+  static createAssetMetadata(data: FfprobeData): IMediaAssetMetadata {
     const assetType = MediaUtils.detectAssetType(data);
 
     const videoStream = MediaUtils.extractPrimaryVideoStream(data);
@@ -274,16 +324,18 @@ export class MediaUtils {
       durationMs = undefined;
     }
 
-    const metadata: IAssetMetadata = {
+    const metadata: IMediaAssetMetadata = {
       size: data.format.size ?? 0,
       durationMs,
       createdAt: MediaUtils.getCreatedTime(data),
+      width: 0,
+      height: 0,
     };
 
     // video / image / animated-image 공통 (video stream 기준)
     if (videoStream) {
-      metadata.width = videoStream.width;
-      metadata.height = videoStream.height;
+      metadata.width = videoStream.width ?? 0;
+      metadata.height = videoStream.height ?? 0;
       metadata.codec = videoStream.codec_name;
 
       if (!MediaUtils.isUnreliableFps(videoStream)) {
@@ -314,7 +366,7 @@ export class MediaUtils {
       const metadata = MediaUtils.createAssetMetadata(ffprobeData);
       const assetType = MediaUtils.detectAssetType(ffprobeData);
 
-      const baseAsset: IBaseAsset = {
+      const baseAsset: IMediaAsset = {
         id: uid(8),
         name: path.basename(filePath),
         filePath,
