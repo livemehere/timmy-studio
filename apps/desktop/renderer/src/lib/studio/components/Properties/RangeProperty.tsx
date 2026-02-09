@@ -1,6 +1,7 @@
 import { MotionNumberInput } from '@/lib/motion-input';
 import { ArrowLeftToLine, ArrowRightToLine } from 'lucide-react';
 import { useMotionValue, useMotionValueEvent } from 'motion/react';
+import { useMemo } from 'react';
 
 interface RangePropertyProps {
   defaultStartTime: number;
@@ -23,18 +24,24 @@ export function RangeProperty({
 }: RangePropertyProps) {
   const startTimeValue = useMotionValue(defaultStartTime);
   const endTimeValue = useMotionValue(defaultEndTime);
+  const clipDuration = useMemo(
+    () => Math.max(0, defaultEndTime - defaultStartTime),
+    [defaultEndTime, defaultStartTime]
+  );
 
-  const clipDuration = Math.max(0, defaultEndTime - defaultStartTime);
-  const minStart = 0;
-  const maxStart = Math.max(0, durationMs - clipDuration);
-  const minEnd = clipDuration;
-  const maxEnd = Math.max(minEnd, durationMs);
+  const { minStart, maxStart, minEnd, maxEnd } = useMemo(() => {
+    const minStart = 0;
+    const maxStart = Math.max(0, durationMs - clipDuration);
+    const minEnd = clipDuration;
+    const maxEnd = Math.max(minEnd, durationMs);
+    return { minStart, maxStart, minEnd, maxEnd };
+  }, [durationMs, clipDuration]);
 
   const applyStartChange = (value: number, commit: boolean) => {
     const nextStart = Math.max(minStart, Math.min(value, maxStart));
     const nextEnd = nextStart + clipDuration;
 
-    startTimeValue.set(nextStart);
+    // endtime 을 함께 업데이트 함께 해야함
     endTimeValue.set(nextEnd);
 
     if (commit) {
@@ -50,8 +57,8 @@ export function RangeProperty({
     const nextEnd = Math.max(minEnd, Math.min(value, maxEnd));
     const nextStart = nextEnd - clipDuration;
 
+    // starttime 을 함께 업데이트 함께 해야함
     startTimeValue.set(nextStart);
-    endTimeValue.set(nextEnd);
 
     if (commit) {
       onCommitStartTime(nextStart);
@@ -76,20 +83,20 @@ export function RangeProperty({
         <MotionNumberInput
           className="flex-1"
           value={startTimeValue}
-          map={(v) => Math.max(minStart, Math.min(v, maxStart))}
           min={minStart}
           max={maxStart}
           step={100}
+          map={(v) => parseInt(v.toFixed(0))}
           icon={<ArrowLeftToLine size={14} />}
           onCommit={(v) => applyStartChange(v, true)}
         />
         <MotionNumberInput
           className="flex-1"
           value={endTimeValue}
-          map={(v) => Math.max(minEnd, Math.min(v, maxEnd))}
           min={minEnd}
           max={maxEnd}
           step={100}
+          map={(v) => parseInt(v.toFixed(0))}
           icon={<ArrowRightToLine size={14} />}
           onCommit={(v) => applyEndChange(v, true)}
         />

@@ -130,6 +130,12 @@ export function Properties({ clipId }: PropertiesProps) {
               onCommitEndTime={(value) => {
                 updateClip({ endTime: value });
               }}
+              onLiveStartTimeChange={(v) => {
+                console.log('live start:', v);
+              }}
+              onLiveEndTimeChange={(v) => {
+                console.log('live end:', v);
+              }}
             />
           }
         />

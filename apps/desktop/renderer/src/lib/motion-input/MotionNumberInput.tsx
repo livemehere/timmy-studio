@@ -27,7 +27,7 @@ export function MotionNumberInput({
   readOnly = false,
   className,
   onCommit,
-  commitOnExternalChange = true,
+  commitOnExternalChange = false,
 }: Props) {
   const ref = useRef<HTMLInputElement>(null);
   const dragStartValue = useRef(0);
