@@ -188,9 +188,6 @@ export function Properties({ clipId }: PropertiesProps) {
                 isTextClip={clip.type === 'text'}
                 canvasWidth={canvasWidth}
                 canvasHeight={canvasHeight}
-                onInteractionStart={() => {
-                  // TODO: undo history begin
-                }}
               />
             }
           />

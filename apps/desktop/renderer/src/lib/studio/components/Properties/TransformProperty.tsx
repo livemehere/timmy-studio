@@ -1,8 +1,8 @@
 import { AlignPresetButtons } from '../inputs';
 import type { ITransform } from '../../domains/Clip/types';
 import type { JsonPath, JsonPrimitive } from '../../utils/transformHelpers';
-import { useEffect } from 'react';
-import { RtNumberInput } from '@/lib/motion-input';
+import { MotionNumberInput } from '@/lib/motion-input';
+import { useMotionValue, useMotionValueEvent } from 'motion/react';
 
 interface TransformPropertyProps {
   transforms: ITransform;
@@ -12,7 +12,6 @@ interface TransformPropertyProps {
   isTextClip?: boolean;
   canvasWidth?: number;
   canvasHeight?: number;
-  onInteractionStart?: () => void;
 }
 
 export function TransformProperty({
@@ -23,8 +22,50 @@ export function TransformProperty({
   isTextClip = false,
   canvasWidth = 1920,
   canvasHeight = 1080,
-  onInteractionStart,
 }: TransformPropertyProps) {
+  const positionXValue = useMotionValue(transforms?.position?.x ?? 0);
+  const positionYValue = useMotionValue(transforms?.position?.y ?? 0);
+  const sizeWidthValue = useMotionValue(transforms?.size?.width ?? 0);
+  const sizeHeightValue = useMotionValue(transforms?.size?.height ?? 0);
+  const scaleXValue = useMotionValue(transforms?.scaleX ?? 1);
+  const scaleYValue = useMotionValue(transforms?.scaleY ?? 1);
+  const rotationValue = useMotionValue(
+    transforms?.rotation ? (transforms.rotation * 180) / Math.PI : 0
+  );
+  const opacityValue = useMotionValue(transforms?.opacity ?? 1);
+
+  useMotionValueEvent(positionXValue, 'change', (v) => {
+    onChange(['position', 'x'], v);
+  });
+
+  useMotionValueEvent(positionYValue, 'change', (v) => {
+    onChange(['position', 'y'], v);
+  });
+
+  useMotionValueEvent(sizeWidthValue, 'change', (v) => {
+    onChange(['size', 'width'], v);
+  });
+
+  useMotionValueEvent(sizeHeightValue, 'change', (v) => {
+    onChange(['size', 'height'], v);
+  });
+
+  useMotionValueEvent(scaleXValue, 'change', (v) => {
+    onChange(['scaleX'], v);
+  });
+
+  useMotionValueEvent(scaleYValue, 'change', (v) => {
+    onChange(['scaleY'], v);
+  });
+
+  useMotionValueEvent(rotationValue, 'change', (v) => {
+    onChange(['rotation'], (v * Math.PI) / 180);
+  });
+
+  useMotionValueEvent(opacityValue, 'change', (v) => {
+    onChange(['opacity'], v);
+  });
+
   const handleAlignX = (alignX: 'left' | 'center' | 'right') => {
     const xValue =
       alignX === 'left'
@@ -33,19 +74,8 @@ export function TransformProperty({
           ? canvasWidth / 2
           : canvasWidth;
 
-    if (onBatchChange) {
-      const updates: Partial<ITransform> = {
-        position: { ...transforms.position } as { x: number; y: number },
-      };
-      updates.position!.x = xValue;
-      onBatchChange(updates);
-      onChanged?.();
-      // TODO: undo history push
-    } else {
-      onChange(['position', 'x'], xValue);
-      onChanged?.();
-      // TODO: undo history push
-    }
+    positionXValue.set(xValue);
+    onChanged?.();
   };
 
   const handleAlignY = (alignY: 'top' | 'center' | 'bottom') => {
@@ -56,92 +86,29 @@ export function TransformProperty({
           ? canvasHeight / 2
           : canvasHeight;
 
-    if (onBatchChange) {
-      const updates: Partial<ITransform> = {
-        position: { ...transforms.position } as { x: number; y: number },
-      };
-      updates.position!.y = yValue;
-      onBatchChange(updates);
-      onChanged?.();
-      // TODO: undo history push
-    } else {
-      onChange(['position', 'y'], yValue);
-      onChanged?.();
-      // TODO: undo history push
-    }
-  };
-
-  const handlePositionXCommit = (v: number) => {
-    onChange(['position', 'x'], v);
+    positionYValue.set(yValue);
     onChanged?.();
-    // TODO: undo history push
-  };
-
-  const handlePositionYCommit = (v: number) => {
-    onChange(['position', 'y'], v);
-    onChanged?.();
-    // TODO: undo history push
-  };
-
-  const handleSizeWidthCommit = (v: number) => {
-    onChange(['size', 'width'], v);
-    onChanged?.();
-    // TODO: undo history push
-  };
-
-  const handleSizeHeightCommit = (v: number) => {
-    onChange(['size', 'height'], v);
-    onChanged?.();
-    // TODO: undo history push
-  };
-
-  const handleScaleXCommit = (v: number) => {
-    onChange(['scaleX'], v);
-    onChanged?.();
-    // TODO: undo history push
-  };
-
-  const handleScaleYCommit = (v: number) => {
-    onChange(['scaleY'], v);
-    onChanged?.();
-    // TODO: undo history push
-  };
-
-  const handleRotationCommit = (v: number) => {
-    onChange(['rotation'], (v * Math.PI) / 180);
-    onChanged?.();
-    // TODO: undo history push
-  };
-
-  const handleOpacityCommit = (v: number) => {
-    onChange(['opacity'], v);
-    onChanged?.();
-    // TODO: undo history push
   };
 
   return (
     <div className="space-y-2">
       <div className="text-xs text-neutral-400 mb-1">Position</div>
       <div className={'flex gap-2'}>
-        <RtNumberInput
-          defaultValue={transforms?.position?.x ?? 0}
+        <MotionNumberInput
+          value={positionXValue}
           map={(v) => Number(v.toFixed(2))}
-          onChange={(v) => onChange(['position', 'x'], v)}
-          onCommit={handlePositionXCommit}
-          onInteractionStart={onInteractionStart}
           min={0}
           max={canvasWidth * 2}
           icon={<div className={'text-sm opacity-50'}>X</div>}
+          onCommit={() => onChanged?.()}
         />
-        <RtNumberInput
-          defaultValue={transforms?.position?.y ?? 0}
+        <MotionNumberInput
+          value={positionYValue}
           map={(v) => Number(v.toFixed(2))}
-          onChange={(v) => onChange(['position', 'y'], v)}
-          onCommit={handlePositionYCommit}
-          onInteractionStart={onInteractionStart}
           min={0}
           max={canvasHeight * 2}
           icon={<div className={'text-sm opacity-50'}>Y</div>}
+          onCommit={() => onChanged?.()}
         />
       </div>
 
@@ -149,21 +116,17 @@ export function TransformProperty({
         <>
           <div className="text-xs text-neutral-400 mb-1 mt-4">Size</div>
           <div className={'flex gap-2'}>
-            <RtNumberInput
-              defaultValue={transforms?.size?.width ?? 0}
+            <MotionNumberInput
+              value={sizeWidthValue}
               map={(v) => Math.max(0, Number(v.toFixed(2)))}
-              onChange={(v) => onChange(['size', 'width'], v)}
-              onCommit={handleSizeWidthCommit}
-              onInteractionStart={onInteractionStart}
               icon={<div className={'text-sm opacity-50'}>W</div>}
+              onCommit={() => onChanged?.()}
             />
-            <RtNumberInput
-              defaultValue={transforms?.size?.height ?? 0}
+            <MotionNumberInput
+              value={sizeHeightValue}
               map={(v) => Math.max(0, Number(v.toFixed(2)))}
-              onChange={(v) => onChange(['size', 'height'], v)}
-              onCommit={handleSizeHeightCommit}
-              onInteractionStart={onInteractionStart}
               icon={<div className={'text-sm opacity-50'}>H</div>}
+              onCommit={() => onChanged?.()}
             />
           </div>
         </>
@@ -171,60 +134,50 @@ export function TransformProperty({
 
       <div className="text-xs text-neutral-400 mb-1 mt-4">Scale</div>
       <div className={'flex gap-2'}>
-        <RtNumberInput
-          defaultValue={transforms?.scaleX ?? 1}
+        <MotionNumberInput
+          value={scaleXValue}
           map={(v) => Number(v.toFixed(2))}
-          onChange={(v) => onChange(['scaleX'], v)}
-          onCommit={handleScaleXCommit}
-          onInteractionStart={onInteractionStart}
           min={0.1}
           max={5}
           step={0.1}
           sensitivity={0.1}
           icon={<div className={'text-sm opacity-50'}>X</div>}
+          onCommit={() => onChanged?.()}
         />
-        <RtNumberInput
-          defaultValue={transforms?.scaleY ?? 1}
+        <MotionNumberInput
+          value={scaleYValue}
           map={(v) => Number(v.toFixed(2))}
-          onChange={(v) => onChange(['scaleY'], v)}
-          onCommit={handleScaleYCommit}
-          onInteractionStart={onInteractionStart}
           min={0.1}
           max={5}
           step={0.1}
           sensitivity={0.1}
           icon={<div className={'text-sm opacity-50'}>Y</div>}
+          onCommit={() => onChanged?.()}
         />
       </div>
 
       <div className="text-xs text-neutral-400 mb-1 mt-4">Rotation</div>
-      <RtNumberInput
-        defaultValue={
-          transforms?.rotation ? (transforms.rotation * 180) / Math.PI : 0
-        }
+      <MotionNumberInput
+        value={rotationValue}
         map={(v) => Number(v.toFixed(2))}
-        onChange={(v) => onChange(['rotation'], (v * Math.PI) / 180)}
-        onCommit={handleRotationCommit}
-        onInteractionStart={onInteractionStart}
         min={0}
         max={360}
         step={0.1}
         sensitivity={0.5}
         icon={<div className={'text-sm opacity-50'}>°</div>}
+        onCommit={() => onChanged?.()}
       />
 
       <div className="text-xs text-neutral-400 mb-1 mt-4">Opacity</div>
-      <RtNumberInput
-        defaultValue={transforms?.opacity ?? 1}
+      <MotionNumberInput
+        value={opacityValue}
         map={(v) => Math.max(0, Math.min(1, Number(v.toFixed(2))))}
-        onChange={(v) => onChange(['opacity'], v)}
-        onCommit={handleOpacityCommit}
-        onInteractionStart={onInteractionStart}
         min={0}
         max={1}
         step={0.01}
         sensitivity={0.01}
         icon={<div className={'text-sm opacity-50'}>%</div>}
+        onCommit={() => onChanged?.()}
       />
 
       <div className="text-xs text-neutral-400 mb-1 mt-4">Alignment</div>

@@ -5,7 +5,7 @@ import type { RealTimeInputProps } from './types';
 
 type Props = RealTimeInputProps<string>;
 
-export function RtTextInput({
+export function MotionTextInput({
   icon,
   defaultValue,
   onChange,

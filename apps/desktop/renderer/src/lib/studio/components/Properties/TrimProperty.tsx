@@ -1,5 +1,6 @@
-import { RtNumberInput } from '@/lib/motion-input';
+import { MotionNumberInput } from '@/lib/motion-input';
 import { ArrowLeftToLine, ArrowRightToLine } from 'lucide-react';
+import { useMotionValue, useMotionValueEvent } from 'motion/react';
 
 interface TrimPropertyProps {
   trimStart: number;
@@ -8,7 +9,6 @@ interface TrimPropertyProps {
   onChangeTrimStart: (value: number) => void;
   onChangeTrimEnd: (value: number) => void;
   onChanged?: () => void;
-  onInteractionStart?: () => void;
 }
 
 export function TrimProperty({
@@ -18,45 +18,51 @@ export function TrimProperty({
   onChangeTrimStart,
   onChangeTrimEnd,
   onChanged,
-  onInteractionStart,
 }: TrimPropertyProps) {
+  const trimStartValue = useMotionValue(trimStart);
+  const trimEndValue = useMotionValue(trimEnd);
+
   const clampTrim = (value: number, min: number, max: number) =>
     Math.max(min, Math.min(value, max));
   const maxTrimStart = Math.max(0, maxTrimMs - trimEnd);
   const maxTrimEnd = Math.max(0, maxTrimMs - trimStart);
 
-  const handleTrimStartChange = (value: number) => {
+  useMotionValueEvent(trimStartValue, 'change', (value) => {
     onChangeTrimStart(clampTrim(value, 0, maxTrimStart));
     onChanged?.();
-  };
+  });
 
-  const handleTrimEndChange = (value: number) => {
+  useMotionValueEvent(trimEndValue, 'change', (value) => {
     onChangeTrimEnd(clampTrim(value, 0, maxTrimEnd));
     onChanged?.();
-  };
+  });
 
   return (
     <div className="space-y-2">
       <div className="flex gap-2">
-        <RtNumberInput
-          defaultValue={trimStart}
+        <MotionNumberInput
+          value={trimStartValue}
           map={(v) => clampTrim(v, 0, maxTrimStart)}
-          onChange={handleTrimStartChange}
-          onInteractionStart={onInteractionStart}
           min={0}
           max={maxTrimStart}
           step={100}
           icon={<ArrowLeftToLine size={14} />}
+          onCommit={(value) => {
+            onChangeTrimStart(clampTrim(value, 0, maxTrimStart));
+            onChanged?.();
+          }}
         />
-        <RtNumberInput
-          defaultValue={trimEnd}
+        <MotionNumberInput
+          value={trimEndValue}
           map={(v) => clampTrim(v, 0, maxTrimEnd)}
-          onChange={handleTrimEndChange}
-          onInteractionStart={onInteractionStart}
           min={0}
           max={maxTrimEnd}
           step={100}
           icon={<ArrowRightToLine size={14} />}
+          onCommit={(value) => {
+            onChangeTrimEnd(clampTrim(value, 0, maxTrimEnd));
+            onChanged?.();
+          }}
         />
       </div>
     </div>

@@ -8,6 +8,7 @@ const VideoPlayerPage = lazy(() => import('@/pages/video-player'));
 const VideoEditorPage = lazy(() => import('@/pages/video-editor'));
 const SettingsPage = lazy(() => import('@/pages/settings'));
 const PixiPlaygroundPage = lazy(() => import('@/pages/pixi-playground'));
+const TestPage = lazy(() => import('@/pages/test-page'));
 
 const router = createHashRouter([
   {
@@ -36,6 +37,10 @@ const router = createHashRouter([
           {
             path: 'settings',
             element: <SettingsPage />,
+          },
+          {
+            path: 'test',
+            element: <TestPage />,
           },
         ],
       },

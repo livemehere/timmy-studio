@@ -37,5 +37,15 @@ export function createDockItems({
       icon: <Settings size={18} />,
       onClick: () => navigate('/settings'),
     },
+    ...(import.meta.env.DEV
+      ? [
+          {
+            id: 'test-page',
+            label: 'Test Page',
+            icon: <Settings size={18} />,
+            onClick: () => navigate('/test'),
+          },
+        ]
+      : []),
   ];
 }

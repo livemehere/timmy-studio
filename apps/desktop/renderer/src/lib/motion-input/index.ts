@@ -1,2 +1,2 @@
-export { RtNumberInput } from './number';
-export { RtTextInput } from './text';
+export { MotionNumberInput } from './MotionNumberInput';
+export { MotionTextInput } from './text';
