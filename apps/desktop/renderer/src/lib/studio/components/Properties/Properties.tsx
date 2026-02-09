@@ -51,11 +51,7 @@ export function Properties({ clipId }: PropertiesProps) {
 
   const result = Track.findClip(tracks, clipId);
   if (!result) {
-    return (
-      <div className="h-full flex flex-col gap-3 p-4">
-        Can't find Clip ID: {clipId}
-      </div>
-    );
+    throw new Error('Clip not found');
   }
 
   const { clip, trackId } = result;

@@ -1,3 +1,4 @@
+import { ErrorBoundary } from 'react-error-boundary';
 import { useState } from 'react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Empty } from '../Properties/Empty';
@@ -38,9 +39,20 @@ export function PropertiesPanel() {
       </GradientScroll>
 
       <div className="flex-1 min-h-0">
-        {activeClipId && (
-          <Properties key={activeClipId} clipId={activeClipId} />
-        )}
+        <ErrorBoundary
+          resetKeys={selectedClipIds}
+          fallbackRender={({ error }) => {
+            return (
+              <div className="h-full flex items-center justify-center text-xs opacity-50">
+                {(error as Error).message}
+              </div>
+            );
+          }}
+        >
+          {activeClipId && (
+            <Properties key={activeClipId} clipId={activeClipId} />
+          )}
+        </ErrorBoundary>
       </div>
     </div>
   );
