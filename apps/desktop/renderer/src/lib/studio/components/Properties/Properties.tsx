@@ -131,10 +131,11 @@ export function Properties({ clipId }: PropertiesProps) {
                 updateClip({ endTime: value });
               }}
               onLiveStartTimeChange={(v) => {
-                console.log('live start:', v);
+                // TODO: preview 업데이트
+                // TODO: clip 을 포퍼먼스 이슈 없이 tranlsate 처리할 방법 고안 (motionValue or dom ref 잡아서 zustand 공유) - insteractionStore 활용
               }}
               onLiveEndTimeChange={(v) => {
-                console.log('live end:', v);
+                // TODO: 위와 동일
               }}
             />
           }
