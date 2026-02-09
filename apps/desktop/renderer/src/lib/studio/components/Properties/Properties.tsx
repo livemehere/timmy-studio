@@ -94,7 +94,7 @@ export function Properties({ clipId }: PropertiesProps) {
 
       <Accordion
         type="multiple"
-        defaultValue={['range']}
+        defaultValue={['trim']}
         className="w-full space-y-1"
       >
         <PropertyItem
@@ -130,11 +130,11 @@ export function Properties({ clipId }: PropertiesProps) {
               onCommitEndTime={(value) => {
                 updateClip({ endTime: value });
               }}
-              onLiveStartTimeChange={(v) => {
+              onLiveStartTimeChange={() => {
                 // TODO: preview 업데이트
                 // TODO: clip 을 포퍼먼스 이슈 없이 tranlsate 처리할 방법 고안 (motionValue or dom ref 잡아서 zustand 공유) - insteractionStore 활용
               }}
-              onLiveEndTimeChange={(v) => {
+              onLiveEndTimeChange={() => {
                 // TODO: 위와 동일
               }}
             />
@@ -147,16 +147,21 @@ export function Properties({ clipId }: PropertiesProps) {
           icon={Scissors}
           content={
             <TrimProperty
-              trimStart={clip.trimStart}
-              trimEnd={clip.trimEnd}
+              defaultTrimStart={clip.trimStart}
+              defaultTrimEnd={clip.trimEnd}
               maxTrimMs={Math.max(0, clip.endTime - clip.startTime)}
-              onChangeTrimStart={(value) => {
+              onCommitTrimStart={(value) => {
                 updateClip({ trimStart: value });
               }}
-              onChangeTrimEnd={(value) => {
+              onCommitTrimEnd={(value) => {
                 updateClip({ trimEnd: value });
               }}
-              onChanged={() => {}}
+              onLiveTrimStartChange={() => {
+                // TODO: preview 업데이트
+              }}
+              onLiveTrimEndChange={() => {
+                // TODO: preview 업데이트
+              }}
             />
           }
         />

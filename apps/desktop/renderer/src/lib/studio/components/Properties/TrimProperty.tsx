@@ -1,68 +1,88 @@
 import { MotionNumberInput } from '@/lib/motion-input';
 import { ArrowLeftToLine, ArrowRightToLine } from 'lucide-react';
 import { useMotionValue, useMotionValueEvent } from 'motion/react';
+import { useMemo } from 'react';
 
 interface TrimPropertyProps {
-  trimStart: number;
-  trimEnd: number;
+  defaultTrimStart: number;
+  defaultTrimEnd: number;
   maxTrimMs: number;
-  onChangeTrimStart: (value: number) => void;
-  onChangeTrimEnd: (value: number) => void;
-  onChanged?: () => void;
+  onCommitTrimStart: (value: number) => void;
+  onCommitTrimEnd: (value: number) => void;
+  onLiveTrimStartChange?: (value: number) => void;
+  onLiveTrimEndChange?: (value: number) => void;
 }
 
 export function TrimProperty({
-  trimStart,
-  trimEnd,
+  defaultTrimStart,
+  defaultTrimEnd,
   maxTrimMs,
-  onChangeTrimStart,
-  onChangeTrimEnd,
-  onChanged,
+  onCommitTrimStart,
+  onCommitTrimEnd,
+  onLiveTrimStartChange,
+  onLiveTrimEndChange,
 }: TrimPropertyProps) {
-  const trimStartValue = useMotionValue(trimStart);
-  const trimEndValue = useMotionValue(trimEnd);
+  const trimStartValue = useMotionValue(defaultTrimStart);
+  const trimEndValue = useMotionValue(defaultTrimEnd);
 
-  const clampTrim = (value: number, min: number, max: number) =>
-    Math.max(min, Math.min(value, max));
-  const maxTrimStart = Math.max(0, maxTrimMs - trimEnd);
-  const maxTrimEnd = Math.max(0, maxTrimMs - trimStart);
+  const { minStart, maxStart, minEnd, maxEnd } = useMemo(() => {
+    const minStart = 0;
+    const minEnd = 0;
+    const maxStart = Math.max(0, maxTrimMs - defaultTrimEnd);
+    const maxEnd = Math.max(0, maxTrimMs - defaultTrimStart);
+    return { minStart, maxStart, minEnd, maxEnd };
+  }, [maxTrimMs, defaultTrimStart, defaultTrimEnd]);
+
+  const applyTrimStartChange = (value: number, commit: boolean) => {
+    const nextStart = Math.max(minStart, Math.min(value, maxStart));
+
+    if (commit) {
+      onCommitTrimStart(nextStart);
+      return;
+    }
+    onLiveTrimStartChange?.(nextStart);
+  };
+
+  const applyTrimEndChange = (value: number, commit: boolean) => {
+    const nextEnd = Math.max(minEnd, Math.min(value, maxEnd));
+
+    if (commit) {
+      onCommitTrimEnd(nextEnd);
+      return;
+    }
+    onLiveTrimEndChange?.(nextEnd);
+  };
 
   useMotionValueEvent(trimStartValue, 'change', (value) => {
-    onChangeTrimStart(clampTrim(value, 0, maxTrimStart));
-    onChanged?.();
+    applyTrimStartChange(value, false);
   });
 
   useMotionValueEvent(trimEndValue, 'change', (value) => {
-    onChangeTrimEnd(clampTrim(value, 0, maxTrimEnd));
-    onChanged?.();
+    applyTrimEndChange(value, false);
   });
 
   return (
     <div className="space-y-2">
       <div className="flex gap-2">
         <MotionNumberInput
+          className="flex-1"
           value={trimStartValue}
-          map={(v) => clampTrim(v, 0, maxTrimStart)}
-          min={0}
-          max={maxTrimStart}
+          min={minStart}
+          max={maxStart}
           step={100}
+          map={(v) => parseInt(v.toFixed(0))}
           icon={<ArrowLeftToLine size={14} />}
-          onCommit={(value) => {
-            onChangeTrimStart(clampTrim(value, 0, maxTrimStart));
-            onChanged?.();
-          }}
+          onCommit={(v) => applyTrimStartChange(v, true)}
         />
         <MotionNumberInput
+          className="flex-1"
           value={trimEndValue}
-          map={(v) => clampTrim(v, 0, maxTrimEnd)}
-          min={0}
-          max={maxTrimEnd}
+          min={minEnd}
+          max={maxEnd}
           step={100}
+          map={(v) => parseInt(v.toFixed(0))}
           icon={<ArrowRightToLine size={14} />}
-          onCommit={(value) => {
-            onChangeTrimEnd(clampTrim(value, 0, maxTrimEnd));
-            onChanged?.();
-          }}
+          onCommit={(v) => applyTrimEndChange(v, true)}
         />
       </div>
     </div>

@@ -6,11 +6,11 @@ import { useMemo } from 'react';
 interface RangePropertyProps {
   defaultStartTime: number;
   defaultEndTime: number;
+  durationMs: number;
   onCommitStartTime: (value: number) => void;
   onCommitEndTime: (value: number) => void;
   onLiveStartTimeChange?: (value: number) => void;
   onLiveEndTimeChange?: (value: number) => void;
-  durationMs: number;
 }
 
 export function RangeProperty({
