@@ -33,6 +33,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
+import type { IMediaAsset } from '../../domains/Asset/types';
 
 // 최소 클립 길이 (ms)
 const MIN_CLIP_DURATION_MS = 100;
@@ -159,7 +160,7 @@ export function TimelineClip({
   const getMaxDuration = useCallback((): number | null => {
     if (clip.type === 'video' || clip.type === 'audio') {
       const assetId = (clip as IVideoClip | IAudioClip).assetId;
-      const asset = getAssetById(assetId);
+      const asset = getAssetById<IMediaAsset>(assetId);
       if (asset?.metadata?.durationMs) {
         return asset.metadata.durationMs;
       }
