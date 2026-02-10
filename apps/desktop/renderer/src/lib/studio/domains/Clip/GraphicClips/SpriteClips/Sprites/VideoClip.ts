@@ -31,6 +31,13 @@ export class VideoClip extends SpriteClip {
     };
   }
 
+  // trim을 고려한 실제 재생 가능 범위 체크
+  protected override isInRangeAt(timeMs: number): boolean {
+    const actualStartTime = this._data.startTime + (this._data.trimStart ?? 0);
+    const actualEndTime = this._data.endTime - (this._data.trimEnd ?? 0);
+    return timeMs >= actualStartTime && timeMs < actualEndTime;
+  }
+
   constructor(renderer: GraphicRenderer, data: IVideoClip) {
     super(renderer, data);
     this.debugCall(`(Video) constructor`);
@@ -103,11 +110,38 @@ export class VideoClip extends SpriteClip {
     super.onBecameHidden(ctx);
     this._wasVisible = false;
     this.cancelPendingSwaps('all');
+
+    // trim 범위를 벗어나거나 클립이 숨겨질 때 비디오 정지
+    if (!this.originEl!.paused) {
+      console.log('[VideoClip] pausing video (became hidden)');
+      this.debugCall('pausing video (became hidden)');
+      this.originEl!.pause();
+    }
+    if (this.proxyEl && !this.proxyEl.paused) {
+      this.proxyEl.pause();
+    }
   }
 
   override onTick(ctx: TickContext): void {
     super.onTick(ctx);
     const { currentTime, isPlaying, playStateChanged, isSeeking } = ctx;
+
+    // trim 범위를 벗어나면 재생 중지 (재생 중이든 아니든 체크)
+    if (!this.shouldRenderAt(currentTime)) {
+      console.log('VideoClip out of trim range at', currentTime);
+      if (!this.originEl!.paused) {
+        this.debugCall('stopping playback (out of trim range)');
+        this.originEl!.pause();
+      }
+      if (this.proxyEl && !this.proxyEl.paused) {
+        this.proxyEl.pause();
+      }
+
+      // 재생 요청이 와도 범위 밖이면 무시
+      if (isPlaying) {
+        return;
+      }
+    }
 
     const relTime = this.calcRelTime(currentTime);
 

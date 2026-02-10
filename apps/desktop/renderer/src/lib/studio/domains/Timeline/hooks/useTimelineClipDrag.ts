@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useMotionValue } from 'motion/react';
 import { msToSec } from '../../../utils/time';
 import { Track } from '../../Track/Track';
@@ -96,9 +96,31 @@ export function useTimelineClipDrag({
   const displayTrimStart = localDragState?.trimStart ?? clip.trimStart;
   const displayTrimEnd = localDragState?.trimEnd ?? clip.trimEnd;
 
-  // 표시용 width/left 계산 (로컬 상태 우선)
-  const displayWidth = msToSec(displayEndTime - displayStartTime) * pxPerSec;
-  const displayLeft = msToSec(displayStartTime) * pxPerSec;
+  // trim을 고려한 실제 보이는 시간 범위 계산
+  const getActualTimeRange = (
+    clip: IClip,
+    localState: typeof localDragState
+  ) => {
+    const startTime = localState?.startTime ?? clip.startTime;
+    const endTime = localState?.endTime ?? clip.endTime;
+
+    if (clip.type === 'video' || clip.type === 'audio') {
+      const trimStart = localState?.trimStart ?? clip.trimStart ?? 0;
+      const trimEnd = localState?.trimEnd ?? clip.trimEnd ?? 0;
+      return {
+        start: startTime + trimStart,
+        end: endTime - trimEnd,
+      };
+    }
+
+    return { start: startTime, end: endTime };
+  };
+
+  const actualRange = getActualTimeRange(clip, localDragState);
+
+  // 표시용 width/left 계산 (trim 고려)
+  const displayWidth = msToSec(actualRange.end - actualRange.start) * pxPerSec;
+  const displayLeft = msToSec(actualRange.start) * pxPerSec;
 
   // 리사이즈 모드가 끝나면 motionX를 0으로 리셋
   useEffect(() => {
@@ -132,7 +154,7 @@ export function useTimelineClipDrag({
     setIsDragging(dragging);
   };
 
-  const _getMaxDuration = (): number | null => {
+  const _getMediaAssetDurationMs = (): number | null => {
     if ('assetId' in clip) {
       const assetId = clip.assetId;
       const asset = getAssetById<IMediaAsset>(assetId);
@@ -178,414 +200,352 @@ export function useTimelineClipDrag({
     // move 모드는 handleDragStart에서 처리
   };
 
-  const handlePointerMove = useCallback(
-    (e: React.PointerEvent) => {
-      const mode = dragModeRef.current;
-      if (!isDraggingRef.current || !dragStartDataRef.current) return;
-      if (!_isResizingMode(mode)) return;
+  // 리사이징 모드 진행 핸들러
+  const handlePointerMove = (e: React.PointerEvent) => {
+    const mode = dragModeRef.current;
+    if (!isDraggingRef.current || !dragStartDataRef.current) return;
+    if (!_isResizingMode(mode)) return;
 
-      const deltaX = e.clientX - dragStartDataRef.current.mouseX;
-      const deltaMsRaw = (deltaX / pxPerSec) * 1000;
+    const deltaX = e.clientX - dragStartDataRef.current.mouseX;
+    const deltaMs = (deltaX / pxPerSec) * 1000;
 
-      const maxDuration = _getMaxDuration();
-      const isVideoOrAudio = clip.type === 'video' || clip.type === 'audio';
+    // 미디어 에셋을 가진 경우, 해당 duration 이 최대 간격
+    const mediaAssetDuration = _getMediaAssetDurationMs();
 
-      if (mode === 'resize-start') {
-        // 시작점 드래그: startTime 조절
-        let newStartTime = dragStartDataRef.current.startTime + deltaMsRaw;
+    if (mode === 'resize-start') {
+      if (mediaAssetDuration) {
+        // 미디어 클립: startTime은 고정, trimStart만 조절 (클리핑)
+        // 오른쪽으로 드래그(+) = trimStart 증가 (앞부분 잘라냄)
+        // 왼쪽으로 드래그(-) = trimStart 감소 (앞부분 더 보여줌)
+        let newTrimStart = dragStartDataRef.current.trimStart + deltaMs;
 
-        // 최소/최대 제약
+        // trimStart 제약: 0 이상, mediaAssetDuration - trimEnd - MIN_CLIP_DURATION_MS 이하
+        const maxTrimStart =
+          mediaAssetDuration -
+          dragStartDataRef.current.trimEnd -
+          MIN_CLIP_DURATION_MS;
+        newTrimStart = Math.max(0, Math.min(maxTrimStart, newTrimStart));
+
+        setLocalDragState({
+          startTime: dragStartDataRef.current.startTime,
+          endTime: dragStartDataRef.current.endTime,
+          trimStart: newTrimStart,
+          trimEnd: dragStartDataRef.current.trimEnd,
+        });
+      } else {
+        // 일반 클립: startTime만 조절, trim은 0 유지
+        let newStartTime = dragStartDataRef.current.startTime + deltaMs;
+
+        // startTime 제약
         const minStart = 0;
         const maxStart =
           dragStartDataRef.current.endTime - MIN_CLIP_DURATION_MS;
         newStartTime = Math.max(minStart, Math.min(maxStart, newStartTime));
 
-        // VideoClip의 경우 trimStart도 조절
-        if (isVideoOrAudio && maxDuration) {
-          const originalDuration =
-            dragStartDataRef.current.endTime -
-            dragStartDataRef.current.startTime;
-          const newDuration = dragStartDataRef.current.endTime - newStartTime;
-          const durationDelta = newDuration - originalDuration;
+        setLocalDragState({
+          startTime: newStartTime,
+          endTime: dragStartDataRef.current.endTime,
+          trimStart: 0,
+          trimEnd: 0,
+        });
+      }
+    } else if (mode === 'resize-end') {
+      if (mediaAssetDuration) {
+        // 미디어 클립: endTime은 고정, trimEnd만 조절 (클리핑)
+        // 오른쪽으로 드래그(+) = trimEnd 감소 (뒷부분 더 보여줌)
+        // 왼쪽으로 드래그(-) = trimEnd 증가 (뒷부분 잘라냄)
+        let newTrimEnd = dragStartDataRef.current.trimEnd - deltaMs;
 
-          // trimStart 감소 = 더 많이 보여줌 (왼쪽으로 확장)
-          let newTrimStart = dragStartDataRef.current.trimStart - durationDelta;
+        // trimEnd 제약: 0 이상, mediaAssetDuration - trimStart - MIN_CLIP_DURATION_MS 이하
+        const maxTrimEnd =
+          mediaAssetDuration -
+          dragStartDataRef.current.trimStart -
+          MIN_CLIP_DURATION_MS;
+        newTrimEnd = Math.max(0, Math.min(maxTrimEnd, newTrimEnd));
 
-          // trimStart는 0 이상이어야 함
-          if (newTrimStart < 0) {
-            // trimStart가 0 미만이 되려고 하면 startTime을 조절
-            newStartTime =
-              dragStartDataRef.current.startTime +
-              dragStartDataRef.current.trimStart;
-            newTrimStart = 0;
-          }
+        setLocalDragState({
+          startTime: dragStartDataRef.current.startTime,
+          endTime: dragStartDataRef.current.endTime,
+          trimStart: dragStartDataRef.current.trimStart,
+          trimEnd: newTrimEnd,
+        });
+      } else {
+        // 일반 클립: endTime만 조절, trim은 0 유지
+        let newEndTime = dragStartDataRef.current.endTime + deltaMs;
 
-          // 🔥 로컬 상태만 업데이트 (store 터치 안함)
-          setLocalDragState({
-            startTime: newStartTime,
-            endTime: dragStartDataRef.current.endTime,
-            trimStart: newTrimStart,
-            trimEnd: dragStartDataRef.current.trimEnd,
-          });
-        } else {
-          // 일반 클립은 단순히 startTime만 조절
-          setLocalDragState({
-            startTime: newStartTime,
-            endTime: dragStartDataRef.current.endTime,
-            trimStart: dragStartDataRef.current.trimStart,
-            trimEnd: dragStartDataRef.current.trimEnd,
-          });
-        }
-      } else if (mode === 'resize-end') {
-        // 끝점 드래그: endTime 조절
-        let newEndTime = dragStartDataRef.current.endTime + deltaMsRaw;
-
-        // 최소 제약
+        // endTime 제약
         const minEnd =
           dragStartDataRef.current.startTime + MIN_CLIP_DURATION_MS;
         newEndTime = Math.max(minEnd, newEndTime);
 
-        // VideoClip의 경우 최대 길이 제약 + trimEnd 조절
-        if (isVideoOrAudio && maxDuration) {
-          const originalDuration =
-            dragStartDataRef.current.endTime -
-            dragStartDataRef.current.startTime;
-          const newDuration = newEndTime - dragStartDataRef.current.startTime;
-          const durationDelta = newDuration - originalDuration;
-
-          // trimEnd 감소 = 더 많이 보여줌 (오른쪽으로 확장)
-          let newTrimEnd = dragStartDataRef.current.trimEnd - durationDelta;
-
-          // trimEnd는 0 이상이어야 함
-          if (newTrimEnd < 0) {
-            // trimEnd가 0 미만이 되려고 하면 endTime을 조절
-            newEndTime =
-              dragStartDataRef.current.startTime +
-              (maxDuration - dragStartDataRef.current.trimStart);
-            newTrimEnd = 0;
-          }
-
-          // 🔥 로컬 상태만 업데이트 (store 터치 안함)
-          setLocalDragState({
-            startTime: dragStartDataRef.current.startTime,
-            endTime: newEndTime,
-            trimStart: dragStartDataRef.current.trimStart,
-            trimEnd: newTrimEnd,
-          });
-        } else {
-          // 일반 클립은 단순히 endTime만 조절 (무제한)
-          setLocalDragState({
-            startTime: dragStartDataRef.current.startTime,
-            endTime: newEndTime,
-            trimStart: dragStartDataRef.current.trimStart,
-            trimEnd: dragStartDataRef.current.trimEnd,
-          });
-        }
+        setLocalDragState({
+          startTime: dragStartDataRef.current.startTime,
+          endTime: newEndTime,
+          trimStart: 0,
+          trimEnd: 0,
+        });
       }
-    },
-    [clip.type, _getMaxDuration, pxPerSec, setLocalDragState]
-  );
+    }
+  };
 
-  const handlePointerUp = useCallback(
-    (e: React.PointerEvent) => {
-      const mode = dragModeRef.current;
-      if (_isResizingMode(mode)) {
-        if (clipRef.current) {
-          clipRef.current.releasePointerCapture(e.pointerId);
-        }
-
-        // 🔥 드래그 종료 시 로컬 상태를 store에 커밋
-        if (localDragState) {
-          updateClip(trackId, clip.id, {
-            startTime: localDragState.startTime,
-            endTime: localDragState.endTime,
-            trimStart: localDragState.trimStart,
-            trimEnd: localDragState.trimEnd,
-          });
-          setLocalDragState(null);
-        }
-
-        _resetResizeState();
+  const handlePointerUp = (e: React.PointerEvent) => {
+    const mode = dragModeRef.current;
+    if (_isResizingMode(mode)) {
+      if (clipRef.current) {
+        clipRef.current.releasePointerCapture(e.pointerId);
       }
-    },
-    [
-      clip.id,
-      localDragState,
-      _resetResizeState,
-      setLocalDragState,
-      trackId,
-      updateClip,
-    ]
-  );
 
-  const handlePointerCancel = useCallback(
-    (e: React.PointerEvent) => {
-      const mode = dragModeRef.current;
-      if (_isResizingMode(mode)) {
-        if (clipRef.current) {
-          clipRef.current.releasePointerCapture(e.pointerId);
-        }
-
-        // 🔥 취소 시 로컬 상태 버림 (store 업데이트 안함)
+      // 🔥 드래그 종료 시 로컬 상태를 store에 커밋
+      if (localDragState) {
+        updateClip(trackId, clip.id, {
+          startTime: localDragState.startTime,
+          endTime: localDragState.endTime,
+          trimStart: localDragState.trimStart,
+          trimEnd: localDragState.trimEnd,
+        });
         setLocalDragState(null);
-
-        _resetResizeState();
-      }
-    },
-    [_resetResizeState, setLocalDragState]
-  );
-
-  const handleDragStart = useCallback(
-    (e: MouseEvent | TouchEvent | PointerEvent) => {
-      console.log('drag start', dragModeRef.current);
-      if (dragModeRef.current !== 'move' && dragModeRef.current !== null) {
-        return;
       }
 
-      setDraggingClipId(clip.id);
-      isDraggingRef.current = true;
-      setIsDragging(true);
-      dragModeRef.current = 'move';
-      setDragMode('move');
-      wheelDeltaRef.current = { x: 0, y: 0 };
-      // @ts-ignore - e.altKey exists in drag events
-      const altPressed = e.altKey || false;
-      isAltPressedRef.current = altPressed;
-      setIsCloneMode(altPressed);
-    },
-    [clip.id, setDragMode, setDraggingClipId, setIsCloneMode, setIsDragging]
-  );
+      _resetResizeState();
+    }
+  };
 
-  const handleDrag = useCallback(
-    (
-      e: MouseEvent | TouchEvent | PointerEvent,
-      info: { offset: { y: number } }
-    ) => {
-      if (dragModeRef.current !== 'move') return;
+  const handlePointerCancel = (e: React.PointerEvent) => {
+    const mode = dragModeRef.current;
+    if (_isResizingMode(mode)) {
+      if (clipRef.current) {
+        clipRef.current.releasePointerCapture(e.pointerId);
+      }
 
-      // @ts-ignore - e.altKey exists in drag events
-      const altPressed = e.altKey || false;
-      isAltPressedRef.current = altPressed;
-      setIsCloneMode(altPressed);
+      // 🔥 취소 시 로컬 상태 버림 (store 업데이트 안함)
+      setLocalDragState(null);
 
-      const offsetY = info.offset.y + wheelDeltaRef.current.y;
-      const trackIndexDelta = Math.round(offsetY / trackHeight);
+      _resetResizeState();
+    }
+  };
 
-      if (trackIndexDelta !== 0) {
-        const currentTrackIndex = tracks.findIndex((t) => t.id === trackId);
-        const targetTrackIndex = currentTrackIndex + trackIndexDelta;
+  const handleDragStart = (e: MouseEvent | TouchEvent | PointerEvent) => {
+    console.log('drag start', dragModeRef.current);
+    if (dragModeRef.current !== 'move' && dragModeRef.current !== null) {
+      return;
+    }
 
-        if (targetTrackIndex >= 0 && targetTrackIndex < tracks.length) {
-          const targetTrack = tracks[targetTrackIndex];
-          setHoverTrackId(targetTrack.id);
-        } else {
-          setHoverTrackId(null);
-        }
+    setDraggingClipId(clip.id);
+    isDraggingRef.current = true;
+    setIsDragging(true);
+    dragModeRef.current = 'move';
+    setDragMode('move');
+    wheelDeltaRef.current = { x: 0, y: 0 };
+    // @ts-ignore - e.altKey exists in drag events
+    const altPressed = e.altKey || false;
+    isAltPressedRef.current = altPressed;
+    setIsCloneMode(altPressed);
+  };
+
+  const handleDrag = (
+    e: MouseEvent | TouchEvent | PointerEvent,
+    info: { offset: { y: number } }
+  ) => {
+    if (dragModeRef.current !== 'move') return;
+
+    // @ts-ignore - e.altKey exists in drag events
+    const altPressed = e.altKey || false;
+    isAltPressedRef.current = altPressed;
+    setIsCloneMode(altPressed);
+
+    const offsetY = info.offset.y + wheelDeltaRef.current.y;
+    const trackIndexDelta = Math.round(offsetY / trackHeight);
+
+    if (trackIndexDelta !== 0) {
+      const currentTrackIndex = tracks.findIndex((t) => t.id === trackId);
+      const targetTrackIndex = currentTrackIndex + trackIndexDelta;
+
+      if (targetTrackIndex >= 0 && targetTrackIndex < tracks.length) {
+        const targetTrack = tracks[targetTrackIndex];
+        setHoverTrackId(targetTrack.id);
       } else {
         setHoverTrackId(null);
       }
-    },
-    [setHoverTrackId, setIsCloneMode, trackHeight, trackId, tracks]
-  );
+    } else {
+      setHoverTrackId(null);
+    }
+  };
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
+  const handleWheel = (e: React.WheelEvent) => {
     if (isDraggingRef.current && dragModeRef.current === 'move') {
       e.preventDefault();
       wheelDeltaRef.current.x += e.deltaX;
       wheelDeltaRef.current.y += e.deltaY;
     }
-  }, []);
+  };
 
-  const handleClick = useCallback(
-    (e: React.MouseEvent) => {
-      // 리사이즈 중이면 클릭 무시
-      if (_isResizingMode(dragModeRef.current)) {
-        return;
-      }
+  const handleClick = (e: React.MouseEvent) => {
+    // 리사이즈 중이면 클릭 무시
+    if (_isResizingMode(dragModeRef.current)) {
+      return;
+    }
 
-      // Set the parent track as active when clicking a clip
-      setActiveTrackId(trackId);
+    // Set the parent track as active when clicking a clip
+    setActiveTrackId(trackId);
 
-      if (e.shiftKey) {
-        addSelectedClipId(clip.id);
-      } else {
-        setSelectedClipId(clip.id);
-      }
-    },
-    [addSelectedClipId, clip.id, setActiveTrackId, setSelectedClipId, trackId]
-  );
+    if (e.shiftKey) {
+      addSelectedClipId(clip.id);
+    } else {
+      setSelectedClipId(clip.id);
+    }
+  };
 
-  const handleDragEnd = useCallback(
-    (
-      _: MouseEvent | TouchEvent | PointerEvent,
-      info: { offset: { x: number; y: number } }
-    ) => {
-      if (dragModeRef.current !== 'move') {
-        dragModeRef.current = null;
-        setDragMode(null);
-        return;
-      }
-      const isCloning = isAltPressedRef.current;
-      isDraggingRef.current = false;
-      setIsDragging(false);
-      setDraggingClipId(null);
-      setHoverTrackId(null);
-      setIsCloneMode(false);
-
-      const totalOffsetX = info.offset.x + wheelDeltaRef.current.x;
-      const totalOffsetY = info.offset.y + wheelDeltaRef.current.y;
-
-      const deltaStartTime = (totalOffsetX / pxPerSec) * 1000;
-      const newStartTime = Math.max(0, clip.startTime + deltaStartTime);
-      const newEndTime = newStartTime + (clip.endTime - clip.startTime);
-
-      console.log('[TimelineClip] Drag end:', {
-        isCloning,
-        clipId: clip.id,
-        originalTime: { start: clip.startTime, end: clip.endTime },
-        newTime: { start: newStartTime, end: newEndTime },
-      });
-
-      // 트랙 간 이동/복제 로직
-      const trackIndexDelta = Math.round(totalOffsetY / trackHeight);
-
-      if (trackIndexDelta !== 0) {
-        // 현재 트랙의 인덱스 찾기
-        const currentTrackIndex = tracks.findIndex((t) => t.id === trackId);
-        const targetTrackIndex = currentTrackIndex + trackIndexDelta;
-
-        // 타겟 트랙이 존재하는 경우 이동/복제
-        if (targetTrackIndex >= 0 && targetTrackIndex < tracks.length) {
-          const targetTrack = tracks[targetTrackIndex];
-
-          if (isCloning) {
-            // Alt 키가 눌려있으면 복제
-            cloneClipToTrack(
-              trackId,
-              targetTrack.id,
-              clip.id,
-              newStartTime,
-              newEndTime
-            );
-          } else {
-            // Alt 키가 안 눌려있으면 이동
-            moveClipToTrack(trackId, targetTrack.id, clip.id);
-            // 타겟 트랙에서 시간 업데이트
-            updateClip(targetTrack.id, clip.id, {
-              startTime: newStartTime,
-              endTime: newEndTime,
-            });
-          }
-          return;
-        }
-
-        // 타겟 트랙이 없으면 새로 생성 (중간 빈 트랙 포함)
-        if (targetTrackIndex >= tracks.length || targetTrackIndex < 0) {
-          // 현재 트랙의 타입을 확인
-          const currentTrack = tracks[currentTrackIndex];
-          const trackType = (currentTrack?.type || 'graphic') as
-            | 'graphic'
-            | 'audio';
-
-          const newTracks = [];
-          let targetTrackId = '';
-
-          if (targetTrackIndex >= tracks.length) {
-            // 아래로 이동 - 필요한 만큼 트랙 생성
-            const tracksToCreate = targetTrackIndex - tracks.length + 1;
-            // 가장 낮은 zIndex 찾기
-            const minZIndex = Math.min(...tracks.map((t) => t.zIndex));
-
-            for (let i = 0; i < tracksToCreate; i++) {
-              const newTrack = Track.create(trackType);
-              // 아래로 갈수록 zIndex 감소: minZIndex-1, minZIndex-2, ...
-              newTrack.zIndex = minZIndex - (i + 1);
-              newTracks.push(newTrack);
-
-              // 마지막 트랙이 타겟 트랙
-              if (i === tracksToCreate - 1) {
-                targetTrackId = newTrack.id;
-              }
-            }
-          } else if (targetTrackIndex < 0) {
-            // 위로 이동 - 필요한 만큼 트랙 생성
-            const tracksToCreate = Math.abs(targetTrackIndex);
-            // 가장 높은 zIndex 찾기
-            const maxZIndex = Math.max(...tracks.map((t) => t.zIndex));
-
-            for (let i = 0; i < tracksToCreate; i++) {
-              const newTrack = Track.create(trackType);
-              // 위로 갈수록 zIndex 증가: maxZIndex+1, maxZIndex+2, ...
-              newTrack.zIndex = maxZIndex + (i + 1);
-              newTracks.push(newTrack);
-
-              // 마지막 트랙이 타겟 트랙 (가장 위)
-              if (i === tracksToCreate - 1) {
-                targetTrackId = newTrack.id;
-              }
-            }
-          }
-
-          // 트랙 추가
-          addTrack(newTracks);
-
-          if (isCloning) {
-            // Alt 키가 눌려있으면 복제
-            cloneClipToTrack(
-              trackId,
-              targetTrackId,
-              clip.id,
-              newStartTime,
-              newEndTime
-            );
-          } else {
-            // Alt 키가 안 눌려있으면 이동
-            moveClipToTrack(trackId, targetTrackId, clip.id);
-            // 시간 업데이트
-            updateClip(targetTrackId, clip.id, {
-              startTime: newStartTime,
-              endTime: newEndTime,
-            });
-          }
-          return;
-        }
-      }
-
-      // 같은 트랙 내에서 시간만 변경 (복제 모드면 복제)
-      if (isCloning) {
-        // 같은 트랙에 복제
-        cloneClipToTrack(trackId, trackId, clip.id, newStartTime, newEndTime);
-      } else {
-        // 같은 트랙 내에서 시간만 이동
-        updateClip(trackId, clip.id, {
-          startTime: newStartTime,
-          endTime: newEndTime,
-        });
-      }
-
-      // Reset drag mode
+  const handleDragEnd = (
+    _: MouseEvent | TouchEvent | PointerEvent,
+    info: { offset: { x: number; y: number } }
+  ) => {
+    if (dragModeRef.current !== 'move') {
       dragModeRef.current = null;
       setDragMode(null);
-    },
-    [
-      addTrack,
-      clip.endTime,
-      clip.id,
-      clip.startTime,
-      cloneClipToTrack,
-      moveClipToTrack,
-      pxPerSec,
-      setDragMode,
-      setDraggingClipId,
-      setHoverTrackId,
-      setIsCloneMode,
-      setIsDragging,
-      trackHeight,
-      trackId,
-      tracks,
-      updateClip,
-    ]
-  );
+      return;
+    }
+    const isCloning = isAltPressedRef.current;
+    isDraggingRef.current = false;
+    setIsDragging(false);
+    setDraggingClipId(null);
+    setHoverTrackId(null);
+    setIsCloneMode(false);
+
+    const totalOffsetX = info.offset.x + wheelDeltaRef.current.x;
+    const totalOffsetY = info.offset.y + wheelDeltaRef.current.y;
+
+    const deltaStartTime = (totalOffsetX / pxPerSec) * 1000;
+    const newStartTime = Math.max(0, clip.startTime + deltaStartTime);
+    const newEndTime = newStartTime + (clip.endTime - clip.startTime);
+
+    console.log('[TimelineClip] Drag end:', {
+      isCloning,
+      clipId: clip.id,
+      originalTime: { start: clip.startTime, end: clip.endTime },
+      newTime: { start: newStartTime, end: newEndTime },
+    });
+
+    // 트랙 간 이동/복제 로직
+    const trackIndexDelta = Math.round(totalOffsetY / trackHeight);
+
+    if (trackIndexDelta !== 0) {
+      // 현재 트랙의 인덱스 찾기
+      const currentTrackIndex = tracks.findIndex((t) => t.id === trackId);
+      const targetTrackIndex = currentTrackIndex + trackIndexDelta;
+
+      // 타겟 트랙이 존재하는 경우 이동/복제
+      if (targetTrackIndex >= 0 && targetTrackIndex < tracks.length) {
+        const targetTrack = tracks[targetTrackIndex];
+
+        if (isCloning) {
+          // Alt 키가 눌려있으면 복제
+          cloneClipToTrack(
+            trackId,
+            targetTrack.id,
+            clip.id,
+            newStartTime,
+            newEndTime
+          );
+        } else {
+          // Alt 키가 안 눌려있으면 이동
+          moveClipToTrack(trackId, targetTrack.id, clip.id);
+          // 타겟 트랙에서 시간 업데이트
+          updateClip(targetTrack.id, clip.id, {
+            startTime: newStartTime,
+            endTime: newEndTime,
+          });
+        }
+        return;
+      }
+
+      // 타겟 트랙이 없으면 새로 생성 (중간 빈 트랙 포함)
+      if (targetTrackIndex >= tracks.length || targetTrackIndex < 0) {
+        // 현재 트랙의 타입을 확인
+        const currentTrack = tracks[currentTrackIndex];
+        const trackType = (currentTrack?.type || 'graphic') as
+          | 'graphic'
+          | 'audio';
+
+        const newTracks = [];
+        let targetTrackId = '';
+
+        if (targetTrackIndex >= tracks.length) {
+          // 아래로 이동 - 필요한 만큼 트랙 생성
+          const tracksToCreate = targetTrackIndex - tracks.length + 1;
+          // 가장 낮은 zIndex 찾기
+          const minZIndex = Math.min(...tracks.map((t) => t.zIndex));
+
+          for (let i = 0; i < tracksToCreate; i++) {
+            const newTrack = Track.create(trackType);
+            // 아래로 갈수록 zIndex 감소: minZIndex-1, minZIndex-2, ...
+            newTrack.zIndex = minZIndex - (i + 1);
+            newTracks.push(newTrack);
+
+            // 마지막 트랙이 타겟 트랙
+            if (i === tracksToCreate - 1) {
+              targetTrackId = newTrack.id;
+            }
+          }
+        } else if (targetTrackIndex < 0) {
+          // 위로 이동 - 필요한 만큼 트랙 생성
+          const tracksToCreate = Math.abs(targetTrackIndex);
+          // 가장 높은 zIndex 찾기
+          const maxZIndex = Math.max(...tracks.map((t) => t.zIndex));
+
+          for (let i = 0; i < tracksToCreate; i++) {
+            const newTrack = Track.create(trackType);
+            // 위로 갈수록 zIndex 증가: maxZIndex+1, maxZIndex+2, ...
+            newTrack.zIndex = maxZIndex + (i + 1);
+            newTracks.push(newTrack);
+
+            // 마지막 트랙이 타겟 트랙 (가장 위)
+            if (i === tracksToCreate - 1) {
+              targetTrackId = newTrack.id;
+            }
+          }
+        }
+
+        // 트랙 추가
+        addTrack(newTracks);
+
+        if (isCloning) {
+          // Alt 키가 눌려있으면 복제
+          cloneClipToTrack(
+            trackId,
+            targetTrackId,
+            clip.id,
+            newStartTime,
+            newEndTime
+          );
+        } else {
+          // Alt 키가 안 눌려있으면 이동
+          moveClipToTrack(trackId, targetTrackId, clip.id);
+          // 시간 업데이트
+          updateClip(targetTrackId, clip.id, {
+            startTime: newStartTime,
+            endTime: newEndTime,
+          });
+        }
+        return;
+      }
+    }
+
+    // 같은 트랙 내에서 시간만 변경 (복제 모드면 복제)
+    if (isCloning) {
+      // 같은 트랙에 복제
+      cloneClipToTrack(trackId, trackId, clip.id, newStartTime, newEndTime);
+    } else {
+      // 같은 트랙 내에서 시간만 이동
+      updateClip(trackId, clip.id, {
+        startTime: newStartTime,
+        endTime: newEndTime,
+      });
+    }
+
+    // Reset drag mode
+    dragModeRef.current = null;
+    setDragMode(null);
+  };
 
   return {
     clipRef,
