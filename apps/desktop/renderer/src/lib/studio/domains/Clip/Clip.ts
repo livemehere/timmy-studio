@@ -74,9 +74,20 @@ export abstract class Clip<
   }
 
   protected isInRangeAt(timeMs: number): boolean {
-    // startTime/endTime은 타임라인 상의 클립 위치를 나타냄
-    // trimStart/trimEnd는 소스 미디어의 재생 오프셋으로만 사용됨 (visibility에 영향 없음)
-    return timeMs >= this._data.startTime && timeMs < this._data.endTime;
+    const { start, end } = Clip.getActualTimeRange(this._data);
+    return timeMs >= start && timeMs < end;
+  }
+
+  /**
+   * trim을 고려한 실제 보이는 시간 범위를 반환 (static)
+   * - video/audio: trim을 고려한 실제 재생 범위
+   * - 기타 클립: startTime ~ endTime (trim 무시)
+   */
+  static getActualTimeRange(clip: IClip): { start: number; end: number } {
+    return {
+      start: clip.startTime + (clip.trimStart ?? 0),
+      end: clip.endTime - (clip.trimEnd ?? 0),
+    };
   }
 
   shouldRenderAt(timeMs: number): boolean {

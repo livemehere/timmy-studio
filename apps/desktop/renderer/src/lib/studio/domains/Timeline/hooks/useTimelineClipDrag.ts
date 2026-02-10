@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useMotionValue } from 'motion/react';
 import { msToSec } from '../../../utils/time';
 import { Track } from '../../Track/Track';
+import { Clip } from '../../Clip/Clip';
 import type { IClip, IVideoClip, IAudioClip } from '../../Clip/types';
 import type { IMediaAsset } from '../../Asset/types';
 import type { ITrack } from '../../Track/types';
@@ -97,26 +98,15 @@ export function useTimelineClipDrag({
   const displayTrimEnd = localDragState?.trimEnd ?? clip.trimEnd;
 
   // trim을 고려한 실제 보이는 시간 범위 계산
-  const getActualTimeRange = (
-    clip: IClip,
-    localState: typeof localDragState
-  ) => {
-    const startTime = localState?.startTime ?? clip.startTime;
-    const endTime = localState?.endTime ?? clip.endTime;
-
-    if (clip.type === 'video' || clip.type === 'audio') {
-      const trimStart = localState?.trimStart ?? clip.trimStart ?? 0;
-      const trimEnd = localState?.trimEnd ?? clip.trimEnd ?? 0;
-      return {
-        start: startTime + trimStart,
-        end: endTime - trimEnd,
-      };
-    }
-
-    return { start: startTime, end: endTime };
-  };
-
-  const actualRange = getActualTimeRange(clip, localDragState);
+  const actualRange = localDragState
+    ? Clip.getActualTimeRange({
+        ...clip,
+        startTime: localDragState.startTime,
+        endTime: localDragState.endTime,
+        trimStart: localDragState.trimStart,
+        trimEnd: localDragState.trimEnd,
+      })
+    : Clip.getActualTimeRange(clip);
 
   // 표시용 width/left 계산 (trim 고려)
   const displayWidth = msToSec(actualRange.end - actualRange.start) * pxPerSec;

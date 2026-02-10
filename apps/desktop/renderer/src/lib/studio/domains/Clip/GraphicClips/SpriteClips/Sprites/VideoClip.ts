@@ -31,13 +31,6 @@ export class VideoClip extends SpriteClip {
     };
   }
 
-  // trim을 고려한 실제 재생 가능 범위 체크
-  protected override isInRangeAt(timeMs: number): boolean {
-    const actualStartTime = this._data.startTime + (this._data.trimStart ?? 0);
-    const actualEndTime = this._data.endTime - (this._data.trimEnd ?? 0);
-    return timeMs >= actualStartTime && timeMs < actualEndTime;
-  }
-
   constructor(renderer: GraphicRenderer, data: IVideoClip) {
     super(renderer, data);
     this.debugCall(`(Video) constructor`);
