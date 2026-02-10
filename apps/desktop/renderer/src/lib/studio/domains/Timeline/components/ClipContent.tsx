@@ -28,7 +28,7 @@ export function ClipContent({
   const isTrimmed = displayTrimStart > 0 || displayTrimEnd > 0;
 
   return (
-    <div className="flex flex-col pointer-events-none">
+    <div className="flex flex-col pointer-events-none select-none">
       {/* Header */}
       <div className="flex items-center gap-1 px-2 py-0.5 bg-black/20">
         <span className="text-[10px] truncate flex-1">{clip.name}</span>

@@ -30,9 +30,9 @@ import { useClipContextActions } from './hooks/useClipContextActions';
 import { ClipContent } from './components/ClipContent';
 import { ClipResizeHandles } from './components/ClipResizeHandles';
 
-const getBg = (clipType: IClip['type']) => {
-  if (clipType === 'audio') return 'bg-green-700';
-  return 'bg-cyan-700';
+const getBg = (clipType: IClip['type'], alpha?: boolean) => {
+  if (clipType === 'audio') return alpha ? 'bg-green-700/20' : 'bg-green-700';
+  return alpha ? 'bg-cyan-700/20' : 'bg-cyan-700';
 };
 
 export function TimelineClip({
@@ -181,7 +181,10 @@ export function TimelineClip({
       {/* Ghost Element: Alt 키로 복제 중일 때 원본 위치에 표시 */}
       {isCloneMode && isDragging && dragMode === 'move' && (
         <div
-          className="absolute h-full bg-cyan-700/30 px-2 py-1 rounded overflow-hidden pointer-events-none border-2 border-dashed border-cyan-400/50"
+          className={cn(
+            'absolute h-full px-2 py-1 rounded-md overflow-hidden pointer-events-none border border-dashed border-white/10',
+            getBg(clip.type, true)
+          )}
           style={{
             width: displayWidth,
             left: displayLeft,
@@ -199,16 +202,11 @@ export function TimelineClip({
             style={{
               width: displayWidth,
               left: displayLeft,
+              zIndex: Z_INDEX.timeline.clip,
               x:
                 dragMode === 'resize-start' || dragMode === 'resize-end'
                   ? 0
                   : motionX,
-              zIndex: Z_INDEX.timeline.clip,
-              cursor: hoverEdge
-                ? 'ew-resize'
-                : isDragging && dragMode === 'move'
-                  ? 'grabbing'
-                  : 'grab',
             }}
             // 리사이즈 모드에서는 드래그 완전 비활성화, move 모드에서는 x/y 모두 허용
             drag={dragMode === 'move' || dragMode === null ? true : false}
@@ -236,6 +234,8 @@ export function TimelineClip({
                 'ring-1 ring-white/70': isSelected,
                 // 비활성화 상태
                 'opacity-50': !clip.enabled,
+                // 잠금 상태
+                'cursor-ew-resize': hoverEdge,
               }
             )}
           >
