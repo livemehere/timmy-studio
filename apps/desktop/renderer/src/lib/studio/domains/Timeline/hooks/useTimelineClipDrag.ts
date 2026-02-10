@@ -107,9 +107,8 @@ export function useTimelineClipDrag({
     }
   }, [dragMode, isDragging, motionX]);
 
-  const determineDragMode = (e: React.PointerEvent): DragMode => {
+  const _determineDragMode = (e: React.PointerEvent): DragMode => {
     const target = e.target as HTMLElement;
-    console.log('target', target);
     const resizeHandle = target.closest('[data-resize-handle]');
     if (resizeHandle) {
       const handleType = resizeHandle.getAttribute('data-resize-handle');
@@ -118,79 +117,77 @@ export function useTimelineClipDrag({
     }
     return 'move';
   };
-  // 드래깅 모드 판단 & 시작 데이터 저장
-  const handlePointerDown = useCallback(
-    (e: React.PointerEvent) => {
-      const mode = determineDragMode(e);
-      dragModeRef.current = mode;
-      setDragMode(mode);
 
-      // 리사이즈 모드면 드래그 데이터 저장 및 이벤트 캡처
-      if (mode === 'resize-start' || mode === 'resize-end') {
-        e.preventDefault();
-        e.stopPropagation();
+  const _isResizingMode = (mode: DragMode) => {
+    return mode === 'resize-start' || mode === 'resize-end';
+  };
 
-        // clipRef에서 pointer capture
-        if (clipRef.current) {
-          clipRef.current.setPointerCapture(e.pointerId);
-        }
+  const _setDragMode = (mode: DragMode) => {
+    dragModeRef.current = mode;
+    setDragMode(mode);
+  };
 
-        dragStartDataRef.current = {
-          startTime: clip.startTime,
-          endTime: clip.endTime,
-          trimStart: clip.trimStart,
-          trimEnd: clip.trimEnd,
-          mouseX: e.clientX,
-        };
-        isDraggingRef.current = true;
-        setIsDragging(true);
-        setDraggingClipId(clip.id);
-      }
-    },
-    [
-      clip.endTime,
-      clip.id,
-      clip.startTime,
-      clip.trimEnd,
-      clip.trimStart,
-      determineDragMode,
-      setDragMode,
-      setIsDragging,
-      setDraggingClipId,
-    ]
-  );
+  const _setIsDragging = (dragging: boolean) => {
+    isDraggingRef.current = dragging;
+    setIsDragging(dragging);
+  };
 
-  // Get asset duration for video/audio clips
-  const getMaxDuration = useCallback((): number | null => {
-    if (clip.type === 'video' || clip.type === 'audio') {
-      const assetId = (clip as IVideoClip | IAudioClip).assetId;
+  const _getMaxDuration = (): number | null => {
+    if ('assetId' in clip) {
+      const assetId = clip.assetId;
       const asset = getAssetById<IMediaAsset>(assetId);
-      if (asset?.metadata?.durationMs) {
-        return asset.metadata.durationMs;
-      }
+      if (!asset) return null;
+      return asset.metadata.durationMs;
     }
-    return null; // unlimited for non-video/audio clips
-  }, [clip, getAssetById]);
+    // 미디어 에셋이 없는 클립은 최대 길이 제약 없음
+    return null;
+  };
 
-  const resetResizeState = useCallback(() => {
-    isDraggingRef.current = false;
-    setIsDragging(false);
+  const _resetResizeState = () => {
+    _setIsDragging(false);
+    _setDragMode(null);
     setDraggingClipId(null);
     dragStartDataRef.current = null;
-    dragModeRef.current = null;
-    setDragMode(null);
-  }, [setDragMode, setDraggingClipId, setIsDragging]);
+  };
+
+  // 리사이징 모드 시작 핸들러
+  const handlePointerDown = (e: React.PointerEvent) => {
+    const mode = _determineDragMode(e);
+    _setDragMode(mode);
+
+    // 리사이즈 모드면 드래그 데이터 저장 및 이벤트 캡처
+    if (_isResizingMode(mode)) {
+      e.preventDefault();
+      e.stopPropagation();
+      _setIsDragging(true);
+      setDraggingClipId(clip.id);
+
+      if (clipRef.current) {
+        clipRef.current.setPointerCapture(e.pointerId);
+      }
+
+      dragStartDataRef.current = {
+        startTime: clip.startTime,
+        endTime: clip.endTime,
+        trimStart: clip.trimStart,
+        trimEnd: clip.trimEnd,
+        mouseX: e.clientX,
+      };
+    }
+
+    // move 모드는 handleDragStart에서 처리
+  };
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
       const mode = dragModeRef.current;
       if (!isDraggingRef.current || !dragStartDataRef.current) return;
-      if (mode !== 'resize-start' && mode !== 'resize-end') return;
+      if (!_isResizingMode(mode)) return;
 
       const deltaX = e.clientX - dragStartDataRef.current.mouseX;
       const deltaMsRaw = (deltaX / pxPerSec) * 1000;
 
-      const maxDuration = getMaxDuration();
+      const maxDuration = _getMaxDuration();
       const isVideoOrAudio = clip.type === 'video' || clip.type === 'audio';
 
       if (mode === 'resize-start') {
@@ -286,13 +283,13 @@ export function useTimelineClipDrag({
         }
       }
     },
-    [clip.type, getMaxDuration, pxPerSec, setLocalDragState]
+    [clip.type, _getMaxDuration, pxPerSec, setLocalDragState]
   );
 
   const handlePointerUp = useCallback(
     (e: React.PointerEvent) => {
       const mode = dragModeRef.current;
-      if (mode === 'resize-start' || mode === 'resize-end') {
+      if (_isResizingMode(mode)) {
         if (clipRef.current) {
           clipRef.current.releasePointerCapture(e.pointerId);
         }
@@ -308,13 +305,13 @@ export function useTimelineClipDrag({
           setLocalDragState(null);
         }
 
-        resetResizeState();
+        _resetResizeState();
       }
     },
     [
       clip.id,
       localDragState,
-      resetResizeState,
+      _resetResizeState,
       setLocalDragState,
       trackId,
       updateClip,
@@ -324,7 +321,7 @@ export function useTimelineClipDrag({
   const handlePointerCancel = useCallback(
     (e: React.PointerEvent) => {
       const mode = dragModeRef.current;
-      if (mode === 'resize-start' || mode === 'resize-end') {
+      if (_isResizingMode(mode)) {
         if (clipRef.current) {
           clipRef.current.releasePointerCapture(e.pointerId);
         }
@@ -332,10 +329,10 @@ export function useTimelineClipDrag({
         // 🔥 취소 시 로컬 상태 버림 (store 업데이트 안함)
         setLocalDragState(null);
 
-        resetResizeState();
+        _resetResizeState();
       }
     },
-    [resetResizeState, setLocalDragState]
+    [_resetResizeState, setLocalDragState]
   );
 
   const handleDragStart = useCallback(
@@ -402,10 +399,7 @@ export function useTimelineClipDrag({
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       // 리사이즈 중이면 클릭 무시
-      if (
-        dragModeRef.current === 'resize-start' ||
-        dragModeRef.current === 'resize-end'
-      ) {
+      if (_isResizingMode(dragModeRef.current)) {
         return;
       }
 

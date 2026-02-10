@@ -170,7 +170,8 @@ export function TimelineClip({
       {isCloneMode && isDragging && dragMode === 'move' && (
         <div
           className={cn(
-            'absolute h-full px-2 py-1 rounded-md overflow-hidden pointer-events-none border border-dashed border-white/10',
+            'absolute h-full px-2 py-1 rounded-md overflow-hidden pointer-events-none select-none border border-dashed border-white/10',
+            // 투명한 배경색
             getBg(clip.type, true)
           )}
           style={{
