@@ -1,6 +1,9 @@
 import { useMemo } from 'react';
 import type { IClip } from '../../Clip/types';
 
+/**
+ * 배경 없음 순수 콘텐츠만 렌더링
+ */
 export function ClipContent({
   clip,
   isLoaded,

@@ -2,6 +2,12 @@ import { cn } from '@/lib/utils';
 
 type DragMode = 'move' | 'resize-start' | 'resize-end' | null;
 
+const HANDLE_STYLES = {
+  base: 'absolute top-0 bottom-0 w-2 cursor-ew-resize transition-colors',
+  hover: 'bg-white/40',
+  default: 'bg-white/0 group-hover:bg-white/20',
+};
+
 export function ClipResizeHandles({
   hoverEdge,
   dragMode,
@@ -13,18 +19,20 @@ export function ClipResizeHandles({
     <>
       <div
         className={cn(
-          'absolute left-0 top-0 bottom-0 w-2 transition-colors cursor-ew-resize',
+          HANDLE_STYLES.base,
+          'left-0',
           hoverEdge === 'start' || dragMode === 'resize-start'
-            ? 'bg-white/40'
-            : 'bg-white/0 group-hover:bg-white/20'
+            ? HANDLE_STYLES.hover
+            : HANDLE_STYLES.default
         )}
       />
       <div
         className={cn(
-          'absolute right-0 top-0 bottom-0 w-2 transition-colors cursor-ew-resize',
+          HANDLE_STYLES.base,
+          'right-0',
           hoverEdge === 'end' || dragMode === 'resize-end'
-            ? 'bg-white/40'
-            : 'bg-white/0 group-hover:bg-white/20'
+            ? HANDLE_STYLES.hover
+            : HANDLE_STYLES.default
         )}
       />
     </>

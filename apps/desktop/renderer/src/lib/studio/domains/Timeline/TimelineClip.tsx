@@ -30,6 +30,11 @@ import { useClipContextActions } from './hooks/useClipContextActions';
 import { ClipContent } from './components/ClipContent';
 import { ClipResizeHandles } from './components/ClipResizeHandles';
 
+const getBg = (clipType: IClip['type']) => {
+  if (clipType === 'audio') return 'bg-green-700';
+  return 'bg-cyan-700';
+};
+
 export function TimelineClip({
   clipId,
   pxPerSec,
@@ -219,21 +224,20 @@ export function TimelineClip({
             onDragStart={handleDragStart}
             onDrag={handleDrag}
             onWheel={handleWheel}
+            onClick={handleClick}
+            onDragEnd={handleDragEnd}
             className={cn(
-              'absolute h-full rounded-md overflow-hidden group',
-              'bg-linear-to-b from-cyan-600 to-cyan-700',
-              'border border-cyan-500/30',
-              'shadow-sm hover:shadow-md transition-shadow',
+              'absolute h-full rounded-md group overflow-hidden',
+              // 배경색
+              getBg(clip.type),
+              'border border-white/20',
               {
-                'ring-2 ring-white ring-offset-1 ring-offset-neutral-900':
-                  isSelected,
-                'ring-2 ring-yellow-400 ring-offset-1 ring-offset-neutral-900':
-                  isCloneMode && dragMode === 'move',
+                // 선택 상태
+                'ring-1 ring-white/70': isSelected,
+                // 비활성화 상태
                 'opacity-50': !clip.enabled,
               }
             )}
-            onClick={handleClick}
-            onDragEnd={handleDragEnd}
           >
             <ClipContent
               clip={clip}
