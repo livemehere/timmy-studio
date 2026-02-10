@@ -96,15 +96,6 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
 
     const { isPlaying, currentTime, playStateChanged, isSeeking } = ctx;
     // 🔥 현재 시간이 클립 범위 안에 있는지 체크
-    const isInRange = this.shouldRenderAt(currentTime);
-
-    // 범위 밖이면 재생 중지
-    if (!isInRange) {
-      if (this.isPlaying) {
-        this.stop('outOfRange');
-      }
-      return;
-    }
 
     if (this.lastTickWasPlaying !== isPlaying) {
       this.debugCall(
