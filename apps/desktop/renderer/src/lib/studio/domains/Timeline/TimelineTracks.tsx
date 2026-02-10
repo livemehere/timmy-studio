@@ -3,7 +3,7 @@ import {
   useInteractionStore,
   useStudioStores,
 } from '../../hooks/useStudioStores';
-import { TimelineTrack } from '@/lib/studio/components/Timeline/TimelineTrack';
+import { TimelineTrack } from '@/lib/studio/domains/Timeline/TimelineTrack';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, useMotionValue } from 'motion/react';
 import { msToSec } from '../../utils/time';

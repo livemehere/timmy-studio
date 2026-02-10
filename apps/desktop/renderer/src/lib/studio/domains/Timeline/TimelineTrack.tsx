@@ -15,7 +15,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { TimelineClip } from '@/lib/studio/components/Timeline/TimelineClip';
+import { TimelineClip } from '@/lib/studio/domains/Timeline/TimelineClip';
 import {
   useDocStore,
   useEngineStore,

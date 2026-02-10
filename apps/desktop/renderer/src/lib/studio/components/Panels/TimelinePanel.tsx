@@ -1,7 +1,7 @@
 import { motion, useMotionValue, useScroll, useTransform } from 'motion/react';
 import { ActionBar } from '@/lib/studio/components/ActionBar';
 import { TimelineRulerCanvas } from '@/lib/studio/components/TimelineRulerCanvas';
-import { TimelineTracks } from '@/lib/studio/components/Timeline/TimelineTracks';
+import { TimelineTracks } from '@/lib/studio/domains/Timeline/TimelineTracks';
 import {
   useDocStore,
   useEngineStore,
