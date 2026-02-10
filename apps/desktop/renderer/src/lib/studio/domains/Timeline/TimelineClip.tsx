@@ -29,6 +29,7 @@ import { useTimelineClipDrag } from './hooks/useTimelineClipDrag';
 import { useClipContextActions } from './hooks/useClipContextActions';
 import { ClipContent } from './components/ClipContent';
 import { ClipResizeHandles } from './components/ClipResizeHandles';
+import type { IMediaAsset } from '../Asset/types';
 
 const getBg = (clipType: IClip['type'], alpha?: boolean) => {
   if (clipType === 'audio') return alpha ? 'bg-green-700/20' : 'bg-green-700';
@@ -42,13 +43,17 @@ export function TimelineClip({
   trackHeight,
 }: {
   clipId: string;
-  pxPerSec: number;
   trackId: string;
+  pxPerSec: number;
   trackHeight: number;
 }) {
   const getClipById = useDocStore((state) => state.getClipById);
   const getTrackById = useDocStore((state) => state.getTrackById);
-  const getAssetById = useDocStore((state) => state.getAssetById);
+  const getAssetById = useDocStore((state) => state.getAssetById) as <
+    T extends IMediaAsset = IMediaAsset,
+  >(
+    assetId: string
+  ) => T | undefined;
   const updateClip = useDocStore((state) => state.updateClip);
   const moveClipToTrack = useDocStore((state) => state.moveClipToTrack);
   const cloneClipToTrack = useDocStore((state) => state.cloneClipToTrack);
@@ -107,15 +112,12 @@ export function TimelineClip({
     isCloneMode,
     isDragging,
     dragMode,
-    hoverEdge,
     displayStartTime,
     displayEndTime,
     displayTrimStart,
     displayTrimEnd,
     displayWidth,
     displayLeft,
-    handleMouseMove,
-    handleMouseLeave,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
@@ -140,12 +142,7 @@ export function TimelineClip({
     updateClip,
     moveClipToTrack,
     cloneClipToTrack,
-    getAssetById: getAssetById as <
-      T extends
-        import('../Asset/types').IMediaAsset = import('../Asset/types').IMediaAsset,
-    >(
-      assetId: string
-    ) => T | undefined,
+    getAssetById,
   });
 
   const {
@@ -167,15 +164,6 @@ export function TimelineClip({
     setSelectedClipIds,
   });
 
-  const handleContextMenuOpen = (open: boolean) => {
-    if (open) {
-      // 우클릭 시 이 클립을 선택
-      if (!selectedClipIds.includes(clip.id)) {
-        setSelectedClipIds([clip.id]);
-      }
-    }
-  };
-
   return (
     <>
       {/* Ghost Element: Alt 키로 복제 중일 때 원본 위치에 표시 */}
@@ -190,11 +178,11 @@ export function TimelineClip({
             left: displayLeft,
           }}
         >
-          <span className="text-cyan-200/50 text-xs">{clip.name}</span>
+          <span className="text-white/50 text-[10px]">{clip.name}</span>
         </div>
       )}
 
-      <ContextMenu onOpenChange={handleContextMenuOpen}>
+      <ContextMenu>
         <ContextMenuTrigger asChild>
           <motion.div
             ref={clipRef}
@@ -208,22 +196,6 @@ export function TimelineClip({
                   ? 0
                   : motionX,
             }}
-            // 리사이즈 모드에서는 드래그 완전 비활성화, move 모드에서는 x/y 모두 허용
-            drag={dragMode === 'move' || dragMode === null ? true : false}
-            dragMomentum={false}
-            dragSnapToOrigin={dragMode === 'move'}
-            dragElastic={0}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerCancel}
-            onDragStart={handleDragStart}
-            onDrag={handleDrag}
-            onWheel={handleWheel}
-            onClick={handleClick}
-            onDragEnd={handleDragEnd}
             className={cn(
               'absolute h-full rounded-md group overflow-hidden',
               // 배경색
@@ -234,10 +206,23 @@ export function TimelineClip({
                 'ring-1 ring-white/70': isSelected,
                 // 비활성화 상태
                 'opacity-50': !clip.enabled,
-                // 잠금 상태
-                'cursor-ew-resize': hoverEdge,
               }
             )}
+            // 리사이즈 모드에서는 드래그 완전 비활성화, move 모드에서는 x/y 모두 허용
+            drag={dragMode === 'move' || dragMode === null ? true : false}
+            dragMomentum={false}
+            dragSnapToOrigin={dragMode === 'move'}
+            dragElastic={0}
+            // ---
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+            onDragStart={handleDragStart}
+            onDrag={handleDrag}
+            onWheel={handleWheel}
+            onClick={handleClick}
+            onDragEnd={handleDragEnd}
           >
             <ClipContent
               clip={clip}
@@ -248,7 +233,7 @@ export function TimelineClip({
               displayTrimStart={displayTrimStart}
               displayTrimEnd={displayTrimEnd}
             />
-            <ClipResizeHandles hoverEdge={hoverEdge} dragMode={dragMode} />
+            <ClipResizeHandles />
           </motion.div>
         </ContextMenuTrigger>
 

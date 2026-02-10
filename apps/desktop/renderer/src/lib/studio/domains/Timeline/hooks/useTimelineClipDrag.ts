@@ -8,10 +8,8 @@ import type { ITrack } from '../../Track/types';
 
 // 최소 클립 길이 (ms)
 const MIN_CLIP_DURATION_MS = 100;
-// 엣지 드래그 감지 영역 (px)
-const EDGE_DRAG_ZONE_PX = 8;
 
-type DragMode = 'move' | 'resize-start' | 'resize-end' | null;
+export type DragMode = 'move' | 'resize-start' | 'resize-end' | null;
 
 export function useTimelineClipDrag({
   clip,
@@ -83,7 +81,6 @@ export function useTimelineClipDrag({
   const [isCloneMode, setIsCloneMode] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragMode, setDragMode] = useState<DragMode>(null);
-  const [hoverEdge, setHoverEdge] = useState<'start' | 'end' | null>(null);
 
   // 🔥 로컬 드래그 상태 - 드래그 중 store 업데이트 없이 UI만 업데이트
   const [localDragState, setLocalDragState] = useState<{
@@ -110,71 +107,21 @@ export function useTimelineClipDrag({
     }
   }, [dragMode, isDragging, motionX]);
 
-  // Get asset duration for video/audio clips
-  const getMaxDuration = useCallback((): number | null => {
-    if (clip.type === 'video' || clip.type === 'audio') {
-      const assetId = (clip as IVideoClip | IAudioClip).assetId;
-      const asset = getAssetById<IMediaAsset>(assetId);
-      if (asset?.metadata?.durationMs) {
-        return asset.metadata.durationMs;
-      }
+  const determineDragMode = (e: React.PointerEvent): DragMode => {
+    const target = e.target as HTMLElement;
+    console.log('target', target);
+    const resizeHandle = target.closest('[data-resize-handle]');
+    if (resizeHandle) {
+      const handleType = resizeHandle.getAttribute('data-resize-handle');
+      if (handleType === 'start') return 'resize-start';
+      if (handleType === 'end') return 'resize-end';
     }
-    return null; // unlimited for non-video/audio clips
-  }, [clip, getAssetById]);
-
-  // Determine drag mode based on mouse position
-  const getDragModeFromPosition = useCallback(
-    (e: React.MouseEvent | React.PointerEvent): DragMode => {
-      if (!clipRef.current) return 'move';
-
-      const rect = clipRef.current.getBoundingClientRect();
-      const localX = e.clientX - rect.left;
-
-      if (localX <= EDGE_DRAG_ZONE_PX) {
-        return 'resize-start';
-      } else if (localX >= rect.width - EDGE_DRAG_ZONE_PX) {
-        return 'resize-end';
-      }
-      return 'move';
-    },
-    []
-  );
-
-  // Handle mouse move for cursor change
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => {
-      if (isDraggingRef.current) return;
-
-      const mode = getDragModeFromPosition(e);
-      if (mode === 'resize-start') {
-        setHoverEdge('start');
-      } else if (mode === 'resize-end') {
-        setHoverEdge('end');
-      } else {
-        setHoverEdge(null);
-      }
-    },
-    [getDragModeFromPosition]
-  );
-
-  const handleMouseLeave = useCallback(() => {
-    if (!isDraggingRef.current) {
-      setHoverEdge(null);
-    }
-  }, []);
-
-  const resetResizeState = useCallback(() => {
-    isDraggingRef.current = false;
-    setIsDragging(false);
-    setDraggingClipId(null);
-    dragStartDataRef.current = null;
-    dragModeRef.current = null;
-    setDragMode(null);
-  }, [setDragMode, setDraggingClipId, setIsDragging]);
-
+    return 'move';
+  };
+  // 드래깅 모드 판단 & 시작 데이터 저장
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
-      const mode = getDragModeFromPosition(e);
+      const mode = determineDragMode(e);
       dragModeRef.current = mode;
       setDragMode(mode);
 
@@ -206,12 +153,33 @@ export function useTimelineClipDrag({
       clip.startTime,
       clip.trimEnd,
       clip.trimStart,
-      getDragModeFromPosition,
+      determineDragMode,
       setDragMode,
       setIsDragging,
       setDraggingClipId,
     ]
   );
+
+  // Get asset duration for video/audio clips
+  const getMaxDuration = useCallback((): number | null => {
+    if (clip.type === 'video' || clip.type === 'audio') {
+      const assetId = (clip as IVideoClip | IAudioClip).assetId;
+      const asset = getAssetById<IMediaAsset>(assetId);
+      if (asset?.metadata?.durationMs) {
+        return asset.metadata.durationMs;
+      }
+    }
+    return null; // unlimited for non-video/audio clips
+  }, [clip, getAssetById]);
+
+  const resetResizeState = useCallback(() => {
+    isDraggingRef.current = false;
+    setIsDragging(false);
+    setDraggingClipId(null);
+    dragStartDataRef.current = null;
+    dragModeRef.current = null;
+    setDragMode(null);
+  }, [setDragMode, setDraggingClipId, setIsDragging]);
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
@@ -372,6 +340,7 @@ export function useTimelineClipDrag({
 
   const handleDragStart = useCallback(
     (e: MouseEvent | TouchEvent | PointerEvent) => {
+      console.log('drag start', dragModeRef.current);
       if (dragModeRef.current !== 'move' && dragModeRef.current !== null) {
         return;
       }
@@ -630,15 +599,12 @@ export function useTimelineClipDrag({
     isCloneMode,
     isDragging,
     dragMode,
-    hoverEdge,
     displayStartTime,
     displayEndTime,
     displayTrimStart,
     displayTrimEnd,
     displayWidth,
     displayLeft,
-    handleMouseMove,
-    handleMouseLeave,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
