@@ -283,7 +283,7 @@ export function TimelineTrack({
       style={{
         height: trackHeight,
       }}
-      className="bg-neutral-850 flex border-b border-neutral-800/50"
+      className="bg-neutral-850 flex "
       onPointerDown={handlePointerDown}
     >
       <div

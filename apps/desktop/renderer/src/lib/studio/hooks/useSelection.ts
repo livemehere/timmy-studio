@@ -19,17 +19,19 @@ type SelectionTarget = {
 };
 
 type UseSelectionOptions = {
+  container?: React.RefObject<HTMLElement | null>;
   target: string;
   onRangeUpdate?: (range: SelectionRange | null) => void;
   onSelectionChange?: (targets: SelectionTarget[]) => void;
 };
 
 export function useSelection({
+  container,
   target,
   onRangeUpdate,
   onSelectionChange,
 }: UseSelectionOptions) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = container ?? useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
   const rangeRef = useRef<SelectionRange | null>(null);
   const [isDragging, setIsDragging] = useState(false);
