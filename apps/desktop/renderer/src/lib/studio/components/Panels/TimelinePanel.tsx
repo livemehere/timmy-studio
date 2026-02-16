@@ -39,7 +39,6 @@ export function TimelinePanel() {
   const removeClip = useDocStore((state) => state.removeClip);
   const cloneClipToTrack = useDocStore((state) => state.cloneClipToTrack);
   const addClipToTrack = useDocStore((state) => state.addClipToTrack);
-  const setActiveTrackId = useDocStore((state) => state.setActiveTrackId);
   const selectedClipIds = useInteractionStore((state) => state.selectedClipIds);
   const setSelectedClipId = useInteractionStore(
     (state) => state.setSelectedClipId
@@ -47,10 +46,13 @@ export function TimelinePanel() {
   const setSelectedClipIds = useInteractionStore(
     (state) => state.setSelectedClipIds
   );
+  const setActiveTrackId = useInteractionStore(
+    (state) => state.setActiveTrackId
+  );
   const clipboard = useInteractionStore((state) => state.clipboard);
   const setClipboard = useInteractionStore((state) => state.setClipboard);
   const lastClickedTime = useInteractionStore((state) => state.lastClickedTime);
-  const activeTrackId = useDocStore((state) => state.activeTrackId);
+  const activeTrackId = useInteractionStore((state) => state.activeTrackId);
 
   const totalTrackHeight = useMemo(
     () => tracks.length * TRACK_HEIGHT,

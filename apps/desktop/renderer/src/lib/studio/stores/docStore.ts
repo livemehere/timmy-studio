@@ -7,10 +7,6 @@ import type { ITrack } from '../domains/Track/types';
 import type { IClip } from '../domains/Clip/types';
 import { uid } from 'uid';
 
-type AssetGetter = <T extends IAsset = IAsset>(
-  assetId: string
-) => T | undefined;
-
 const DEFAULT_PROJECT: IProject = {
   id: 'default-project',
   name: 'New Project',
@@ -40,9 +36,6 @@ export interface DocState {
   metadata: IProject['metadata'];
   tracks: ITrack[];
   assets: IAsset[];
-
-  // UI state (저장되지 않음)
-  activeTrackId: string | null; // 현재 활성화된 트랙 ID
 }
 
 export interface DocActions {
@@ -57,6 +50,7 @@ export interface DocActions {
   removeTrack: (trackId: string | string[]) => void;
   updateTrack: (trackId: string, updates: Partial<ITrack>) => void;
   getTrackById: (trackId: string) => ITrack | undefined;
+  resetTracks: () => void; // 트랙만 초기화 (프로젝트 설정/메타데이터는 유지)
 
   // Clip actions
   addClip: (trackId: string, clip: IClip) => void;
@@ -91,9 +85,6 @@ export interface DocActions {
   setAssets: (cb: (assets: IAsset[]) => IAsset[]) => void;
   getAssetById: <T extends IAsset = IAsset>(assetId: string) => T | undefined;
 
-  // UI actions
-  setActiveTrackId: (trackId: string | null) => void;
-
   // Reset
   reset: () => void;
 
@@ -121,7 +112,6 @@ export const createDocStore = (initialProject?: IProject) => {
       metadata: project.metadata,
       tracks: project.tracks,
       assets: project.assets,
-      activeTrackId: null,
 
       getProject: () => {
         const state = get();
@@ -181,6 +171,10 @@ export const createDocStore = (initialProject?: IProject) => {
           )
         );
         set({ tracks: newTracks });
+      },
+
+      resetTracks: () => {
+        set({ tracks: [] });
       },
 
       getTrackById: (trackId) => {
@@ -408,10 +402,6 @@ export const createDocStore = (initialProject?: IProject) => {
         return clip as T | undefined;
       },
 
-      setActiveTrackId: (trackId: string | null) => {
-        set({ activeTrackId: trackId });
-      },
-
       reset: () => {
         console.log(`[DocStore] 초기값으로 리셋`);
         set({
@@ -421,7 +411,6 @@ export const createDocStore = (initialProject?: IProject) => {
           metadata: project.metadata,
           tracks: project.tracks,
           assets: project.assets,
-          activeTrackId: null,
         });
       },
       batch: (fn) => {

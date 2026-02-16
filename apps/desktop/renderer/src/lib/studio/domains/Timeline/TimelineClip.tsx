@@ -60,7 +60,9 @@ export function TimelineClip({
   const removeClip = useDocStore((state) => state.removeClip);
   const addTrack = useDocStore((state) => state.addTrack);
   const tracks = useDocStore((state) => state.tracks);
-  const setActiveTrackId = useDocStore((state) => state.setActiveTrackId);
+  const setActiveTrackId = useInteractionStore(
+    (state) => state.setActiveTrackId
+  );
   // Use IClip to support both graphic and audio clips
   const clip = getClipById<IClip>(trackId, clipId)!;
 

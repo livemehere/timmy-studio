@@ -17,8 +17,17 @@ export function TimelineTrack({
 }) {
   const getTrackById = useDocStore((state) => state.getTrackById);
   const track = getTrackById(trackId);
-  const activeTrackId = useDocStore((state) => state.activeTrackId);
-  const setActiveTrackId = useDocStore((state) => state.setActiveTrackId);
+
+  if (!track) {
+    throw new Error(`Track(${trackId}) not found`);
+  }
+
+  /** active track */
+  const activeTrackId = useInteractionStore((state) => state.activeTrackId);
+  const setActiveTrackId = useInteractionStore(
+    (state) => state.setActiveTrackId
+  );
+  const isActive = activeTrackId === trackId;
 
   const draggingClipId = useInteractionStore((state) => state.draggingClipId);
   const hoverTrackId = useInteractionStore((state) => state.hoverTrackId);
@@ -30,18 +39,11 @@ export function TimelineTrack({
 
   const isHovering = draggingClipId && hoverTrackId === trackId;
 
-  if (!track) {
-    throw new Error(`Track(${trackId}) not found`);
-  }
-
-  const handlePointerDown = () => {
-    setActiveTrackId(trackId);
-  };
-
-  const handleClick = (e: react.MouseEvent) => {
+  const handleClick = (e: react.PointerEvent<HTMLDivElement>) => {
     if (!trackContentRef.current) return;
 
     const rect = trackContentRef.current.getBoundingClientRect();
+    console.log(rect);
     const mouseX = e.clientX - rect.left;
     const timeAtMouseSec = mouseX / pxPerSec;
     const timeAtMouseMs = timeAtMouseSec * 1000; // Convert to milliseconds
@@ -50,15 +52,16 @@ export function TimelineTrack({
     setLastClickedTime(timeAtMouseMs);
   };
 
-  const isActive = activeTrackId === trackId;
-
   return (
     <div
       style={{
         height: trackHeight,
       }}
-      className="bg-neutral-850 flex "
-      onPointerDown={handlePointerDown}
+      className="flex"
+      onPointerDown={(e) => {
+        setActiveTrackId(trackId);
+        handleClick(e);
+      }}
     >
       <TrackHeader trackId={trackId} headerWidth={headerWidth} />
       <div
@@ -67,17 +70,7 @@ export function TimelineTrack({
           'bg-cyan-900/20 ring-1 ring-inset ring-cyan-500/30': isHovering,
           'bg-blue-950/20': isActive,
         })}
-        onClick={handleClick}
       >
-        {/* Track Grid Pattern */}
-        <div
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage:
-              'linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px)',
-            backgroundSize: `${pxPerSec}px 100%`,
-          }}
-        />
         {track.clips.map((clip) => (
           <TimelineClip
             key={clip.id}

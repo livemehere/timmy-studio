@@ -8,6 +8,7 @@ import {
   Files,
   Film,
   Music,
+  RotateCcw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,6 +35,7 @@ export function ActionBar({ height }: { height: number }) {
   const selectedClipIds = useInteractionStore((state) => state.selectedClipIds);
   const clipboard = useInteractionStore((state) => state.clipboard);
   const addTrack = useDocStore((state) => state.addTrack);
+  const resetTracks = useDocStore((state) => state.resetTracks);
 
   const totalClips = tracks.reduce((sum, t) => sum + t.clips.length, 0);
   const hasSelection = selectedClipIds.length > 0;
@@ -159,6 +161,28 @@ export function ActionBar({ height }: { height: number }) {
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">Delete (⌫)</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      'Are you sure you want to clear all tracks? This action cannot be undone.'
+                    )
+                  ) {
+                    resetTracks();
+                  }
+                }}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Clear All Tracks</TooltipContent>
           </Tooltip>
         </div>
 

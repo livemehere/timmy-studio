@@ -1,7 +1,10 @@
 import type { IAsset } from '@/lib/studio/domains/Asset/types';
 import { AssetItem } from '@/lib/studio/domains/Asset/components/AssetItem';
 import { FolderOpen } from 'lucide-react';
-import { useDocStore } from '@/lib/studio/hooks/useStudioStores';
+import {
+  useDocStore,
+  useInteractionStore,
+} from '@/lib/studio/hooks/useStudioStores';
 import { useEngineStore } from '@/lib/studio/hooks/useStudioStores';
 import { Track } from '@/lib/studio/domains/Track/Track';
 import { Clip } from '@/lib/studio/domains/Clip/Clip';
@@ -21,10 +24,15 @@ export function AssetList({
   emptyMessage = 'No assets',
   showImport = false,
 }: AssetsProps) {
+  /** track */
   const addClip = useDocStore((state) => state.addClip);
   const addTrack = useDocStore((state) => state.addTrack);
   const tracks = useDocStore((state) => state.tracks);
+  const activeTrackId = useInteractionStore((state) => state.activeTrackId);
+
+  /** asset */
   const removeAsset = useDocStore((state) => state.removeAsset);
+
   const timer = useEngineStore((state) => state.timer)!;
 
   const handleAddToTrack = (
@@ -61,6 +69,12 @@ export function AssetList({
 
     const duration = newClip.endTime - newClip.startTime;
 
+    const activeTrack = activeTrackId
+      ? tracks.find((t) => t.id === activeTrackId)
+      : undefined;
+    const canUseActiveTrack =
+      activeTrack && activeTrack.type === trackType ? activeTrack : undefined;
+
     if (position === 'currentTime') {
       // currentTime 위치에 배치
       const currentTime = timer.currentMs;
@@ -68,6 +82,20 @@ export function AssetList({
       // startTime 을 바꾸면서, endTime 을 duration 만큼 같이 바꿔줌
       newClip.startTime = currentTime;
       newClip.endTime = currentTime + duration;
+
+      if (canUseActiveTrack) {
+        const hasCollision = canUseActiveTrack.clips.some((clip) => {
+          return !(
+            newClip.endTime <= clip.startTime ||
+            newClip.startTime >= clip.endTime
+          );
+        });
+
+        if (!hasCollision) {
+          addClip(canUseActiveTrack.id, newClip);
+          return;
+        }
+      }
 
       // 같은 타입의 트랙을 zIndex 낮은 순서대로 찾기
 
@@ -98,6 +126,14 @@ export function AssetList({
 
       addClip(targetTrack.id, newClip);
     } else {
+      if (canUseActiveTrack) {
+        const endTime = Track.getLastestClipEndTime(canUseActiveTrack);
+        newClip.startTime = endTime;
+        newClip.endTime = endTime + duration;
+        addClip(canUseActiveTrack.id, newClip);
+        return;
+      }
+
       let targetTrack: ITrack | undefined;
       let maxEndTime = 0;
 
