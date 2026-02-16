@@ -48,25 +48,21 @@ export function TimelineClip({
 }) {
   const getClipById = useDocStore((state) => state.getClipById);
   const getTrackById = useDocStore((state) => state.getTrackById);
-  const updateClip = useDocStore((state) => state.updateClip);
-  const cloneClipToTrack = useDocStore((state) => state.cloneClipToTrack);
-  const removeClip = useDocStore((state) => state.removeClip);
-  const tracks = useDocStore((state) => state.tracks);
   // Use IClip to support both graphic and audio clips
   const clip = getClipById<IClip>(trackId, clipId)!;
 
   const track = getTrackById(trackId);
   const syncedGraphicClipIds = useEngineStore(
-    (state) => state.syncedGraphicClipIds || []
+    (state) => state.syncedGraphicClipIds
   );
   const failedGraphicClipIds = useEngineStore(
-    (state) => state.failedGraphicClipIds || []
+    (state) => state.failedGraphicClipIds
   );
   const syncedAudioClipIds = useEngineStore(
-    (state) => state.syncedAudioClipIds || []
+    (state) => state.syncedAudioClipIds
   );
   const failedAudioClipIds = useEngineStore(
-    (state) => state.failedAudioClipIds || []
+    (state) => state.failedAudioClipIds
   );
 
   const syncedClipIds =
@@ -80,12 +76,6 @@ export function TimelineClip({
   const isSelected = useInteractionStore((state) =>
     state.selectedClipIds.includes(clip.id)
   );
-  const selectedClipIds = useInteractionStore((state) => state.selectedClipIds);
-  const setSelectedClipIds = useInteractionStore(
-    (state) => state.setSelectedClipIds
-  );
-
-  const setClipboard = useInteractionStore((state) => state.setClipboard);
 
   const {
     clipRef,
@@ -125,13 +115,6 @@ export function TimelineClip({
   } = useClipContextActions({
     clip,
     trackId,
-    selectedClipIds,
-    tracks,
-    setClipboard,
-    removeClip,
-    updateClip,
-    cloneClipToTrack,
-    setSelectedClipIds,
   });
 
   return (

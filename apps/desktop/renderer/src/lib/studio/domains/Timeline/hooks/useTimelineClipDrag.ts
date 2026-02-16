@@ -127,6 +127,21 @@ export function useTimelineClipDrag({
     return type === 'audio' ? 'audio' : 'graphic';
   };
 
+  const _hasOverlapInTrack = (
+    targetTrackId: string,
+    startTime: number,
+    endTime: number
+  ) => {
+    const targetTrack = tracks.find((track) => track.id === targetTrackId);
+    if (!targetTrack) return false;
+
+    return targetTrack.clips.some((existingClip) => {
+      return !(
+        endTime <= existingClip.startTime || startTime >= existingClip.endTime
+      );
+    });
+  };
+
   const _setDragMode = (mode: DragMode) => {
     dragModeRef.current = mode;
     setDragMode(mode);
@@ -408,6 +423,12 @@ export function useTimelineClipDrag({
         }
 
         if (isCloning) {
+          if (_hasOverlapInTrack(targetTrack.id, newStartTime, newEndTime)) {
+            dragModeRef.current = null;
+            setDragMode(null);
+            return;
+          }
+
           // Alt 키가 눌려있으면 복제
           cloneClipToTrack(
             trackId,
@@ -500,6 +521,12 @@ export function useTimelineClipDrag({
 
     // 같은 트랙 내에서 시간만 변경 (복제 모드면 복제)
     if (isCloning) {
+      if (_hasOverlapInTrack(trackId, newStartTime, newEndTime)) {
+        dragModeRef.current = null;
+        setDragMode(null);
+        return;
+      }
+
       // 같은 트랙에 복제
       cloneClipToTrack(trackId, trackId, clip.id, newStartTime, newEndTime);
     } else {

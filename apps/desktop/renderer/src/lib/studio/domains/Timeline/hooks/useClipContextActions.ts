@@ -1,6 +1,10 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import type { IClip } from '../../Clip/types';
+import {
+  useDocStore,
+  useInteractionStore,
+} from '../../../hooks/useStudioStores';
 
 type SelectedClipData = {
   clip: IClip;
@@ -48,37 +52,21 @@ function toClipboardPayload(selected: SelectedClipData[]) {
 export function useClipContextActions({
   clip,
   trackId,
-  selectedClipIds,
-  tracks,
-  setClipboard,
-  removeClip,
-  updateClip,
-  cloneClipToTrack,
-  setSelectedClipIds,
 }: {
   clip: IClip;
   trackId: string;
-  selectedClipIds: string[];
-  tracks: Array<{ id: string; clips: IClip[] }>;
-  setClipboard: (payload: {
-    clips: Array<{ clip: IClip; trackId: string; relativeStartTime: number }>;
-    operation: 'copy' | 'cut';
-  }) => void;
-  removeClip: (trackId: string, clipId: string) => void;
-  updateClip: (
-    trackId: string,
-    clipId: string,
-    partial: Partial<IClip>
-  ) => void;
-  cloneClipToTrack: (
-    fromTrackId: string,
-    toTrackId: string,
-    clipId: string,
-    startTime: number,
-    endTime: number
-  ) => string | null | undefined;
-  setSelectedClipIds: (clipIds: string[]) => void;
 }) {
+  const tracks = useDocStore((state) => state.tracks);
+  const removeClip = useDocStore((state) => state.removeClip);
+  const updateClip = useDocStore((state) => state.updateClip);
+  const cloneClipToTrack = useDocStore((state) => state.cloneClipToTrack);
+
+  const selectedClipIds = useInteractionStore((state) => state.selectedClipIds);
+  const setSelectedClipIds = useInteractionStore(
+    (state) => state.setSelectedClipIds
+  );
+  const setClipboard = useInteractionStore((state) => state.setClipboard);
+
   const handleCopy = useCallback(() => {
     // 선택된 클립이 여러 개인 경우
     if (selectedClipIds.length > 1) {
