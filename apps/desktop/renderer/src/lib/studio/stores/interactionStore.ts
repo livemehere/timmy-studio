@@ -15,7 +15,6 @@ export interface ClipboardData {
 export interface InteractionState {
   selectedClipIds: string[];
   draggingClipId: string | null;
-  hoverTrackId: string | null;
   activeTrackId: string | null; // 현재 활성화된 트랙 ID
   clipboard: ClipboardData | null;
   lastClickedTime: number | null; // 트랙 클릭 시 시간 위치 (ms)
@@ -29,7 +28,6 @@ export interface InteractionActions {
   removeSelectedClipId: (clipId: string) => void;
 
   setDraggingClipId: (clipId: string | null) => void;
-  setHoverTrackId: (trackId: string | null) => void;
   setActiveTrackId: (trackId: string | null) => void;
   setClipboard: (data: ClipboardData | null) => void;
   setLastClickedTime: (time: number | null) => void;
@@ -46,7 +44,6 @@ export const createInteractionStore = () => {
   return createStore<InteractionStore>()((set, get) => ({
     selectedClipIds: [],
     draggingClipId: null,
-    hoverTrackId: null,
     activeTrackId: null,
     clipboard: null,
     lastClickedTime: null,
@@ -73,10 +70,6 @@ export const createInteractionStore = () => {
 
     setDraggingClipId: (clipId) => {
       set({ draggingClipId: clipId });
-    },
-
-    setHoverTrackId: (trackId) => {
-      set({ hoverTrackId: trackId });
     },
 
     setActiveTrackId: (trackId) => {

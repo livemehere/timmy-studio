@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { TimelineClip } from '@/lib/studio/domains/Timeline/TimelineClip';
 import { useDocStore, useInteractionStore } from '../../hooks/useStudioStores';
 import { TrackHeader } from './TrackHeader';
+import { useRef } from 'react';
 
 export function TimelineTrack({
   trackId,
@@ -15,6 +16,8 @@ export function TimelineTrack({
   trackHeight: number;
   pxPerSec: number;
 }) {
+  const trackContentRef = useRef<HTMLDivElement>(null);
+
   const getTrackById = useDocStore((state) => state.getTrackById);
   const track = getTrackById(trackId);
 
@@ -29,28 +32,22 @@ export function TimelineTrack({
   );
   const isActive = activeTrackId === trackId;
 
-  const draggingClipId = useInteractionStore((state) => state.draggingClipId);
-  const hoverTrackId = useInteractionStore((state) => state.hoverTrackId);
+  /** last clicked time */
   const setLastClickedTime = useInteractionStore(
     (state) => state.setLastClickedTime
   );
-
-  const trackContentRef = react.useRef<HTMLDivElement>(null);
-
-  const isHovering = draggingClipId && hoverTrackId === trackId;
-
-  const handleClick = (e: react.PointerEvent<HTMLDivElement>) => {
-    if (!trackContentRef.current) return;
-
-    const rect = trackContentRef.current.getBoundingClientRect();
-    console.log(rect);
-    const mouseX = e.clientX - rect.left;
+  const saveLastClickedTime = (e: react.PointerEvent<HTMLDivElement>) => {
+    const trackEl = trackContentRef.current;
+    if (!trackEl) return;
+    const rect = trackEl.getBoundingClientRect();
+    const mouseX = e.clientX - rect.x;
     const timeAtMouseSec = mouseX / pxPerSec;
-    const timeAtMouseMs = timeAtMouseSec * 1000; // Convert to milliseconds
-
-    console.log('[TimelineTrack] Clicked at time:', timeAtMouseMs);
+    const timeAtMouseMs = timeAtMouseSec * 1000;
     setLastClickedTime(timeAtMouseMs);
   };
+
+  const draggingClipId = useInteractionStore((state) => state.draggingClipId);
+  const isHovering = draggingClipId && isActive;
 
   return (
     <div
@@ -60,7 +57,7 @@ export function TimelineTrack({
       className="flex"
       onPointerDown={(e) => {
         setActiveTrackId(trackId);
-        handleClick(e);
+        saveLastClickedTime(e);
       }}
     >
       <TrackHeader trackId={trackId} headerWidth={headerWidth} />

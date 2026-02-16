@@ -105,7 +105,6 @@ export function TimelineClip({
   const setDraggingClipId = useInteractionStore(
     (state) => state.setDraggingClipId
   );
-  const setHoverTrackId = useInteractionStore((state) => state.setHoverTrackId);
   const setClipboard = useInteractionStore((state) => state.setClipboard);
 
   const {
@@ -139,7 +138,6 @@ export function TimelineClip({
     addSelectedClipId,
     setSelectedClipId,
     setDraggingClipId,
-    setHoverTrackId,
     addTrack,
     updateClip,
     moveClipToTrack,

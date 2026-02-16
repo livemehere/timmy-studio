@@ -3,7 +3,7 @@ import { useMotionValue } from 'motion/react';
 import { msToSec } from '../../../utils/time';
 import { Track } from '../../Track/Track';
 import { Clip } from '../../Clip/Clip';
-import type { IClip, IVideoClip, IAudioClip } from '../../Clip/types';
+import type { IClip } from '../../Clip/types';
 import type { IMediaAsset } from '../../Asset/types';
 import type { ITrack } from '../../Track/types';
 
@@ -22,7 +22,6 @@ export function useTimelineClipDrag({
   addSelectedClipId,
   setSelectedClipId,
   setDraggingClipId,
-  setHoverTrackId,
   addTrack,
   updateClip,
   moveClipToTrack,
@@ -38,7 +37,6 @@ export function useTimelineClipDrag({
   addSelectedClipId: (clipId: string) => void;
   setSelectedClipId: (clipId: string) => void;
   setDraggingClipId: (clipId: string | null) => void;
-  setHoverTrackId: (trackId: string | null) => void;
   addTrack: (track: ITrack | ITrack[]) => void;
   updateClip: (
     trackId: string,
@@ -342,23 +340,6 @@ export function useTimelineClipDrag({
     const altPressed = e.altKey || false;
     isAltPressedRef.current = altPressed;
     setIsCloneMode(altPressed);
-
-    const offsetY = info.offset.y + wheelDeltaRef.current.y;
-    const trackIndexDelta = Math.round(offsetY / trackHeight);
-
-    if (trackIndexDelta !== 0) {
-      const currentTrackIndex = tracks.findIndex((t) => t.id === trackId);
-      const targetTrackIndex = currentTrackIndex + trackIndexDelta;
-
-      if (targetTrackIndex >= 0 && targetTrackIndex < tracks.length) {
-        const targetTrack = tracks[targetTrackIndex];
-        setHoverTrackId(targetTrack.id);
-      } else {
-        setHoverTrackId(null);
-      }
-    } else {
-      setHoverTrackId(null);
-    }
   };
 
   const handleWheel = (e: React.WheelEvent) => {
@@ -398,7 +379,6 @@ export function useTimelineClipDrag({
     isDraggingRef.current = false;
     setIsDragging(false);
     setDraggingClipId(null);
-    setHoverTrackId(null);
     setIsCloneMode(false);
 
     const totalOffsetX = info.offset.x + wheelDeltaRef.current.x;
