@@ -485,7 +485,7 @@ export function TimelinePanel() {
     <div
       id="timeline"
       ref={timelinePanelRef}
-      className="relative h-full overflow-y-scroll bg-neutral-900/50"
+      className="relative h-full overflow-y-scroll overflow-x-hidden bg-neutral-900/50"
     >
       <div
         id="timeline-header"

@@ -105,10 +105,10 @@ export class VideoClip extends SpriteClip {
     this.cancelPendingSwaps('all');
 
     // trim 범위를 벗어나거나 클립이 숨겨질 때 비디오 정지
-    if (!this.originEl!.paused) {
+    if (this.originEl && !this.originEl.paused) {
       console.log('[VideoClip] pausing video (became hidden)');
       this.debugCall('pausing video (became hidden)');
-      this.originEl!.pause();
+      this.originEl.pause();
     }
     if (this.proxyEl && !this.proxyEl.paused) {
       this.proxyEl.pause();
