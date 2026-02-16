@@ -43,6 +43,7 @@ export function TimelineTracks({
       selectionHeight.set(range.height);
     },
     onSelectionChange: (targets) => {
+      console.log('Selected targets:', targets);
       setSelectedClipIds(targets.map((t) => t.value));
     },
   });

@@ -290,7 +290,7 @@ export function TimelineTrack({
         className={cn(
           'sticky left-0 bg-neutral-900 shrink-0 flex items-center gap-1 px-2 border-r border-neutral-800/50',
           {
-            'bg-blue-950/30 border-l-2 border-l-blue-500': isActive,
+            'border-l-2 border-l-blue-500': isActive,
           }
         )}
         style={{

@@ -82,8 +82,11 @@ export function useSelection({
       if (!isDraggingRef.current || !rangeRef.current) return;
 
       const rect = container.getBoundingClientRect();
-      const currentX = e.clientX - rect.left;
-      const currentY = e.clientY - rect.top;
+      // 마우스 좌표를 containerRef 범위 내로 clamp
+      const rawX = e.clientX - rect.left;
+      const rawY = e.clientY - rect.top;
+      const currentX = Math.max(0, Math.min(rect.width, rawX));
+      const currentY = Math.max(0, Math.min(rect.height, rawY));
 
       const range = toRange(
         rangeRef.current.startX,
@@ -142,19 +145,13 @@ export function useSelection({
       onRangeUpdate?.(null);
     };
 
-    const handleMouseLeave = () => {
-      handleMouseUp();
-    };
-
     container.addEventListener('mousedown', handleMouseDown);
-    container.addEventListener('mousemove', handleMouseMove);
-    container.addEventListener('mouseleave', handleMouseLeave);
+    window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
 
     return () => {
       container.removeEventListener('mousedown', handleMouseDown);
-      container.removeEventListener('mousemove', handleMouseMove);
-      container.removeEventListener('mouseleave', handleMouseLeave);
+      window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [onRangeUpdate, onSelectionChange, target]);

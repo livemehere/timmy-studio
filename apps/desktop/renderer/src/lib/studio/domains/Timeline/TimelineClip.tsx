@@ -204,7 +204,7 @@ export function TimelineClip({
               'border border-white/20',
               {
                 // 선택 상태
-                'ring-1 ring-white/70': isSelected,
+                'border-white': isSelected,
                 // 비활성화 상태
                 'opacity-50': !clip.enabled,
               }
