@@ -484,7 +484,7 @@ export function TimelinePanel() {
       <div
         className="sticky top-0 bg-neutral-900 border-blue-400 border"
         style={{
-          zIndex: Z_INDEX.timeline.actionBar,
+          zIndex: Z_INDEX.timeline.header,
         }}
       >
         {/* 현재시간 인디케이터 */}

@@ -3,7 +3,7 @@ export const Z_INDEX = {
     clip: 5,
     overlay: 50,
     trackHeader: 50,
-    actionBar: 60,
+    header: 60,
     playhead: 70,
     selectionRect: 1000,
   },

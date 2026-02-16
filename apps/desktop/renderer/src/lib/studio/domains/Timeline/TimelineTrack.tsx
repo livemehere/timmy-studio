@@ -29,12 +29,7 @@ import {
   ContextMenuShortcut,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+
 import { Z_INDEX } from '../../constants/zIndex';
 import { toast } from 'sonner';
 
@@ -43,7 +38,6 @@ function TrackButton({
   activeIcon: ActiveIconComp,
   active,
   onClick,
-  tooltip,
   activeColor = 'text-blue-400',
 }: {
   icon: react.ForwardRefExoticComponent<
@@ -54,11 +48,10 @@ function TrackButton({
   >;
   active?: boolean;
   onClick?: () => void;
-  tooltip?: string;
   activeColor?: string;
 }) {
   const Icon = active && ActiveIconComp ? ActiveIconComp : IconComp;
-  const button = (
+  return (
     <button
       className={cn(
         'p-1 rounded transition-colors',
@@ -71,19 +64,6 @@ function TrackButton({
       <Icon className="h-3.5 w-3.5" />
     </button>
   );
-
-  if (tooltip) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>{button}</TooltipTrigger>
-        <TooltipContent side="top" className="text-xs">
-          {tooltip}
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
-
-  return button;
 }
 
 export function TimelineTrack({
@@ -306,79 +286,54 @@ export function TimelineTrack({
       className="bg-neutral-850 flex border-b border-neutral-800/50"
       onPointerDown={handlePointerDown}
     >
-      <TooltipProvider delayDuration={200}>
-        <div
-          className={cn(
-            'sticky left-0 bg-neutral-850 shrink-0 flex items-center gap-1 px-2 border-r border-neutral-800/50',
-            {
-              'bg-blue-950/30 border-l-2 border-l-blue-500': isActive,
-            }
+      <div
+        className={cn(
+          'sticky left-0 bg-neutral-900 shrink-0 flex items-center gap-1 px-2 border-r border-neutral-800/50',
+          {
+            'bg-blue-950/30 border-l-2 border-l-blue-500': isActive,
+          }
+        )}
+        style={{
+          width: trackTitleWidth,
+          zIndex: Z_INDEX.timeline.trackHeader,
+        }}
+      >
+        {/* Track Type Icon */}
+        <div className="flex items-center justify-center w-5 h-5 rounded bg-neutral-700/50">
+          {track.type === 'audio' ? (
+            <Music className="h-3 w-3 text-purple-400" />
+          ) : (
+            <Film className="h-3 w-3 text-emerald-400" />
           )}
-          style={{
-            width: trackTitleWidth,
-            zIndex: Z_INDEX.timeline.trackHeader,
-          }}
-        >
-          {/* Track Type Icon */}
-          <div className="flex items-center justify-center w-5 h-5 rounded bg-neutral-700/50">
-            {track.type === 'audio' ? (
-              <Music className="h-3 w-3 text-purple-400" />
-            ) : (
-              <Film className="h-3 w-3 text-emerald-400" />
-            )}
-          </div>
-
-          {/* Track Controls */}
-          <div className="flex items-center gap-0.5">
-            <TrackButton
-              icon={LockKeyholeOpen}
-              activeIcon={LockKeyhole}
-              active={track.locked}
-              onClick={() => toggleTrackLock(track.id, !track.locked)}
-              tooltip={track.locked ? 'Unlock' : 'Lock'}
-              activeColor="text-orange-400"
-            />
-            <TrackButton
-              icon={Eye}
-              activeIcon={EyeOff}
-              tooltip="Toggle visibility"
-            />
-            <TrackButton
-              icon={Volume2}
-              activeIcon={VolumeOff}
-              tooltip="Toggle mute"
-            />
-          </div>
-
-          {/* Status & zIndex */}
-          <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
-            {/* Status dot */}
-            {isSynced && !isFailed && (
-              <Tooltip>
-                <TooltipTrigger>
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs">
-                  Synced
-                </TooltipContent>
-              </Tooltip>
-            )}
-            {isFailed && (
-              <Tooltip>
-                <TooltipTrigger>
-                  <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" />
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs">
-                  Failed
-                </TooltipContent>
-              </Tooltip>
-            )}
-            <span className="text-[10px] text-neutral-500 font-mono tabular-nums shrink-0">
-              z:{track.zIndex}
-            </span>
-          </div>
         </div>
-      </TooltipProvider>
+
+        {/* Track Controls */}
+        <div className="flex items-center gap-0.5">
+          <TrackButton
+            icon={LockKeyholeOpen}
+            activeIcon={LockKeyhole}
+            active={track.locked}
+            onClick={() => toggleTrackLock(track.id, !track.locked)}
+            activeColor="text-orange-400"
+          />
+          <TrackButton icon={Eye} activeIcon={EyeOff} />
+          <TrackButton icon={Volume2} activeIcon={VolumeOff} />
+        </div>
+
+        {/* Status & zIndex */}
+        <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
+          {/* Status dot */}
+          {isSynced && !isFailed && (
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+          )}
+          {isFailed && (
+            <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" />
+          )}
+          <span className="text-[10px] text-neutral-500 font-mono tabular-nums shrink-0">
+            z:{track.zIndex}
+          </span>
+        </div>
+      </div>
 
       <ContextMenu>
         <ContextMenuTrigger asChild>
