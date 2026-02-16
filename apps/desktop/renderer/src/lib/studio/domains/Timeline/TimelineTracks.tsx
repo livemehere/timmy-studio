@@ -1,13 +1,8 @@
-import {
-  useDocStore,
-  useInteractionStore,
-  useStudioStores,
-} from '../../hooks/useStudioStores';
+import { useDocStore, useInteractionStore } from '../../hooks/useStudioStores';
 import { TimelineTrack } from '@/lib/studio/domains/Timeline/TimelineTrack';
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { motion, useMotionValue } from 'motion/react';
-import { msToSec } from '../../utils/time';
+import { useState, useRef, useCallback } from 'react';
 import { Z_INDEX } from '../../constants/zIndex';
+import { ExportRangeOverlay } from './ExportRangeOverlay';
 
 interface SelectionRect {
   startX: number;
@@ -33,58 +28,12 @@ export function TimelineTracks({
   const setSelectedClipIds = useInteractionStore(
     (state) => state.setSelectedClipIds
   );
-  const { interactionStore } = useStudioStores();
 
   const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(
     null
   );
   const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingSelection = useRef(false);
-  const leftOverlayWidth = useMotionValue(0);
-  const rightOverlayLeft = useMotionValue(0);
-  const rangeOverlayLeft = useMotionValue(0);
-  const rangeOverlayWidth = useMotionValue(0);
-  const overlayOpacity = useMotionValue(0);
-
-  useEffect(() => {
-    const applyRange = (range: { start: number; end: number } | null) => {
-      if (!range) {
-        overlayOpacity.set(0);
-        leftOverlayWidth.set(0);
-        rightOverlayLeft.set(0);
-        rangeOverlayLeft.set(0);
-        rangeOverlayWidth.set(0);
-        return;
-      }
-
-      const startLeft = msToSec(range.start) * pxPerSec;
-      const endLeft = msToSec(range.end) * pxPerSec;
-      const width = Math.max(0, endLeft - startLeft);
-
-      overlayOpacity.set(1);
-      leftOverlayWidth.set(Math.max(0, startLeft));
-      rightOverlayLeft.set(Math.max(0, endLeft));
-      rangeOverlayLeft.set(Math.max(0, startLeft));
-      rangeOverlayWidth.set(width);
-    };
-
-    applyRange(interactionStore.getState().exportPreviewRange);
-    const unsubscribe = interactionStore.subscribe((state, prev) => {
-      if (state.exportPreviewRange !== prev.exportPreviewRange) {
-        applyRange(state.exportPreviewRange);
-      }
-    });
-
-    return unsubscribe;
-  }, [
-    interactionStore,
-    pxPerSec,
-    leftOverlayWidth,
-    rightOverlayLeft,
-    rangeOverlayLeft,
-    rangeOverlayWidth,
-    overlayOpacity,
-  ]);
 
   // 마우스 다운: 드래그 선택 시작
   const handleMouseDown = useCallback(
@@ -253,43 +202,8 @@ export function TimelineTracks({
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp} // 마우스가 영역 밖으로 나가면 종료
     >
-      {/* Export Range Overlay - left/right dim + range border (motion values) */}
-      <motion.div
-        className="absolute top-0 bottom-0 bg-black/60 pointer-events-none"
-        style={{
-          left: 0,
-          width: leftOverlayWidth,
-          opacity: overlayOpacity,
-          zIndex: Z_INDEX.timeline.overlay,
-        }}
-      />
-      <motion.div
-        className="absolute top-0 bottom-0 bg-black/60 pointer-events-none"
-        style={{
-          left: rightOverlayLeft,
-          right: 0,
-          opacity: overlayOpacity,
-          zIndex: Z_INDEX.timeline.overlay,
-        }}
-      />
-      <motion.div
-        className="absolute top-0 bottom-0 border-x-2 border-emerald-500/80 pointer-events-none"
-        style={{
-          left: rangeOverlayLeft,
-          width: rangeOverlayWidth,
-          opacity: overlayOpacity,
-          zIndex: Z_INDEX.timeline.overlay,
-        }}
-      >
-        <div className="absolute -top-6 left-0 right-0 flex justify-between px-1">
-          <span className="text-[10px] font-mono text-emerald-400 bg-neutral-900/90 px-1 rounded">
-            Export Start
-          </span>
-          <span className="text-[10px] font-mono text-emerald-400 bg-neutral-900/90 px-1 rounded">
-            Export End
-          </span>
-        </div>
-      </motion.div>
+      {/* Export Range Overlay */}
+      <ExportRangeOverlay pxPerSec={pxPerSec} />
 
       {tracks.map((track) => (
         <TimelineTrack

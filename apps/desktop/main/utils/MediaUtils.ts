@@ -24,6 +24,8 @@ FfmpegCmd.setFfprobePath(FFPROBE_PATH);
 const APP_DATA_DIR = app.getPath('userData');
 
 export class MediaUtils {
+  static readonly ffmpegPath = FFMPEG_PATH;
+  static readonly ffprobePath = FFPROBE_PATH;
   static readonly THUMBNAILS_DIR = path.join(
     APP_DATA_DIR,
     'contents-cache',
