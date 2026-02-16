@@ -26,6 +26,7 @@ export interface InteractionActions {
   setSelectedClipIds: (clipIds: string[]) => void;
   addSelectedClipId: (clipId: string) => void;
   removeSelectedClipId: (clipId: string) => void;
+
   setDraggingClipId: (clipId: string | null) => void;
   setHoverTrackId: (trackId: string | null) => void;
   setClipboard: (data: ClipboardData | null) => void;

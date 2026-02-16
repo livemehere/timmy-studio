@@ -19,7 +19,7 @@ const RULER_HEIGHT = 30;
 const MIN_PIXELS_PER_SECOND = 2;
 const MAX_PIXELS_PER_SECOND = 100;
 
-const TRACK_LEFT_HEADER_WIDTH = 160;
+const TRACK_LEFT_HEADER_WIDTH = 180;
 const TRACK_HEIGHT = 60;
 
 export function TimelinePanel() {

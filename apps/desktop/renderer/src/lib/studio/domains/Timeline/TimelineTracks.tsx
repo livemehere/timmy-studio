@@ -22,7 +22,7 @@ export function TimelineTracks({
     <div
       id="timeline-tracks"
       ref={ref}
-      className="relative border-blue-400 border"
+      className="relative"
       style={{
         width,
       }}
