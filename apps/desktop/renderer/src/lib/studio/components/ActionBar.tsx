@@ -47,6 +47,7 @@ export function ActionBar({ height }: { height: number }) {
   return (
     <TooltipProvider delayDuration={300}>
       <div
+        id="timeline-action-bar"
         className={`relative px-3 flex items-center justify-between border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-sm`}
         style={{ height }}
       >

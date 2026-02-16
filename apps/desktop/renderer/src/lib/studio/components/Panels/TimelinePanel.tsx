@@ -74,8 +74,13 @@ export function TimelinePanel() {
   const currentTimeX = useTransform(() => {
     return `${(currentTimeMs.get() / 1000) * pxPerSec - scrollX.get()}px`;
   });
+  const indicatorVisibility = useTransform(currentTimeX, (x) => {
+    const numericX = parseFloat(x);
+    return numericX >= 0 ? 'visible' : 'hidden';
+  });
   /** --- */
 
+  /** zoom shortcut */
   useEffect(() => {
     const container = hScrollContainerRef.current;
     if (!container) return;
@@ -478,10 +483,12 @@ export function TimelinePanel() {
 
   return (
     <div
+      id="timeline"
       ref={timelinePanelRef}
       className="relative h-full overflow-y-scroll bg-neutral-900/50"
     >
       <div
+        id="timeline-header"
         className="sticky top-0 bg-neutral-900 border-blue-400 border"
         style={{
           zIndex: Z_INDEX.timeline.header,
@@ -489,6 +496,7 @@ export function TimelinePanel() {
       >
         {/* 현재시간 인디케이터 */}
         <motion.div
+          id="current-time-indicator"
           className="w-px bg-red-500 absolute top-0"
           style={{
             left: currentTimeX,
@@ -497,11 +505,13 @@ export function TimelinePanel() {
             height: totalTrackHeight,
             pointerEvents: 'none',
             zIndex: Z_INDEX.timeline.playhead,
+            visibility: indicatorVisibility, // 화면 밖으로 나가면 숨김
           }}
         >
           {/* 플레이헤드 삼각형 */}
           <div className="absolute top-0 -left-1.5 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-8 border-t-red-500" />
         </motion.div>
+
         <ActionBar height={ACTION_BAR_HEIGHT} />
         <TimelineRulerCanvas
           leftPadding={trackTitleWidth}
@@ -511,7 +521,11 @@ export function TimelinePanel() {
         />
       </div>
 
-      <div ref={hScrollContainerRef} className="w-full overflow-x-scroll">
+      <div
+        id="timeline-hscroll-container"
+        ref={hScrollContainerRef}
+        className="w-full overflow-x-scroll"
+      >
         <TimelineTracks
           width={totalTrackWidth + trackTitleWidth}
           height={totalTrackHeight}

@@ -82,6 +82,7 @@ export function TimelineRulerCanvas({
 
   return (
     <div
+      id="timeline-ruler"
       className={`relative w-full select-none flex bg-neutral-900/80 border-b border-neutral-800`}
       style={{ height }}
     >

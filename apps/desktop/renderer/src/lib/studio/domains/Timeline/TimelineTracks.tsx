@@ -241,6 +241,7 @@ export function TimelineTracks({
   // tracks는 이미 docStore에서 zIndex 기반 정렬됨
   return (
     <div
+      id="timeline-tracks"
       ref={containerRef}
       style={{
         width,
