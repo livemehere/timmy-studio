@@ -8,10 +8,12 @@ export function TimelineRulerCanvas({
   scrollXMotionValue,
   leftPadding,
   pixelPerSecond,
+  height,
 }: {
   scrollXMotionValue: MotionValue<number>;
   leftPadding: number;
   pixelPerSecond: number;
+  height: number;
 }) {
   const duration = useDocStore((state) => state.settings.duration); // duration: ms 라고 가정
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -79,7 +81,10 @@ export function TimelineRulerCanvas({
   };
 
   return (
-    <div className="w-full h-6 select-none flex bg-neutral-900/80 border-b border-neutral-800">
+    <div
+      className={`relative w-full select-none flex bg-neutral-900/80 border-b border-neutral-800`}
+      style={{ height }}
+    >
       <div
         style={{ width: leftPadding }}
         className="h-full shrink-0 flex items-center justify-center border-r border-neutral-800"

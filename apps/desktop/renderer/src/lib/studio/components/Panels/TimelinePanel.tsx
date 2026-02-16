@@ -12,19 +12,29 @@ import { useHotkeys } from 'react-hotkeys-hook';
 import { toast } from 'sonner';
 import { Z_INDEX } from '../../constants/zIndex';
 
+/** sizes */
+const ACTION_BAR_HEIGHT = 40;
+const RULER_HEIGHT = 30;
+
 const MIN_PIXELS_PER_SECOND = 2;
 const MAX_PIXELS_PER_SECOND = 100;
 
-export function TimelinePanel() {
-  const { duration } = useDocStore((state) => state.settings);
-  const totalTrackHeight = 2200;
+const trackTitleWidth = 160;
+const trackHeight = 60;
+// TODO: 변수 상태로 수정 필요
+const totalTrackHeight = 2200;
 
-  const trackTitleWidth = 160;
-  const trackHeight = 60;
+export function TimelinePanel() {
+  const timelinePanelRef = useRef<HTMLDivElement>(null);
 
   const [pxPerSec, setPixPerSec] = useState(10);
 
-  const timelinePanelRef = useRef<HTMLDivElement>(null);
+  /** duration, total width */
+  const { duration } = useDocStore((state) => state.settings);
+  const totalTrackWidth = useMemo(() => {
+    const durationSec = duration / 1000;
+    return durationSec * pxPerSec;
+  }, [duration, pxPerSec]);
 
   // Store actions for deleting clips
   const tracks = useDocStore((state) => state.tracks);
@@ -43,6 +53,53 @@ export function TimelinePanel() {
   const setClipboard = useInteractionStore((state) => state.setClipboard);
   const lastClickedTime = useInteractionStore((state) => state.lastClickedTime);
   const activeTrackId = useDocStore((state) => state.activeTrackId);
+
+  /** current time */
+  const timer = useEngineStore((state) => state.timer);
+  const currentTimeMs = useMotionValue(timer?.currentMs ?? 0);
+  useEffect(() => {
+    if (!timer) return;
+    const unsub = timer.subscribe(({ currentMs }) => {
+      currentTimeMs.set(currentMs);
+    });
+    return () => {
+      unsub();
+    };
+  }, [timer]);
+
+  const hScrollContainerRef = useRef<HTMLDivElement>(null);
+  const { scrollX } = useScroll({
+    container: hScrollContainerRef,
+  });
+  const currentTimeX = useTransform(() => {
+    return `${(currentTimeMs.get() / 1000) * pxPerSec - scrollX.get()}px`;
+  });
+  /** --- */
+
+  useEffect(() => {
+    const container = hScrollContainerRef.current;
+    if (!container) return;
+    const onWheel = (e: WheelEvent) => {
+      const isMetaKeyPressed = e.metaKey || e.ctrlKey;
+      if (isMetaKeyPressed) {
+        e.preventDefault();
+        const delta = -e.deltaY; // 마우스 휠의 수직 이동량을 반전시킴
+        setPixPerSec((prev) => {
+          let newPxPerSec = prev + delta * 0.1; // 확대/축소 속도 조절
+          newPxPerSec = Math.max(
+            MIN_PIXELS_PER_SECOND,
+            Math.min(MAX_PIXELS_PER_SECOND, newPxPerSec)
+          );
+          return newPxPerSec;
+        });
+      }
+    };
+    container.addEventListener('wheel', onWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener('wheel', onWheel);
+    };
+  }, []);
 
   // Backspace 또는 Delete 키로 선택된 클립 삭제
   useHotkeys('backspace, delete', () => {
@@ -419,94 +476,38 @@ export function TimelinePanel() {
     }
   });
 
-  // duration(ms)과 pxPerSec에 따라 totalTrackWidth 계산
-  const totalTrackWidth = useMemo(() => {
-    const durationSec = duration / 1000;
-    return durationSec * pxPerSec;
-  }, [duration, pxPerSec]);
-
-  const timer = useEngineStore((state) => state.timer);
-  const currentTimeMs = useMotionValue(timer?.currentMs ?? 0);
-
-  useEffect(() => {
-    if (!timer) return;
-    const unsub = timer.subscribe(({ currentMs }) => {
-      currentTimeMs.set(currentMs);
-    });
-    return () => {
-      unsub();
-    };
-  }, [timer]);
-
-  const hScrollContainerRef = useRef<HTMLDivElement>(null);
-  const vScrollContainerRef = useRef<HTMLDivElement>(null);
-  const { scrollX } = useScroll({
-    container: hScrollContainerRef,
-  });
-
-  const currentTimeLeft = useTransform(() => {
-    return `${(currentTimeMs.get() / 1000) * pxPerSec - scrollX.get()}px`;
-  });
-
-  useEffect(() => {
-    const el = hScrollContainerRef.current;
-    if (!el) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      const isMetaKeyPressed = e.metaKey || e.ctrlKey;
-      if (isMetaKeyPressed) {
-        e.preventDefault();
-        const delta = -e.deltaY; // 마우스 휠의 수직 이동량을 반전시킴
-        setPixPerSec((prev) => {
-          let newPxPerSec = prev + delta * 0.1; // 확대/축소 속도 조절
-          newPxPerSec = Math.max(
-            MIN_PIXELS_PER_SECOND,
-            Math.min(MAX_PIXELS_PER_SECOND, newPxPerSec)
-          );
-          return newPxPerSec;
-        });
-      }
-    };
-
-    el.addEventListener('wheel', handleWheel, { passive: false });
-
-    return () => {
-      el.removeEventListener('wheel', handleWheel);
-    };
-  }, []);
   return (
     <div
-      ref={(el) => {
-        vScrollContainerRef.current = el;
-        timelinePanelRef.current = el;
-      }}
+      ref={timelinePanelRef}
       className="relative h-full overflow-y-scroll bg-neutral-900/50"
-      tabIndex={0}
     >
-      {/* 현재시간 인디케이터 */}
-      <motion.div
-        className="w-0.5 bg-red-500 absolute top-0 shadow-[0_0_8px_rgba(239,68,68,0.5)]"
+      <div
+        className="sticky top-0 bg-neutral-900 border-blue-400 border"
         style={{
-          left: currentTimeLeft,
-          marginLeft: trackTitleWidth,
-          height: totalTrackHeight,
-          pointerEvents: 'none',
-          zIndex: Z_INDEX.timeline.playhead,
+          zIndex: Z_INDEX.timeline.actionBar,
         }}
       >
-        {/* 플레이헤드 삼각형 */}
-        <div className="absolute top-0 -left-1.5 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-8 border-t-red-500" />
-      </motion.div>
-
-      <div
-        className="sticky top-0 bg-neutral-900 shadow-lg"
-        style={{ zIndex: Z_INDEX.timeline.rulerSticky }}
-      >
-        <ActionBar />
+        {/* 현재시간 인디케이터 */}
+        <motion.div
+          className="w-px bg-red-500 absolute top-0"
+          style={{
+            left: currentTimeX,
+            marginLeft: trackTitleWidth,
+            marginTop: ACTION_BAR_HEIGHT,
+            height: totalTrackHeight,
+            pointerEvents: 'none',
+            zIndex: Z_INDEX.timeline.playhead,
+          }}
+        >
+          {/* 플레이헤드 삼각형 */}
+          <div className="absolute top-0 -left-1.5 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-8 border-t-red-500" />
+        </motion.div>
+        <ActionBar height={ACTION_BAR_HEIGHT} />
         <TimelineRulerCanvas
           leftPadding={trackTitleWidth}
           scrollXMotionValue={scrollX}
           pixelPerSecond={pxPerSec}
+          height={RULER_HEIGHT}
         />
       </div>
 

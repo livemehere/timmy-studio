@@ -29,7 +29,7 @@ import { cn } from '@/lib/utils';
 import { Track } from '@/lib/studio/domains/Track/Track';
 import type { TrackType } from '../domains/Track/types';
 
-export function ActionBar() {
+export function ActionBar({ height }: { height: number }) {
   const tracks = useDocStore((state) => state.tracks);
   const selectedClipIds = useInteractionStore((state) => state.selectedClipIds);
   const clipboard = useInteractionStore((state) => state.clipboard);
@@ -46,7 +46,10 @@ export function ActionBar() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="h-10 px-3 flex items-center justify-between border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-sm">
+      <div
+        className={`relative px-3 flex items-center justify-between border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-sm`}
+        style={{ height }}
+      >
         <div className="flex items-center gap-1">
           {/* Track Actions */}
           <DropdownMenu>

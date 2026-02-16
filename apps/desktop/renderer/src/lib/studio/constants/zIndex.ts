@@ -1,10 +1,10 @@
 export const Z_INDEX = {
   timeline: {
     clip: 5,
-    playhead: 30,
     overlay: 50,
     trackHeader: 50,
-    rulerSticky: 60,
+    actionBar: 60,
+    playhead: 70,
     selectionRect: 1000,
   },
   ui: {
