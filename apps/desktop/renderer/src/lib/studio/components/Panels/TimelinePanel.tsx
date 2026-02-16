@@ -19,10 +19,8 @@ const RULER_HEIGHT = 30;
 const MIN_PIXELS_PER_SECOND = 2;
 const MAX_PIXELS_PER_SECOND = 100;
 
-const trackTitleWidth = 160;
-const trackHeight = 60;
-// TODO: 변수 상태로 수정 필요
-const totalTrackHeight = 2200;
+const TRACK_LEFT_HEADER_WIDTH = 160;
+const TRACK_HEIGHT = 60;
 
 export function TimelinePanel() {
   const timelinePanelRef = useRef<HTMLDivElement>(null);
@@ -53,6 +51,11 @@ export function TimelinePanel() {
   const setClipboard = useInteractionStore((state) => state.setClipboard);
   const lastClickedTime = useInteractionStore((state) => state.lastClickedTime);
   const activeTrackId = useDocStore((state) => state.activeTrackId);
+
+  const totalTrackHeight = useMemo(
+    () => tracks.length * TRACK_HEIGHT,
+    [tracks.length]
+  );
 
   /** current time */
   const timer = useEngineStore((state) => state.timer);
@@ -489,7 +492,7 @@ export function TimelinePanel() {
     >
       <div
         id="timeline-header"
-        className="sticky top-0 bg-neutral-900 border-blue-400 border"
+        className="sticky top-0 bg-neutral-900 "
         style={{
           zIndex: Z_INDEX.timeline.header,
         }}
@@ -497,12 +500,12 @@ export function TimelinePanel() {
         {/* 현재시간 인디케이터 */}
         <motion.div
           id="current-time-indicator"
-          className="w-px bg-red-500 absolute top-0"
+          className="w-px bg-red-500 absolute"
           style={{
             left: currentTimeX,
-            marginLeft: trackTitleWidth,
-            marginTop: ACTION_BAR_HEIGHT,
-            height: totalTrackHeight,
+            marginLeft: TRACK_LEFT_HEADER_WIDTH,
+            top: ACTION_BAR_HEIGHT,
+            height: totalTrackHeight + RULER_HEIGHT,
             pointerEvents: 'none',
             zIndex: Z_INDEX.timeline.playhead,
             visibility: indicatorVisibility, // 화면 밖으로 나가면 숨김
@@ -514,7 +517,7 @@ export function TimelinePanel() {
 
         <ActionBar height={ACTION_BAR_HEIGHT} />
         <TimelineRulerCanvas
-          leftPadding={trackTitleWidth}
+          leftPadding={TRACK_LEFT_HEADER_WIDTH}
           scrollXMotionValue={scrollX}
           pixelPerSecond={pxPerSec}
           height={RULER_HEIGHT}
@@ -527,10 +530,9 @@ export function TimelinePanel() {
         className="w-full overflow-x-scroll"
       >
         <TimelineTracks
-          width={totalTrackWidth + trackTitleWidth}
-          height={totalTrackHeight}
-          trackTitleWidth={trackTitleWidth}
-          trackHeight={trackHeight}
+          width={totalTrackWidth + TRACK_LEFT_HEADER_WIDTH}
+          trackHeaderWidth={TRACK_LEFT_HEADER_WIDTH}
+          trackHeight={TRACK_HEIGHT}
           pxPerSec={pxPerSec}
         />
       </div>

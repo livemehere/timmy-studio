@@ -68,12 +68,12 @@ function TrackButton({
 
 export function TimelineTrack({
   trackId,
-  trackTitleWidth,
+  headerWidth,
   trackHeight,
   pxPerSec,
 }: {
   trackId: string;
-  trackTitleWidth: number;
+  headerWidth: number;
   trackHeight: number;
   pxPerSec: number;
 }) {
@@ -294,7 +294,7 @@ export function TimelineTrack({
           }
         )}
         style={{
-          width: trackTitleWidth,
+          width: headerWidth,
           zIndex: Z_INDEX.timeline.trackHeader,
         }}
       >
