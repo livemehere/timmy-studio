@@ -5,7 +5,10 @@ import { Track } from '../../Track/Track';
 import { Clip } from '../../Clip/Clip';
 import type { IClip } from '../../Clip/types';
 import type { IMediaAsset } from '../../Asset/types';
-import type { ITrack } from '../../Track/types';
+import {
+  useDocStore,
+  useInteractionStore,
+} from '../../../hooks/useStudioStores';
 
 // 최소 클립 길이 (ms)
 const MIN_CLIP_DURATION_MS = 100;
@@ -17,48 +20,36 @@ export function useTimelineClipDrag({
   trackId,
   trackHeight,
   pxPerSec,
-  tracks,
-  setActiveTrackId,
-  addSelectedClipId,
-  setSelectedClipId,
-  setDraggingClipId,
-  addTrack,
-  updateClip,
-  moveClipToTrack,
-  cloneClipToTrack,
-  getAssetById,
 }: {
   clip: IClip;
   trackId: string;
   trackHeight: number;
   pxPerSec: number;
-  tracks: Array<{ id: string; zIndex: number; type?: string; clips: IClip[] }>;
-  setActiveTrackId: (trackId: string) => void;
-  addSelectedClipId: (clipId: string) => void;
-  setSelectedClipId: (clipId: string) => void;
-  setDraggingClipId: (clipId: string | null) => void;
-  addTrack: (track: ITrack | ITrack[]) => void;
-  updateClip: (
-    trackId: string,
-    clipId: string,
-    partial: Partial<IClip>
-  ) => void;
-  moveClipToTrack: (
-    fromTrackId: string,
-    toTrackId: string,
-    clipId: string
-  ) => void;
-  cloneClipToTrack: (
-    fromTrackId: string,
-    toTrackId: string,
-    clipId: string,
-    startTime: number,
-    endTime: number
-  ) => string | null | undefined;
-  getAssetById: <T extends IMediaAsset = IMediaAsset>(
+}) {
+  const tracks = useDocStore((state) => state.tracks);
+  const addTrack = useDocStore((state) => state.addTrack);
+  const updateClip = useDocStore((state) => state.updateClip);
+  const moveClipToTrack = useDocStore((state) => state.moveClipToTrack);
+  const cloneClipToTrack = useDocStore((state) => state.cloneClipToTrack);
+  const getAssetById = useDocStore((state) => state.getAssetById) as <
+    T extends IMediaAsset = IMediaAsset,
+  >(
     assetId: string
   ) => T | undefined;
-}) {
+
+  const setActiveTrackId = useInteractionStore(
+    (state) => state.setActiveTrackId
+  );
+  const addSelectedClipId = useInteractionStore(
+    (state) => state.addSelectedClipId
+  );
+  const setSelectedClipId = useInteractionStore(
+    (state) => state.setSelectedClipId
+  );
+  const setDraggingClipId = useInteractionStore(
+    (state) => state.setDraggingClipId
+  );
+
   // Refs for drag state
   const clipRef = useRef<HTMLDivElement>(null);
   const wheelDeltaRef = useRef({ x: 0, y: 0 });
@@ -130,6 +121,10 @@ export function useTimelineClipDrag({
 
   const _isResizingMode = (mode: DragMode) => {
     return mode === 'resize-start' || mode === 'resize-end';
+  };
+
+  const _normalizeTrackType = (type?: string): 'graphic' | 'audio' => {
+    return type === 'audio' ? 'audio' : 'graphic';
   };
 
   const _setDragMode = (mode: DragMode) => {
@@ -330,10 +325,7 @@ export function useTimelineClipDrag({
     setIsCloneMode(altPressed);
   };
 
-  const handleDrag = (
-    e: MouseEvent | TouchEvent | PointerEvent,
-    info: { offset: { y: number } }
-  ) => {
+  const handleDrag = (e: MouseEvent | TouchEvent | PointerEvent) => {
     if (dragModeRef.current !== 'move') return;
 
     // @ts-ignore - e.altKey exists in drag events
@@ -405,7 +397,15 @@ export function useTimelineClipDrag({
 
       // 타겟 트랙이 존재하는 경우 이동/복제
       if (targetTrackIndex >= 0 && targetTrackIndex < tracks.length) {
+        const clipTrackType = _normalizeTrackType(clip.type);
         const targetTrack = tracks[targetTrackIndex];
+        const targetTrackType = _normalizeTrackType(targetTrack.type);
+
+        if (targetTrackType !== clipTrackType) {
+          dragModeRef.current = null;
+          setDragMode(null);
+          return;
+        }
 
         if (isCloning) {
           // Alt 키가 눌려있으면 복제
@@ -425,16 +425,13 @@ export function useTimelineClipDrag({
             endTime: newEndTime,
           });
         }
+        setActiveTrackId(targetTrack.id);
         return;
       }
 
       // 타겟 트랙이 없으면 새로 생성 (중간 빈 트랙 포함)
       if (targetTrackIndex >= tracks.length || targetTrackIndex < 0) {
-        // 현재 트랙의 타입을 확인
-        const currentTrack = tracks[currentTrackIndex];
-        const trackType = (currentTrack?.type || 'graphic') as
-          | 'graphic'
-          | 'audio';
+        const trackType = _normalizeTrackType(clip.type);
 
         const newTracks = [];
         let targetTrackId = '';
@@ -496,6 +493,7 @@ export function useTimelineClipDrag({
             endTime: newEndTime,
           });
         }
+        setActiveTrackId(targetTrackId);
         return;
       }
     }
@@ -511,6 +509,7 @@ export function useTimelineClipDrag({
         endTime: newEndTime,
       });
     }
+    setActiveTrackId(trackId);
 
     // Reset drag mode
     dragModeRef.current = null;

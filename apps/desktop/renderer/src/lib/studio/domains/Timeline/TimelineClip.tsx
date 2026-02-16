@@ -29,7 +29,6 @@ import { useTimelineClipDrag } from './hooks/useTimelineClipDrag';
 import { useClipContextActions } from './hooks/useClipContextActions';
 import { ClipContent } from './components/ClipContent';
 import { ClipResizeHandles } from './components/ClipResizeHandles';
-import type { IMediaAsset } from '../Asset/types';
 
 const getBg = (clipType: IClip['type'], alpha?: boolean) => {
   if (clipType === 'audio') return alpha ? 'bg-green-700/20' : 'bg-green-700';
@@ -49,20 +48,10 @@ export function TimelineClip({
 }) {
   const getClipById = useDocStore((state) => state.getClipById);
   const getTrackById = useDocStore((state) => state.getTrackById);
-  const getAssetById = useDocStore((state) => state.getAssetById) as <
-    T extends IMediaAsset = IMediaAsset,
-  >(
-    assetId: string
-  ) => T | undefined;
   const updateClip = useDocStore((state) => state.updateClip);
-  const moveClipToTrack = useDocStore((state) => state.moveClipToTrack);
   const cloneClipToTrack = useDocStore((state) => state.cloneClipToTrack);
   const removeClip = useDocStore((state) => state.removeClip);
-  const addTrack = useDocStore((state) => state.addTrack);
   const tracks = useDocStore((state) => state.tracks);
-  const setActiveTrackId = useInteractionStore(
-    (state) => state.setActiveTrackId
-  );
   // Use IClip to support both graphic and audio clips
   const clip = getClipById<IClip>(trackId, clipId)!;
 
@@ -92,19 +81,10 @@ export function TimelineClip({
     state.selectedClipIds.includes(clip.id)
   );
   const selectedClipIds = useInteractionStore((state) => state.selectedClipIds);
-  const setSelectedClipId = useInteractionStore(
-    (state) => state.setSelectedClipId
-  );
   const setSelectedClipIds = useInteractionStore(
     (state) => state.setSelectedClipIds
   );
 
-  const addSelectedClipId = useInteractionStore(
-    (state) => state.addSelectedClipId
-  );
-  const setDraggingClipId = useInteractionStore(
-    (state) => state.setDraggingClipId
-  );
   const setClipboard = useInteractionStore((state) => state.setClipboard);
 
   const {
@@ -133,16 +113,6 @@ export function TimelineClip({
     trackId,
     trackHeight,
     pxPerSec,
-    tracks,
-    setActiveTrackId,
-    addSelectedClipId,
-    setSelectedClipId,
-    setDraggingClipId,
-    addTrack,
-    updateClip,
-    moveClipToTrack,
-    cloneClipToTrack,
-    getAssetById,
   });
 
   const {

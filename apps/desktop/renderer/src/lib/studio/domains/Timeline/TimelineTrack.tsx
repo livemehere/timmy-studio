@@ -31,6 +31,9 @@ export function TimelineTrack({
     (state) => state.setActiveTrackId
   );
   const isActive = activeTrackId === trackId;
+  const activeTrack = activeTrackId ? getTrackById(activeTrackId) : undefined;
+  const activeTrackType = activeTrack?.type;
+  const isSameTrackType = activeTrackType === track.type;
 
   /** last clicked time */
   const setLastClickedTime = useInteractionStore(
@@ -46,8 +49,10 @@ export function TimelineTrack({
     setLastClickedTime(timeAtMouseMs);
   };
 
+  /** dragging clip */
   const draggingClipId = useInteractionStore((state) => state.draggingClipId);
-  const isHovering = draggingClipId && isActive;
+  const isDroppable = !!draggingClipId && isSameTrackType;
+  const isNotDroppable = !!draggingClipId && !isSameTrackType;
 
   return (
     <div
@@ -64,8 +69,9 @@ export function TimelineTrack({
       <div
         ref={trackContentRef}
         className={cn('bg-neutral-800/50 flex-1 relative transition-colors', {
-          'bg-cyan-900/20 ring-1 ring-inset ring-cyan-500/30': isHovering,
-          'bg-blue-950/20': isActive,
+          'bg-blue-900/10': isDroppable,
+          'bg-rose-900/10': isNotDroppable,
+          'bg-white/10': isActive,
         })}
       >
         {track.clips.map((clip) => (
