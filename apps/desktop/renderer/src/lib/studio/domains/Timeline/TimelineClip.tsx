@@ -7,6 +7,7 @@ import {
 import type { IClip } from '@/lib/studio/domains/Clip/types';
 import { cn } from '@/lib/utils';
 import { Z_INDEX } from '../../constants/zIndex';
+import { getClipBg } from '../../constants/colors';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -29,11 +30,6 @@ import { useTimelineClipDrag } from './hooks/useTimelineClipDrag';
 import { useClipContextActions } from './hooks/useClipContextActions';
 import { ClipContent } from './components/ClipContent';
 import { ClipResizeHandles } from './components/ClipResizeHandles';
-
-const getBg = (clipType: IClip['type'], alpha?: boolean) => {
-  if (clipType === 'audio') return alpha ? 'bg-green-700/20' : 'bg-green-700';
-  return alpha ? 'bg-cyan-700/20' : 'bg-cyan-700';
-};
 
 export function TimelineClip({
   clipId,
@@ -125,7 +121,7 @@ export function TimelineClip({
           className={cn(
             'absolute h-full px-2 py-1 rounded-md overflow-hidden pointer-events-none select-none border border-dashed border-white/10',
             // 투명한 배경색
-            getBg(clip.type, true)
+            getClipBg(clip.type, 20)
           )}
           style={{
             width: displayWidth,
@@ -153,7 +149,7 @@ export function TimelineClip({
             className={cn(
               'absolute h-full rounded-md group overflow-hidden',
               // 배경색
-              getBg(clip.type),
+              getClipBg(clip.type),
               'border border-white/20',
               {
                 // 선택 상태
