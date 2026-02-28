@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { GradientScroll } from '@/components/GradientScroll';
 import { useSelectAssets } from '@/lib/studio/domains/Asset/hooks/useSelectAssets';
+import { useDropAssets } from '@/lib/studio/domains/Asset/hooks/useDropAssets';
 import { useDocStore } from '@/lib/studio/hooks/useStudioStores';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -55,6 +56,7 @@ export function ResourcePanel() {
     [activeTabIndex]
   );
   const handleSelectFiles = useSelectAssets();
+  const { isDragOver, dropHandlers } = useDropAssets();
   const handleSortBy = useCallback(
     (sort: string) => {
       setSortBy(sort);
@@ -87,7 +89,19 @@ export function ResourcePanel() {
   );
 
   return (
-    <div className="h-full flex flex-col select-none">
+    <div
+      className="h-full flex flex-col select-none relative"
+      {...dropHandlers}
+    >
+      {/* Drop overlay */}
+      {isDragOver && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-blue-500/10 border-2 border-dashed border-blue-400 rounded-lg pointer-events-none">
+          <div className="flex flex-col items-center gap-2 text-blue-400">
+            <FolderUp size={32} />
+            <span className="text-sm font-medium">Drop files to upload</span>
+          </div>
+        </div>
+      )}
       {/* Tab Selector */}
       <GradientScroll className="px-3 py-2">
         <ToggleGroup
