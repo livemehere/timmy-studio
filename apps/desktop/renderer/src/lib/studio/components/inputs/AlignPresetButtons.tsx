@@ -1,72 +1,47 @@
-import {
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  ArrowUp,
-  Minus,
-  ArrowDown,
-} from 'lucide-react';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Label } from '@/components/ui/label';
+import type { AlignX, AlignY } from '../../domains/Clip/types';
+import { cn } from '@/lib/utils';
+
+const COLS: AlignX[] = ['left', 'center', 'right'];
+const ROWS: AlignY[] = ['top', 'center', 'bottom'];
 
 interface AlignPresetButtonsProps {
-  onAlignX: (alignX: 'left' | 'center' | 'right') => void;
-  onAlignY: (alignY: 'top' | 'center' | 'bottom') => void;
-  currentAlignX?: 'left' | 'center' | 'right';
-  currentAlignY?: 'top' | 'center' | 'bottom';
+  onAlign: (alignX: AlignX, alignY: AlignY) => void;
+  activeAlignX?: AlignX | null;
+  activeAlignY?: AlignY | null;
 }
 
 export function AlignPresetButtons({
-  onAlignX,
-  onAlignY,
-  currentAlignX = 'center',
-  currentAlignY = 'center',
+  onAlign,
+  activeAlignX,
+  activeAlignY,
 }: AlignPresetButtonsProps) {
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-neutral-400 text-xs">Horizontal</Label>
-        <ToggleGroup
-          type="single"
-          value={currentAlignX}
-          onValueChange={(v) => v && onAlignX(v as 'left' | 'center' | 'right')}
-          variant="outline"
-          size="sm"
-          className="justify-start"
-        >
-          <ToggleGroupItem value="left" aria-label="Left align">
-            <AlignLeft className="h-4 w-4" />
-          </ToggleGroupItem>
-          <ToggleGroupItem value="center" aria-label="Center align">
-            <AlignCenter className="h-4 w-4" />
-          </ToggleGroupItem>
-          <ToggleGroupItem value="right" aria-label="Right align">
-            <AlignRight className="h-4 w-4" />
-          </ToggleGroupItem>
-        </ToggleGroup>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-neutral-400 text-xs">Vertical</Label>
-        <ToggleGroup
-          type="single"
-          value={currentAlignY}
-          onValueChange={(v) => v && onAlignY(v as 'top' | 'center' | 'bottom')}
-          variant="outline"
-          size="sm"
-          className="justify-start"
-        >
-          <ToggleGroupItem value="top" aria-label="Top align">
-            <ArrowUp className="h-4 w-4" />
-          </ToggleGroupItem>
-          <ToggleGroupItem value="center" aria-label="Center align">
-            <Minus className="h-4 w-4" />
-          </ToggleGroupItem>
-          <ToggleGroupItem value="bottom" aria-label="Bottom align">
-            <ArrowDown className="h-4 w-4" />
-          </ToggleGroupItem>
-        </ToggleGroup>
-      </div>
+    <div className="inline-grid grid-cols-3 gap-1 p-2 rounded-lg bg-neutral-900">
+      {ROWS.map((row) =>
+        COLS.map((col) => {
+          const isActive = activeAlignX === col && activeAlignY === row;
+          return (
+            <button
+              key={`${col}-${row}`}
+              type="button"
+              className={cn(
+                'w-7 h-7 rounded flex items-center justify-center transition-colors',
+                'hover:bg-neutral-700',
+                isActive ? 'bg-neutral-700' : 'bg-transparent'
+              )}
+              title={`${row} ${col}`}
+              onClick={() => onAlign(col, row)}
+            >
+              <div
+                className={cn(
+                  'w-1.5 h-1.5 rounded-full',
+                  isActive ? 'bg-blue-400' : 'bg-neutral-500'
+                )}
+              />
+            </button>
+          );
+        })
+      )}
     </div>
   );
 }

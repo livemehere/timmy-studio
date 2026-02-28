@@ -1,7 +1,8 @@
 import { AlignPresetButtons } from '../inputs';
-import type { ITransform } from '../../domains/Clip/types';
+import type { ITransform, AlignX, AlignY } from '../../domains/Clip/types';
 import type { JsonPath, JsonPrimitive } from '../../utils/transformHelpers';
 import { MotionNumberInput } from '@/lib/motion-input';
+import { useMemo } from 'react';
 import { useMotionValue, useMotionValueEvent } from 'motion/react';
 
 interface TransformPropertyProps {
@@ -66,29 +67,49 @@ export function TransformProperty({
     onChange(['opacity'], v);
   });
 
-  const handleAlignX = (alignX: 'left' | 'center' | 'right') => {
-    const xValue =
-      alignX === 'left'
-        ? 0
-        : alignX === 'center'
-          ? canvasWidth / 2
-          : canvasWidth;
+  // ── Alignment helpers ──
+  const renderedWidth =
+    (transforms?.size?.width ?? 0) * (transforms?.scaleX ?? 1);
+  const renderedHeight =
+    (transforms?.size?.height ?? 0) * (transforms?.scaleY ?? 1);
 
-    positionXValue.set(xValue);
+  const computeAlignX = (ax: AlignX) =>
+    ax === 'left'
+      ? 0
+      : ax === 'center'
+        ? (canvasWidth - renderedWidth) / 2
+        : canvasWidth - renderedWidth;
+
+  const computeAlignY = (ay: AlignY) =>
+    ay === 'top'
+      ? 0
+      : ay === 'center'
+        ? (canvasHeight - renderedHeight) / 2
+        : canvasHeight - renderedHeight;
+
+  const handleAlign = (alignX: AlignX, alignY: AlignY) => {
+    positionXValue.set(computeAlignX(alignX));
+    positionYValue.set(computeAlignY(alignY));
     onChanged?.();
   };
 
-  const handleAlignY = (alignY: 'top' | 'center' | 'bottom') => {
-    const yValue =
-      alignY === 'top'
-        ? 0
-        : alignY === 'center'
-          ? canvasHeight / 2
-          : canvasHeight;
+  // Detect which grid cell is closest to current position
+  const THRESHOLD = 2; // px tolerance
+  const activeAlignX = useMemo<AlignX | null>(() => {
+    const x = transforms?.position?.x ?? 0;
+    if (Math.abs(x - computeAlignX('left')) < THRESHOLD) return 'left';
+    if (Math.abs(x - computeAlignX('center')) < THRESHOLD) return 'center';
+    if (Math.abs(x - computeAlignX('right')) < THRESHOLD) return 'right';
+    return null;
+  }, [transforms?.position?.x, renderedWidth, canvasWidth]);
 
-    positionYValue.set(yValue);
-    onChanged?.();
-  };
+  const activeAlignY = useMemo<AlignY | null>(() => {
+    const y = transforms?.position?.y ?? 0;
+    if (Math.abs(y - computeAlignY('top')) < THRESHOLD) return 'top';
+    if (Math.abs(y - computeAlignY('center')) < THRESHOLD) return 'center';
+    if (Math.abs(y - computeAlignY('bottom')) < THRESHOLD) return 'bottom';
+    return null;
+  }, [transforms?.position?.y, renderedHeight, canvasHeight]);
 
   return (
     <div className="space-y-2">
@@ -182,10 +203,9 @@ export function TransformProperty({
 
       <div className="text-xs text-neutral-400 mb-1 mt-4">Alignment</div>
       <AlignPresetButtons
-        currentAlignX="center"
-        currentAlignY="center"
-        onAlignX={handleAlignX}
-        onAlignY={handleAlignY}
+        onAlign={handleAlign}
+        activeAlignX={activeAlignX}
+        activeAlignY={activeAlignY}
       />
     </div>
   );
