@@ -49,6 +49,9 @@ export function ClipContent({
   const hasFilmstrip =
     clip.type === 'video' && filmstripData && pxPerSec && clipWidthPx > 0;
 
+  // 비디오 클립인데 필름스트립이 아직 없으면 로딩 중
+  const isFilmstripLoading = clip.type === 'video' && !filmstripData;
+
   return (
     <div className="relative flex flex-col h-full pointer-events-none select-none">
       {/* Filmstrip background layer (video clips only) */}
@@ -66,6 +69,7 @@ export function ClipContent({
         className={`relative z-10 flex items-center gap-1 px-2 py-0.5 ${hasFilmstrip ? 'bg-black/40' : 'bg-black/20'}`}
       >
         <span className="text-[10px] truncate flex-1">{clip.name}</span>
+        {isFilmstripLoading && <FilmstripLoadingBadge />}
         {poolInfo && <PoolBadge poolInfo={poolInfo} />}
         {isProxyReady !== undefined && <ProxyBadge ready={isProxyReady} />}
         <StatusLight isLoaded={isLoaded} isFailed={isFailed} />
@@ -162,6 +166,18 @@ function PoolBadge({
       title={`Pool: ${usedSlots}/${totalSlots} used${thisAcquired ? ' (this clip holds a slot)' : ''}`}
     >
       {thisAcquired ? '▶' : '○'} {usedSlots}/{totalSlots}
+    </span>
+  );
+}
+
+/** 필름스트립 생성 중 뱃지 */
+function FilmstripLoadingBadge() {
+  return (
+    <span
+      className="shrink-0 text-[8px] leading-none px-1 py-px rounded bg-sky-500/25 text-sky-300/80 font-medium animate-pulse"
+      title="Generating filmstrip…"
+    >
+      🎞
     </span>
   );
 }
