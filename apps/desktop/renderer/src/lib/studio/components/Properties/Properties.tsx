@@ -6,6 +6,7 @@ import type {
   IShapeClip,
   IAudioClip,
 } from '@/lib/studio/domains/Clip/types';
+import type { IMediaAsset } from '@/lib/studio/domains/Asset/types';
 import { Track } from '../../domains/Track/Track';
 import {
   Accordion,
@@ -48,6 +49,7 @@ interface PropertiesProps {
 export function Properties({ clipId }: PropertiesProps) {
   const tracks = useDocStore((state) => state.tracks);
   const settings = useDocStore((state) => state.settings);
+  const assets = useDocStore((state) => state.assets);
   const updateClipInTrack = useDocStore((state) => state.updateClip);
 
   const result = Track.findClip(tracks, clipId);
@@ -69,6 +71,19 @@ export function Properties({ clipId }: PropertiesProps) {
   const shapeClip = clip.type === 'shape' ? (clip as IShapeClip) : null;
   const audioClip = clip.type === 'audio' ? (clip as IAudioClip) : null;
   const durationMs = settings.duration;
+
+  // Look up original asset size for media clips
+  const originalSize = (() => {
+    if ('assetId' in clip && clip.assetId) {
+      const asset = assets.find((a) => a.id === clip.assetId) as
+        | IMediaAsset
+        | undefined;
+      if (asset?.metadata) {
+        return { width: asset.metadata.width, height: asset.metadata.height };
+      }
+    }
+    return undefined;
+  })();
 
   const handleTransformChange = (path: JsonPath, value: JsonPrimitive) => {
     if (!graphicClip) return;
@@ -206,6 +221,7 @@ export function Properties({ clipId }: PropertiesProps) {
                 isTextClip={clip.type === 'text'}
                 canvasWidth={canvasWidth}
                 canvasHeight={canvasHeight}
+                originalSize={originalSize}
               />
             }
           />
