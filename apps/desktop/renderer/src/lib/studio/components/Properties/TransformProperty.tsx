@@ -1,6 +1,11 @@
 import { AlignPresetButtons } from '../inputs';
 import { SizeFitButtons, type SizeFitMode } from '../inputs/SizeFitButtons';
-import type { ITransform, AlignX, AlignY, Size } from '../../domains/Clip/types';
+import type {
+  ITransform,
+  AlignX,
+  AlignY,
+  Size,
+} from '../../domains/Clip/types';
 import type { JsonPath, JsonPrimitive } from '../../utils/transformHelpers';
 import { MotionNumberInput } from '@/lib/motion-input';
 import { useMemo, useCallback, useRef } from 'react';
@@ -185,10 +190,21 @@ export function TransformProperty({
     const h = contentH;
     const T = 0.001;
 
-    if (originalSize && Math.abs(w - originalSize.width) < T && Math.abs(h - originalSize.height) < T && Math.abs(sx - 1) < T && Math.abs(sy - 1) < T) {
+    if (
+      originalSize &&
+      Math.abs(w - originalSize.width) < T &&
+      Math.abs(h - originalSize.height) < T &&
+      Math.abs(sx - 1) < T &&
+      Math.abs(sy - 1) < T
+    ) {
       return 'original';
     }
-    if (Math.abs(w - canvasWidth) < T && Math.abs(h - canvasHeight) < T && Math.abs(sx - 1) < T && Math.abs(sy - 1) < T) {
+    if (
+      Math.abs(w - canvasWidth) < T &&
+      Math.abs(h - canvasHeight) < T &&
+      Math.abs(sx - 1) < T &&
+      Math.abs(sy - 1) < T
+    ) {
       return 'stretch';
     }
     const containS = Math.min(canvasWidth / w, canvasHeight / h);
@@ -208,7 +224,15 @@ export function TransformProperty({
       return 'fitHeight';
     }
     return null;
-  }, [contentW, contentH, transforms?.scaleX, transforms?.scaleY, canvasWidth, canvasHeight, originalSize]);
+  }, [
+    contentW,
+    contentH,
+    transforms?.scaleX,
+    transforms?.scaleY,
+    canvasWidth,
+    canvasHeight,
+    originalSize,
+  ]);
 
   // ── Alignment helpers ──
   const renderedWidth =
@@ -302,10 +326,7 @@ export function TransformProperty({
             />
           </div>
           <div className="mt-2">
-            <SizeFitButtons
-              onFit={handleSizeFit}
-              activeMode={activeFitMode}
-            />
+            <SizeFitButtons onFit={handleSizeFit} activeMode={activeFitMode} />
           </div>
         </>
       )}
