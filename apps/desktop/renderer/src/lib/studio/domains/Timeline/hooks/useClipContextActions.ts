@@ -5,6 +5,11 @@ import {
   useDocStore,
   useInteractionStore,
 } from '../../../hooks/useStudioStores';
+import {
+  extractClipStyle,
+  applyClipStyle,
+  getStyleLabel,
+} from '../../../utils/clipStyleUtils';
 
 type SelectedClipData = {
   clip: IClip;
@@ -66,6 +71,10 @@ export function useClipContextActions({
     (state) => state.setSelectedClipIds
   );
   const setClipboard = useInteractionStore((state) => state.setClipboard);
+  const setStyleClipboard = useInteractionStore(
+    (state) => state.setStyleClipboard
+  );
+  const styleClipboard = useInteractionStore((state) => state.styleClipboard);
 
   const handleCopy = useCallback(() => {
     // 선택된 클립이 여러 개인 경우
@@ -190,6 +199,38 @@ export function useClipContextActions({
     console.log('[TimelineClip] Toggled visibility:', clip.id, !clip.enabled);
   }, [clip.enabled, clip.id, trackId, updateClip]);
 
+  // ── 속성 복사 / 붙여넣기 ──
+  const handleCopyStyle = useCallback(() => {
+    const style = extractClipStyle(clip);
+    setStyleClipboard({
+      sourceType: clip.type,
+      style: style as unknown as Record<string, unknown>,
+    });
+    const label = getStyleLabel(clip.type);
+    toast.success(`${label} copied`, {
+      description: 'Press ⌘⇧V to paste style',
+    });
+  }, [clip, setStyleClipboard]);
+
+  const handlePasteStyle = useCallback(() => {
+    if (!styleClipboard) {
+      toast.error('No style copied');
+      return;
+    }
+
+    const updates = applyClipStyle(clip, styleClipboard.style as any);
+
+    if (!updates) {
+      toast.error('Cannot paste style', {
+        description: `${getStyleLabel(styleClipboard.sourceType)} → ${getStyleLabel(clip.type)} is not supported`,
+      });
+      return;
+    }
+
+    updateClip(trackId, clip.id, updates);
+    toast.success('Style applied');
+  }, [clip, styleClipboard, trackId, updateClip]);
+
   return {
     handleCopy,
     handleCut,
@@ -197,5 +238,8 @@ export function useClipContextActions({
     handleDelete,
     handleToggleLock,
     handleToggleVisibility,
+    handleCopyStyle,
+    handlePasteStyle,
+    hasStyleClipboard: !!styleClipboard,
   };
 }

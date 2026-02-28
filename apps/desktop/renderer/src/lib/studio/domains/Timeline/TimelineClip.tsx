@@ -25,6 +25,8 @@ import {
   Unlock,
   Eye,
   EyeOff,
+  Paintbrush,
+  ClipboardPaste,
 } from 'lucide-react';
 import { useTimelineClipDrag } from './hooks/useTimelineClipDrag';
 import { useClipContextActions } from './hooks/useClipContextActions';
@@ -157,6 +159,9 @@ export function TimelineClip({
     handleDelete,
     handleToggleLock,
     handleToggleVisibility,
+    handleCopyStyle,
+    handlePasteStyle,
+    hasStyleClipboard,
   } = useClipContextActions({
     clip,
     trackId,
@@ -260,6 +265,20 @@ export function TimelineClip({
             <Files size={14} />
             <span>Duplicate</span>
             <ContextMenuShortcut>⌘D</ContextMenuShortcut>
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem onSelect={handleCopyStyle}>
+            <Paintbrush size={14} />
+            <span>Copy Style</span>
+            <ContextMenuShortcut>⌘⇧C</ContextMenuShortcut>
+          </ContextMenuItem>
+          <ContextMenuItem
+            onSelect={handlePasteStyle}
+            disabled={!hasStyleClipboard}
+          >
+            <ClipboardPaste size={14} />
+            <span>Paste Style</span>
+            <ContextMenuShortcut>⌘⇧V</ContextMenuShortcut>
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem onSelect={handleToggleLock}>

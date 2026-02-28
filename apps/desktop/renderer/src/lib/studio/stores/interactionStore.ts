@@ -1,5 +1,5 @@
 import { createStore } from 'zustand/vanilla';
-import type { IClip } from '../domains/Clip/types';
+import type { IClip, ClipType } from '../domains/Clip/types';
 
 export interface ClipboardItem {
   clip: IClip; // 클립 전체 데이터 (JSON 복사본)
@@ -12,11 +12,21 @@ export interface ClipboardData {
   operation: 'copy' | 'cut';
 }
 
+/**
+ * 클립 속성 복사/붙여넣기용 클립보드.
+ * 콘텐츠(텍스트 내용, 에셋 ID 등)를 제외한 스타일 속성만 저장.
+ */
+export interface StyleClipboardData {
+  sourceType: ClipType;
+  style: Record<string, unknown>;
+}
+
 export interface InteractionState {
   selectedClipIds: string[];
   draggingClipId: string | null;
   activeTrackId: string | null; // 현재 활성화된 트랙 ID
   clipboard: ClipboardData | null;
+  styleClipboard: StyleClipboardData | null; // 속성 복사용
   lastClickedTime: number | null; // 트랙 클릭 시 시간 위치 (ms)
   exportPreviewRange: { start: number; end: number } | null; // Export 다이얼로그 열릴 때 범위 표시
 }
@@ -30,6 +40,7 @@ export interface InteractionActions {
   setDraggingClipId: (clipId: string | null) => void;
   setActiveTrackId: (trackId: string | null) => void;
   setClipboard: (data: ClipboardData | null) => void;
+  setStyleClipboard: (data: StyleClipboardData | null) => void;
   setLastClickedTime: (time: number | null) => void;
   setExportPreviewRange: (range: { start: number; end: number } | null) => void;
 }
@@ -46,6 +57,7 @@ export const createInteractionStore = () => {
     draggingClipId: null,
     activeTrackId: null,
     clipboard: null,
+    styleClipboard: null,
     lastClickedTime: null,
     exportPreviewRange: null,
 
@@ -78,6 +90,10 @@ export const createInteractionStore = () => {
 
     setClipboard: (data) => {
       set({ clipboard: data });
+    },
+
+    setStyleClipboard: (data) => {
+      set({ styleClipboard: data });
     },
 
     setLastClickedTime: (time) => {

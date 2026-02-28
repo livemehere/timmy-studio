@@ -1,15 +1,17 @@
 import { useHotkeys } from 'react-hotkeys-hook';
 import { toast } from 'sonner';
 import type { RefObject } from 'react';
-import {
-  useDocStore,
-  useInteractionStore,
-} from './useStudioStores';
+import { useDocStore, useInteractionStore } from './useStudioStores';
 import {
   findTrackByClipId,
   hasOverlap,
   collectClipboardItems,
 } from '../utils/trackHelpers';
+import {
+  extractClipStyle,
+  applyClipStyle,
+  getStyleLabel,
+} from '../utils/clipStyleUtils';
 
 /**
  * TimelinePanel에서 사용하는 모든 키보드 단축키 로직을 모은 훅.
@@ -29,6 +31,9 @@ export function useTimelineHotkeys(
   const setActiveTrackId = useInteractionStore((s) => s.setActiveTrackId);
   const clipboard = useInteractionStore((s) => s.clipboard);
   const setClipboard = useInteractionStore((s) => s.setClipboard);
+  const styleClipboard = useInteractionStore((s) => s.styleClipboard);
+  const setStyleClipboard = useInteractionStore((s) => s.setStyleClipboard);
+  const updateClip = useDocStore((s) => s.updateClip);
   const lastClickedTime = useInteractionStore((s) => s.lastClickedTime);
   const activeTrackId = useInteractionStore((s) => s.activeTrackId);
 
@@ -143,7 +148,11 @@ export function useTimelineHotkeys(
       const newEndTime = newStartTime + duration;
       return {
         trackId: item.trackId,
-        clipData: { ...item.clip, startTime: newStartTime, endTime: newEndTime },
+        clipData: {
+          ...item.clip,
+          startTime: newStartTime,
+          endTime: newEndTime,
+        },
         newStartTime,
         newEndTime,
       };
@@ -153,7 +162,9 @@ export function useTimelineHotkeys(
     for (const nc of newClips) {
       const targetTrack = tracks.find((t) => t.id === nc.trackId);
       if (!targetTrack) {
-        toast.error('Cannot paste', { description: 'Original track not found' });
+        toast.error('Cannot paste', {
+          description: 'Original track not found',
+        });
         return;
       }
       if (hasOverlap(targetTrack, nc.newStartTime, nc.newEndTime)) {
@@ -205,6 +216,63 @@ export function useTimelineHotkeys(
 
     if (newClipIds.length > 0) {
       setSelectedClipIds(newClipIds);
+    }
+  });
+
+  // ── Copy Style ─────────────────────────────────────
+  useHotkeys('mod+shift+c', (e) => {
+    e.preventDefault();
+    if (selectedClipIds.length !== 1) return;
+
+    const clipId = selectedClipIds[0];
+    const track = findTrackByClipId(tracks, clipId);
+    if (!track) return;
+
+    const clip = track.clips.find((c) => c.id === clipId);
+    if (!clip) return;
+
+    const style = extractClipStyle(clip);
+    setStyleClipboard({
+      sourceType: clip.type,
+      style: style as unknown as Record<string, unknown>,
+    });
+
+    const label = getStyleLabel(clip.type);
+    toast.success(`${label} copied`, {
+      description: 'Press ⌘⇧V to paste style',
+    });
+  });
+
+  // ── Paste Style ────────────────────────────────────
+  useHotkeys('mod+shift+v', (e) => {
+    e.preventDefault();
+    if (!styleClipboard || selectedClipIds.length === 0) return;
+
+    let appliedCount = 0;
+    selectedClipIds.forEach((clipId) => {
+      const track = findTrackByClipId(tracks, clipId);
+      if (!track) return;
+
+      const clip = track.clips.find((c) => c.id === clipId);
+      if (!clip) return;
+
+      const updates = applyClipStyle(clip, styleClipboard.style as any);
+      if (updates) {
+        updateClip(track.id, clipId, updates);
+        appliedCount++;
+      }
+    });
+
+    if (appliedCount > 0) {
+      toast.success(
+        appliedCount === 1
+          ? 'Style applied'
+          : `Style applied to ${appliedCount} clips`
+      );
+    } else {
+      toast.error('Cannot paste style', {
+        description: 'Incompatible clip types',
+      });
     }
   });
 }
