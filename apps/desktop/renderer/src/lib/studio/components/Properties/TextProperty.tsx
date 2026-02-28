@@ -115,19 +115,27 @@ export function TextProperty({
       />
 
       <div className="flex flex-col gap-2 mt-2">
-        <div className="text-xs text-neutral-400 mb-1">Alignment</div>
+        <div className="text-xs text-neutral-400 mb-1">Anchor</div>
         <div className="flex gap-2">
-          {(['left', 'center', 'right'] as const).map((align) => (
+          {(
+            [
+              { value: 'left', label: '← Left' },
+              { value: 'center', label: '· Center' },
+              { value: 'right', label: 'Right →' },
+            ] as const
+          ).map(({ value, label }) => (
             <button
-              key={align}
-              onClick={() => handleChange({ align })}
+              key={value}
+              onClick={() =>
+                handleChange({ align: value as 'left' | 'center' | 'right' })
+              }
               className={`flex-1 px-3 py-1.5 rounded text-xs transition-colors ${
-                local.align === align
+                local.align === value
                   ? 'bg-blue-600 text-white'
                   : 'bg-neutral-700 text-neutral-300 hover:bg-neutral-600'
               }`}
             >
-              {align.charAt(0).toUpperCase() + align.slice(1)}
+              {label}
             </button>
           ))}
         </div>
