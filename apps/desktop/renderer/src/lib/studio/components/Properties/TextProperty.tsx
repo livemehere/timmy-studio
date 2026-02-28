@@ -1,40 +1,106 @@
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { TextField, ColorField, NumberField, ToggleField } from '../inputs';
 import { TextAreaField } from '../inputs/TextAreaField';
 import type { ITextData } from '../../types/text';
 
+const DEBOUNCE_MS = 300;
+
 interface TextPropertyProps {
   textData: ITextData;
+  /** debounce 후 store 에 커밋 */
   onChange: (updates: Partial<ITextData>) => void;
+  /** 🔥 store 를 거치지 않고 엔진에 직접 실시간 미리보기 적용 */
+  onLivePreview?: (merged: ITextData) => void;
   onChanged?: () => void;
 }
 
+/**
+ * TextProperty — local state + debounced commit 패턴.
+ *
+ * 모든 입력은 먼저 local state 에만 반영하고 엔진에 live preview 전송.
+ * DEBOUNCE_MS 동안 추가 입력이 없으면 store 에 커밋하여
+ * Immer produce → syncTracks → renderOnce 파이프라인을 최소 빈도로 호출.
+ */
 export function TextProperty({
   textData,
   onChange,
+  onLivePreview,
   onChanged,
 }: TextPropertyProps) {
-  const handleChange = (updates: Partial<ITextData>) => {
-    onChange(updates);
+  // ── local state: store 와 독립된 작업 복사본 ──
+  const [local, setLocal] = useState<ITextData>(textData);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestLocal = useRef<ITextData>(local);
+
+  // store 에서 외부 변경이 오면 로컬 동기화 (다른 곳에서 수정된 경우)
+  // debounce 진행 중이 아닐 때만 외부값 수용
+  const isPendingCommit = useRef(false);
+  useEffect(() => {
+    if (!isPendingCommit.current) {
+      setLocal(textData);
+      latestLocal.current = textData;
+    }
+  }, [textData]);
+
+  // commit: debounce timer 가 만료될 때 호출
+  const commitToStore = useCallback(() => {
+    isPendingCommit.current = false;
+    onChange(latestLocal.current);
     onChanged?.();
-  };
+  }, [onChange, onChanged]);
+
+  // 핵심: 로컬 업데이트 + live preview + debounce commit
+  const handleChange = useCallback(
+    (updates: Partial<ITextData>) => {
+      setLocal((prev) => {
+        const merged = { ...prev, ...updates };
+        latestLocal.current = merged;
+
+        // 엔진에 직접 실시간 미리보기
+        onLivePreview?.(merged);
+
+        return merged;
+      });
+
+      // debounce 재시작
+      isPendingCommit.current = true;
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(commitToStore, DEBOUNCE_MS);
+    },
+    [onLivePreview, commitToStore]
+  );
+
+  // unmount 시 pending commit flush
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        // unmount 시점의 최신 로컬 값을 커밋
+        if (isPendingCommit.current) {
+          onChange(latestLocal.current);
+        }
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="space-y-2">
       <TextAreaField
         label="Content"
-        value={textData.content}
+        value={local.content}
         onChange={(value) => handleChange({ content: value })}
       />
 
       <TextField
         label="Font Family"
-        defaultValue={textData.fontFamily}
+        defaultValue={local.fontFamily}
         onCommit={(value) => handleChange({ fontFamily: value })}
       />
 
       <NumberField
         label="Font Size"
-        value={textData.fontSize}
+        value={local.fontSize}
         onChange={(value) => handleChange({ fontSize: value })}
         min={8}
         max={200}
@@ -43,7 +109,7 @@ export function TextProperty({
 
       <ColorField
         label="Color"
-        value={String(textData.color)}
+        value={String(local.color)}
         onChange={(value) => handleChange({ color: value })}
       />
 
@@ -55,7 +121,7 @@ export function TextProperty({
               key={align}
               onClick={() => handleChange({ align })}
               className={`flex-1 px-3 py-1.5 rounded text-xs transition-colors ${
-                textData.align === align
+                local.align === align
                   ? 'bg-blue-600 text-white'
                   : 'bg-neutral-700 text-neutral-300 hover:bg-neutral-600'
               }`}
@@ -70,24 +136,24 @@ export function TextProperty({
         <div className="text-xs text-neutral-400 mb-1">Text Style</div>
         <ToggleField
           label="Bold"
-          checked={textData.bold ?? false}
+          checked={local.bold ?? false}
           onChange={(checked) => handleChange({ bold: checked })}
         />
         <ToggleField
           label="Italic"
-          checked={textData.italic ?? false}
+          checked={local.italic ?? false}
           onChange={(checked) => handleChange({ italic: checked })}
         />
         <ToggleField
           label="Underline"
-          checked={textData.underline ?? false}
+          checked={local.underline ?? false}
           onChange={(checked) => handleChange({ underline: checked })}
         />
       </div>
 
       <NumberField
         label="Letter Spacing"
-        value={textData.letterSpacing ?? 0}
+        value={local.letterSpacing ?? 0}
         onChange={(value) => handleChange({ letterSpacing: value })}
         min={-10}
         max={50}
@@ -96,7 +162,7 @@ export function TextProperty({
 
       <NumberField
         label="Line Height"
-        value={textData.lineHeight ?? 1}
+        value={local.lineHeight ?? 1}
         onChange={(value) => handleChange({ lineHeight: value })}
         min={0.5}
         max={3}
@@ -107,7 +173,7 @@ export function TextProperty({
         <div className="text-xs text-neutral-400 mb-1">Background</div>
         <ToggleField
           label="Enable"
-          checked={!!textData.background}
+          checked={!!local.background}
           onChange={(checked) => {
             if (checked) {
               handleChange({
@@ -124,23 +190,23 @@ export function TextProperty({
             }
           }}
         />
-        {textData.background && (
+        {local.background && (
           <>
             <ColorField
               label="Color"
-              value={textData.background.color}
+              value={local.background.color}
               onChange={(value) =>
                 handleChange({
-                  background: { ...textData.background!, color: value },
+                  background: { ...local.background!, color: value },
                 })
               }
             />
             <NumberField
               label="Padding X"
-              value={textData.background.paddingX}
+              value={local.background.paddingX}
               onChange={(value) =>
                 handleChange({
-                  background: { ...textData.background!, paddingX: value },
+                  background: { ...local.background!, paddingX: value },
                 })
               }
               min={0}
@@ -148,10 +214,10 @@ export function TextProperty({
             />
             <NumberField
               label="Padding Y"
-              value={textData.background.paddingY}
+              value={local.background.paddingY}
               onChange={(value) =>
                 handleChange({
-                  background: { ...textData.background!, paddingY: value },
+                  background: { ...local.background!, paddingY: value },
                 })
               }
               min={0}
@@ -159,10 +225,10 @@ export function TextProperty({
             />
             <NumberField
               label="Radius"
-              value={textData.background.radius}
+              value={local.background.radius}
               onChange={(value) =>
                 handleChange({
-                  background: { ...textData.background!, radius: value },
+                  background: { ...local.background!, radius: value },
                 })
               }
               min={0}
@@ -170,10 +236,10 @@ export function TextProperty({
             />
             <NumberField
               label="Alpha"
-              value={textData.background.alpha ?? 1}
+              value={local.background.alpha ?? 1}
               onChange={(value) =>
                 handleChange({
-                  background: { ...textData.background!, alpha: value },
+                  background: { ...local.background!, alpha: value },
                 })
               }
               min={0}
@@ -189,7 +255,7 @@ export function TextProperty({
         <div className="text-xs text-neutral-400 mb-1">Shadow</div>
         <ToggleField
           label="Enable"
-          checked={!!textData.shadow}
+          checked={!!local.shadow}
           onChange={(checked) => {
             if (checked) {
               handleChange({
@@ -206,23 +272,23 @@ export function TextProperty({
             }
           }}
         />
-        {textData.shadow && (
+        {local.shadow && (
           <>
             <ColorField
               label="Color"
-              value={textData.shadow.color}
+              value={local.shadow.color}
               onChange={(value) =>
                 handleChange({
-                  shadow: { ...textData.shadow!, color: value },
+                  shadow: { ...local.shadow!, color: value },
                 })
               }
             />
             <NumberField
               label="Blur"
-              value={textData.shadow.blur}
+              value={local.shadow.blur}
               onChange={(value) =>
                 handleChange({
-                  shadow: { ...textData.shadow!, blur: value },
+                  shadow: { ...local.shadow!, blur: value },
                 })
               }
               min={0}
@@ -230,10 +296,10 @@ export function TextProperty({
             />
             <NumberField
               label="Offset X"
-              value={textData.shadow.offsetX}
+              value={local.shadow.offsetX}
               onChange={(value) =>
                 handleChange({
-                  shadow: { ...textData.shadow!, offsetX: value },
+                  shadow: { ...local.shadow!, offsetX: value },
                 })
               }
               min={-50}
@@ -241,10 +307,10 @@ export function TextProperty({
             />
             <NumberField
               label="Offset Y"
-              value={textData.shadow.offsetY}
+              value={local.shadow.offsetY}
               onChange={(value) =>
                 handleChange({
-                  shadow: { ...textData.shadow!, offsetY: value },
+                  shadow: { ...local.shadow!, offsetY: value },
                 })
               }
               min={-50}
@@ -252,10 +318,10 @@ export function TextProperty({
             />
             <NumberField
               label="Alpha"
-              value={textData.shadow.alpha ?? 1}
+              value={local.shadow.alpha ?? 1}
               onChange={(value) =>
                 handleChange({
-                  shadow: { ...textData.shadow!, alpha: value },
+                  shadow: { ...local.shadow!, alpha: value },
                 })
               }
               min={0}
@@ -271,7 +337,7 @@ export function TextProperty({
         <div className="text-xs text-neutral-400 mb-1">Border</div>
         <ToggleField
           label="Enable"
-          checked={!!textData.border}
+          checked={!!local.border}
           onChange={(checked) => {
             if (checked) {
               handleChange({
@@ -286,23 +352,23 @@ export function TextProperty({
             }
           }}
         />
-        {textData.border && (
+        {local.border && (
           <>
             <ColorField
               label="Color"
-              value={String(textData.border.color)}
+              value={String(local.border.color)}
               onChange={(value) =>
                 handleChange({
-                  border: { ...textData.border!, color: value },
+                  border: { ...local.border!, color: value },
                 })
               }
             />
             <NumberField
               label="Width"
-              value={textData.border.width}
+              value={local.border.width}
               onChange={(value) =>
                 handleChange({
-                  border: { ...textData.border!, width: value },
+                  border: { ...local.border!, width: value },
                 })
               }
               min={0}
@@ -310,10 +376,10 @@ export function TextProperty({
             />
             <NumberField
               label="Radius"
-              value={textData.border.radius ?? 0}
+              value={local.border.radius ?? 0}
               onChange={(value) =>
                 handleChange({
-                  border: { ...textData.border!, radius: value },
+                  border: { ...local.border!, radius: value },
                 })
               }
               min={0}

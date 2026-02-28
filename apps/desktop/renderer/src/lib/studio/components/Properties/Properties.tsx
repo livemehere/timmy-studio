@@ -1,4 +1,6 @@
-import { useDocStore } from '../../hooks/useStudioStores';
+import { useCallback } from 'react';
+import { useDocStore, useEngineStore } from '../../hooks/useStudioStores';
+import { TextClip } from '../../domains/Clip/GraphicClips/TextClips/TextClip';
 import type {
   IClip,
   IGraphicClip,
@@ -52,12 +54,26 @@ export function Properties({ clipId }: PropertiesProps) {
   const assets = useDocStore((state) => state.assets);
   const updateClipInTrack = useDocStore((state) => state.updateClip);
 
+  const renderer = useEngineStore((s) => s.renderer);
+
   const result = Track.findClip(tracks, clipId);
   if (!result) {
     throw new Error('Clip not found');
   }
 
   const { clip, trackId } = result;
+
+  // 🔥 TextClip live preview — store 파이프라인 우회, 엔진에 직접 반영
+  const handleTextLivePreview = useCallback(
+    (merged: import('../../types/text').ITextData) => {
+      if (!renderer) return;
+      const instance = renderer.findClipInstance(clipId);
+      if (instance && instance instanceof TextClip) {
+        instance.applyTextPreview(merged);
+      }
+    },
+    [renderer, clipId]
+  );
   const canvasWidth = settings.width;
   const canvasHeight = settings.height;
 
@@ -235,12 +251,10 @@ export function Properties({ clipId }: PropertiesProps) {
             content={
               <TextProperty
                 textData={textClip.textData}
-                onChange={(updates) => {
-                  updateClip({
-                    textData: { ...textClip.textData, ...updates },
-                  });
+                onChange={(merged) => {
+                  updateClip({ textData: merged as any });
                 }}
-                onChanged={() => {}}
+                onLivePreview={handleTextLivePreview}
               />
             }
           />

@@ -1,5 +1,6 @@
 import { Text, TextStyle, Graphics } from 'pixi.js';
 import type { ITextClip } from '../../types';
+import type { ITextData } from '@/lib/studio/types/text';
 import { GraphicClip } from '../GraphicClip';
 import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
 
@@ -55,6 +56,16 @@ export class TextClip extends GraphicClip {
     this.debugCall('applyData');
     this.updateContent();
     this.updateSelectionBounds();
+  }
+
+  /**
+   * 🔥 실시간 미리보기용 — store/sync 파이프라인을 우회하여 textData 만 직접 반영.
+   * Properties 패널에서 debounce commit 전에 실시간 프리뷰를 위해 사용.
+   */
+  applyTextPreview(textData: ITextData): void {
+    this._data = { ...this._data, textData };
+    this.updateContent();
+    this.applyTransform(this._data.transforms);
   }
 
   protected shouldApplyBaseScale(): boolean {

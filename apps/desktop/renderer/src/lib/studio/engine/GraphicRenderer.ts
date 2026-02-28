@@ -317,6 +317,22 @@ export class GraphicRenderer extends RendererBase {
   }
 
   /**
+   * 엔진 쪽 clip 인스턴스를 ID 로 검색.
+   * 실시간 미리보기(live preview) 등에서 store 를 거치지 않고 직접 접근할 때 사용.
+   */
+  findClipInstance(
+    clipId: string
+  ):
+    | import('@/lib/studio/domains/Clip/GraphicClips/GraphicClip').GraphicClip
+    | null {
+    for (const track of this.tracks.values()) {
+      const clip = track.clips.get(clipId);
+      if (clip) return clip;
+    }
+    return null;
+  }
+
+  /**
    * 특정 시점으로의 탐색(Seek)이 렌더링적으로 완료될 때까지 대기합니다.
    * 비디오 로딩이나 텍스처 업로드 등 비동기 작업이 완료되기를 기다립니다.
    * timer의 seekAndWait(ms) 호출 시점에 함께 호출되도록 설계되었습니다
