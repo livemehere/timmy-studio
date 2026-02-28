@@ -1,5 +1,6 @@
 import { Container } from 'pixi.js';
 import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
+import { TrackVideoPool } from '@/lib/studio/engine/TrackVideoPool';
 import type { IGraphicTrack } from './types';
 import type {
   IGraphicClip,
@@ -8,6 +9,7 @@ import type {
   ITextClip,
   IShapeClip,
 } from '@/lib/studio/domains/Clip/types';
+import type { IVideoAsset } from '@/lib/studio/domains/Asset/types';
 import {
   VideoClip,
   ImageClip,
@@ -24,6 +26,8 @@ export class GraphicTrack extends Track<
   GraphicClip
 > {
   public container: Container;
+  /** 이 트랙 내 VideoClip 들이 공유하는 video element pool */
+  public readonly videoPool = new TrackVideoPool();
 
   static readonly LABELS = {
     TRACK_PREFIX: 'Track-',
@@ -48,6 +52,21 @@ export class GraphicTrack extends Track<
   protected async addClip(data: IGraphicClip): Promise<void> {
     const clip = this.createClipInstance(data);
     this.clips.set(data.id, clip);
+
+    // VideoClip → pool 에 asset 준비 & pool 주입
+    if (clip instanceof VideoClip) {
+      const videoData = data as IVideoClip;
+      const asset = this.renderer
+        .getDoc()
+        .assets.find((a) => a.id === videoData.assetId) as
+        | IVideoAsset
+        | undefined;
+      if (asset && asset.type === 'video') {
+        await this.videoPool.ensureAsset(asset);
+      }
+      clip.setPool(this.videoPool);
+    }
+
     await clip.init();
     clip.mount(this.container);
   }
@@ -80,6 +99,9 @@ export class GraphicTrack extends Track<
       this.removeClip(clipId);
     }
     this.clips.clear();
+
+    // video element pool 정리
+    this.videoPool.destroy();
 
     this.container.destroy({ children: true });
   }

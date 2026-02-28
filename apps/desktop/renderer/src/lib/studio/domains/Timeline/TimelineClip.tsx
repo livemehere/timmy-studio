@@ -30,7 +30,7 @@ import { useTimelineClipDrag } from './hooks/useTimelineClipDrag';
 import { useClipContextActions } from './hooks/useClipContextActions';
 import { ClipContent } from './components/ClipContent';
 import { ClipResizeHandles } from './components/ClipResizeHandles';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { selectClipById, selectTrackById } from '../../stores/docStore';
 import type { IVideoAsset } from '../Asset/types';
 import { registerClipMotion, unregisterClipMotion } from './clipMotionRegistry';
@@ -119,6 +119,26 @@ export function TimelineClip({
       | undefined;
     return asset?.isProxyReady ?? false;
   });
+
+  // Video pool info — reactive via useSyncExternalStore
+  const renderer = useEngineStore((state) => state.renderer);
+  const pool =
+    clip.type === 'video' && renderer
+      ? (renderer.tracks.get(trackId)?.videoPool ?? null)
+      : null;
+
+  const poolSubscribe = useCallback(
+    (cb: () => void) => pool?.subscribe(cb) ?? (() => {}),
+    [pool]
+  );
+  const poolSnapshot = useCallback(() => pool?.getVersion() ?? 0, [pool]);
+  const poolVersion = useSyncExternalStore(poolSubscribe, poolSnapshot);
+
+  const poolInfo = useMemo(() => {
+    if (!pool || !assetId) return undefined;
+    return pool.getClipPoolInfo(assetId, clipId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pool, assetId, clipId, poolVersion]);
 
   const isSelected = useInteractionStore((state) =>
     state.selectedClipIds.includes(clip.id)
@@ -209,6 +229,7 @@ export function TimelineClip({
               isLoaded={isLoaded}
               isFailed={isFailed}
               isProxyReady={isProxyReady}
+              poolInfo={poolInfo}
               displayStartTime={displayStartTime}
               displayEndTime={displayEndTime}
               displayTrimStart={displayTrimStart}

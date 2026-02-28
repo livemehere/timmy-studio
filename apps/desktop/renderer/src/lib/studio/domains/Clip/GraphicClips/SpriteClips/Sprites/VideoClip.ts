@@ -3,8 +3,11 @@ import type { IVideoClip } from '../../../types';
 import { SpriteClip } from '../SpriteClip';
 import { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
 import type { SeekingRenderMode, TickContext } from '@/lib/studio/engine/types';
-import { toFilePath } from '@/lib/studio/utils/toFilePath';
 import type { IVideoAsset } from '../../../../Asset/types';
+import type {
+  TrackVideoPool,
+  VideoElementSlot,
+} from '@/lib/studio/engine/TrackVideoPool';
 
 /** Debounce delay for backward seeks on origin (no proxy) */
 const BACKWARD_SEEK_DEBOUNCE_MS = 300;
@@ -13,11 +16,25 @@ export class VideoClip extends SpriteClip {
   readonly type = 'video';
   declare protected _data: IVideoClip;
 
-  // State
-  private originEl: HTMLVideoElement | null = null;
-  private proxyEl: HTMLVideoElement | null = null;
-  private originVideoSource: VideoSource | undefined;
-  private proxyVideoSource: VideoSource | undefined;
+  // ── Pool-based state ──
+  private pool: TrackVideoPool | null = null;
+  private slot: VideoElementSlot | null = null;
+
+  // Convenience accessors
+  private get originEl(): HTMLVideoElement | null {
+    return this.slot?.originEl ?? null;
+  }
+  private get proxyEl(): HTMLVideoElement | null {
+    return this.slot?.proxyEl ?? null;
+  }
+  private get originVideoSource(): VideoSource | undefined {
+    return this.slot?.originVideoSource;
+  }
+  private get proxyVideoSource(): VideoSource | null | undefined {
+    return this.slot?.proxyVideoSource;
+  }
+
+  // Swap / visibility state
   private isUsingProxy = false;
   private pendingProxySwap = false;
   private pendingOriginSwap = false;
@@ -32,12 +49,11 @@ export class VideoClip extends SpriteClip {
 
   // VideoClip은 항상 origin 기준으로 contentSize 반환 (proxy는 해상도가 낮음)
   protected override getContentSize(): { width: number; height: number } {
-    if (!this.originEl) {
-      return { width: 0, height: 0 };
-    }
+    const el = this.originEl;
+    if (!el) return { width: 0, height: 0 };
     return {
-      width: this.originEl.videoWidth || 0,
-      height: this.originEl.videoHeight || 0,
+      width: el.videoWidth || 0,
+      height: el.videoHeight || 0,
     };
   }
 
@@ -46,61 +62,35 @@ export class VideoClip extends SpriteClip {
     this.debugCall(`(Video) constructor`);
   }
 
+  /** 외부에서 pool 을 주입한다 (GraphicTrack.addClip 에서 호출) */
+  setPool(pool: TrackVideoPool): void {
+    this.pool = pool;
+  }
+
   async init(): Promise<void> {
     this.debugCall('=== (Video) init ===');
-    const asset = this.renderer
-      .getDoc()
-      .assets.find((a) => a.id === this._data.assetId) as
-      | IVideoAsset
-      | undefined;
 
-    if (!asset || asset.type !== 'video') {
+    if (!this.pool) {
       throw new Error(
-        `[VideoClip] Asset not found or invalid: ${this._data.assetId}`
+        `[VideoClip] Pool not set for clip ${this.id}. Call setPool() before init().`
       );
     }
 
-    this.originEl = await this.createVideoElement(asset);
-    this.originEl.pause();
-    this.originEl.currentTime = 0;
-
-    try {
-      this.proxyEl = await this.createProxyVideoElement(asset);
-      if (this.proxyEl) {
-        this.proxyEl.pause();
-        this.proxyEl.currentTime = 0;
-      }
-    } catch (error) {
-      console.warn(`[VideoClip] Proxy init failed for ${this.id}`, error);
-    }
-
-    this.originVideoSource = new VideoSource({
-      resource: this.originEl,
-      autoPlay: false,
-    });
-    this.sprite.texture = Texture.from(this.originVideoSource);
-
-    if (this.proxyEl) {
-      this.proxyVideoSource = new VideoSource({
-        resource: this.proxyEl,
-        autoPlay: false,
-      });
-    }
-
-    this.sync(this.data);
+    // 슬롯 acquire 는 onBecameVisible / onTick 에서 lazy 로 수행.
+    // 같은 asset 의 클립이 2개 이상이면 동시에 acquire 하면 슬롯 부족.
+    // sync (applyData + applyTransform) 도 슬롯 확보 후 호출해야 함.
+    // (getContentSize 가 videoWidth/Height 를 참조하므로 slot 없으면 0×0 → transform 깨짐)
+    this.applyData();
     this.debugCall('(Video) === init-end ===');
   }
 
   destroy(): void {
     this.debugCall('(Video) destroy');
     this._clearBackwardDebounce();
-    if (this.originEl) {
-      this.cleanupVideoElement(this.originEl);
-      this.originEl = null;
-    }
-    if (this.proxyEl) {
-      this.cleanupVideoElement(this.proxyEl);
-      this.proxyEl = null;
+    // 슬롯 반환 (element 는 pool 이 관리)
+    if (this.pool && this.slot) {
+      this.pool.release(this.id);
+      this.slot = null;
     }
     super.destroy();
   }
@@ -108,26 +98,65 @@ export class VideoClip extends SpriteClip {
   override onBecameVisible(ctx: TickContext): void {
     super.onBecameVisible(ctx);
     this._wasVisible = true;
+
+    // 슬롯이 없으면 pool 에서 acquire
+    if (!this.slot && this.pool) {
+      const slot = this.pool.acquire(this._data.assetId, this.id);
+      if (slot) {
+        this.slot = slot;
+        // texture 재연결 + transform 재계산 (content size 가 slot 의 videoWidth 에 의존)
+        this.rebindTexture();
+        this.applyTransform(this.data.transforms);
+      }
+    }
+
+    // 슬롯이 확보된 상태라면, 현재 시간으로 강제 seek (isSeeking=false 인 경우 대비)
+    if (this.slot) {
+      const relTime = this.calcRelTime(ctx.currentTime);
+      this.handleSeeking(relTime);
+    }
   }
 
   override onBecameHidden(ctx: TickContext): void {
     super.onBecameHidden(ctx);
     this._wasVisible = false;
     this.cancelPendingSwaps('all');
+    this.isUsingProxy = false;
 
-    // trim 범위를 벗어나거나 클립이 숨겨질 때 비디오 정지
+    // 비디오 정지
     if (this.originEl && !this.originEl.paused) {
-      console.log('[VideoClip] pausing video (became hidden)');
       this.debugCall('pausing video (became hidden)');
       this.originEl.pause();
     }
     if (this.proxyEl && !this.proxyEl.paused) {
       this.proxyEl.pause();
     }
+
+    // 슬롯 반환 → 다른 클립이 사용 가능
+    if (this.pool && this.slot) {
+      this.pool.release(this.id);
+      this.slot = null;
+    }
   }
 
   override onTick(ctx: TickContext): void {
     super.onTick(ctx);
+
+    // Lazy slot acquisition — 첫 tick 시 onBecameVisible 이 불리지 않으므로 여기서 처리
+    if (!this.slot && this.pool) {
+      const slot = this.pool.acquire(this._data.assetId, this.id);
+      if (slot) {
+        this.slot = slot;
+        this._wasVisible = true;
+        this.rebindTexture();
+        this.applyTransform(this.data.transforms);
+        const relTime = this.calcRelTime(ctx.currentTime);
+        this.handleSeeking(relTime);
+      }
+    }
+
+    if (!this.slot) return; // 슬롯 미확보 시 스킵
+
     const { currentTime, isPlaying, playStateChanged, isSeeking } = ctx;
     const relTime = this.calcRelTime(currentTime);
 
@@ -207,7 +236,7 @@ export class VideoClip extends SpriteClip {
   }
 
   private decideSeekingMode(): SeekingRenderMode {
-    // Try lazy hot-swap if proxy not yet initialized
+    // Try lazy hot-swap if proxy not yet initialized on pool slots
     if (!this.proxyEl && !this._proxyInitAttempted) {
       this._tryLazyProxyInit();
     }
@@ -286,7 +315,7 @@ export class VideoClip extends SpriteClip {
       : this.proxyVideoSource;
 
     // 만들어져있는 videoSource 를 가지고 texture 생성 및 교체
-    this.sprite.texture = Texture.from(videoSource!);
+    this.sprite.texture = new Texture({ source: videoSource! });
     const originSize = this.getContentSize();
     this.sprite.width = originSize.width;
     this.sprite.height = originSize.height;
@@ -295,6 +324,27 @@ export class VideoClip extends SpriteClip {
     if (!this.renderer.timer.isPlaying) {
       targetEl.pause();
     }
+  }
+
+  /**
+   * 현재 슬롯의 VideoSource 로 sprite texture 를 재바인딩한다.
+   * 슬롯 acquire / re-acquire 시 호출.
+   */
+  private rebindTexture(): void {
+    const oldTexture = this.sprite.texture;
+    if (oldTexture) {
+      oldTexture.destroy(false);
+    }
+
+    const videoSource = this.isUsingProxy
+      ? this.proxyVideoSource
+      : this.originVideoSource;
+    if (!videoSource) return;
+
+    this.sprite.texture = new Texture({ source: videoSource });
+    const size = this.getContentSize();
+    this.sprite.width = size.width;
+    this.sprite.height = size.height;
   }
 
   // currentTime 업데이트 및 dirty 처리
@@ -337,54 +387,6 @@ export class VideoClip extends SpriteClip {
     return Math.max(0, (globalTime - this._data.startTime + trimStart) / 1000);
   }
 
-  private async createVideoElement(
-    asset: IVideoAsset
-  ): Promise<HTMLVideoElement> {
-    const video = document.createElement('video');
-    video.src = toFilePath(asset.filePath);
-    video.crossOrigin = 'anonymous';
-    video.preload = 'auto';
-    video.volume = 1.0;
-    video.playbackRate = 1.0;
-
-    await new Promise<void>((resolve, reject) => {
-      video.oncanplay = () => resolve();
-      video.onerror = () => {
-        reject(new Error(`Failed to load video: ${asset.filePath}`));
-      };
-    });
-    return video;
-  }
-
-  private async createProxyVideoElement(
-    asset: IVideoAsset
-  ): Promise<HTMLVideoElement | null> {
-    if (!asset.proxyFilePath) return null;
-    const proxy = document.createElement('video');
-    proxy.src = toFilePath(asset.proxyFilePath);
-    proxy.crossOrigin = 'anonymous';
-    proxy.preload = 'auto';
-    proxy.volume = 1.0;
-    proxy.playbackRate = 1.0;
-
-    await new Promise<void>((resolve) => {
-      proxy.oncanplay = () => resolve();
-      proxy.onerror = () => {
-        resolve();
-      };
-    });
-    return proxy;
-  }
-
-  private cleanupVideoElement(video: HTMLVideoElement): void {
-    video.pause();
-    video.oncanplay = null;
-    video.onerror = null;
-    video.removeAttribute('src');
-    video.src = '';
-    video.load();
-  }
-
   // ── Backward seek debounce ──
 
   private _scheduleBackwardSeek(targetTime: number): void {
@@ -411,6 +413,8 @@ export class VideoClip extends SpriteClip {
    * Resets if the asset updates with isProxyReady=true.
    */
   private _tryLazyProxyInit(): void {
+    if (!this.pool) return;
+
     const asset = this.renderer
       .getDoc()
       .assets.find((a) => a.id === this._data.assetId) as
@@ -423,25 +427,16 @@ export class VideoClip extends SpriteClip {
       return;
     }
 
-    this.debugCall('(Video) lazy proxy init — proxy became ready');
+    this.debugCall('(Video) lazy proxy init via pool — proxy became ready');
     this._proxyInitAttempted = true;
 
-    // Fire-and-forget async init
-    this.createProxyVideoElement(asset)
-      .then((proxyEl) => {
-        if (!proxyEl) return;
-        this.proxyEl = proxyEl;
-        this.proxyEl.pause();
-        this.proxyEl.currentTime = this.originEl?.currentTime ?? 0;
-        this.proxyVideoSource = new VideoSource({
-          resource: this.proxyEl,
-          autoPlay: false,
-        });
-        this.debugCall('(Video) proxy hot-swap ready — will use on next seek');
-      })
-      .catch((err) => {
-        console.warn(`[VideoClip] Lazy proxy init failed for ${this.id}`, err);
-      });
+    // pool 을 통해 모든 슬롯에 proxy 핫스왑
+    this.pool.hotSwapProxy(asset).catch((err) => {
+      console.warn(
+        `[VideoClip] Pool proxy hot-swap failed for ${this.id}`,
+        err
+      );
+    });
   }
 
   /**
