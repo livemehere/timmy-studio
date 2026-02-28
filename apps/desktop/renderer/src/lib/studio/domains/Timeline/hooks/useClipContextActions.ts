@@ -254,10 +254,7 @@ export function useClipContextActions({
 
   const handlePastePosition = useCallback(() => {
     if (!isGraphicClip || !positionClipboard) return;
-    const updates = applyPosition(
-      clip as IGraphicClip,
-      positionClipboard
-    );
+    const updates = applyPosition(clip as IGraphicClip, positionClipboard);
     updateClip(trackId, clip.id, updates);
     toast.success('Position applied');
   }, [clip, isGraphicClip, positionClipboard, trackId, updateClip]);
