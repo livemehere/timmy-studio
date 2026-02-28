@@ -433,4 +433,101 @@ export class GraphicRenderer extends RendererBase {
 
     return { width, height, data };
   }
+
+  /**
+   * Export용 비디오 클립의 오디오 트랙 정보 수집
+   * Video 소스 파일에 포함된 오디오 스트림을 ffmpeg로 추출하기 위한 메타데이터 반환
+   * - track.enabled / clip.enabled 를 확인하여 비활성화된 항목 제외
+   * - asset.metadata.hasAudio 가 false 인 경우 제외
+   */
+  getExportVideoAudioTracks(): Array<{
+    src: string;
+    trimStart: number; // 초
+    trimEnd: number; // 초
+    startMs: number; // 타임라인 상 시작 시간 (밀리초)
+    volume: number;
+  }> {
+    const doc = this.getDoc();
+    const clips: Array<{
+      src: string;
+      trimStart: number;
+      trimEnd: number;
+      startMs: number;
+      volume: number;
+    }> = [];
+
+    console.log(
+      `[GraphicRenderer] Collecting video audio tracks from ${doc.tracks.length} tracks`
+    );
+
+    for (const trackData of doc.tracks) {
+      if (trackData.type !== 'graphic') continue;
+      if (!trackData.enabled) {
+        console.log(
+          `[GraphicRenderer] Skipping disabled graphic track: ${trackData.id}`
+        );
+        continue;
+      }
+
+      for (const clipData of trackData.clips) {
+        if (clipData.type !== 'video') continue;
+        if (!clipData.enabled) {
+          console.log(
+            `[GraphicRenderer] Skipping disabled video clip: ${clipData.id}`
+          );
+          continue;
+        }
+
+        const asset = doc.assets.find((a) => a.id === clipData.assetId);
+        if (!asset || asset.type !== 'video') {
+          console.warn(
+            `[GraphicRenderer] Asset not found or invalid type for clip: ${clipData.assetId}`
+          );
+          continue;
+        }
+
+        // hasAudio 가 명시적으로 false 이면 제외 (undefined 는 하위호환을 위해 포함)
+        if (asset.metadata.hasAudio === false) {
+          console.log(
+            `[GraphicRenderer] Skipping video clip without audio: ${clipData.id}`
+          );
+          continue;
+        }
+
+        // 원본 파일 경로 사용 (프록시가 아닌 원본에서 오디오 추출)
+        const src = asset.filePath;
+        const trimStart = (clipData.trimStart ?? 0) / 1000; // ms -> s
+        const duration =
+          (clipData.endTime - clipData.startTime - (clipData.trimEnd ?? 0)) /
+          1000; // ms -> s
+        const trimEnd = trimStart + duration;
+
+        const clipInfo = {
+          src,
+          trimStart,
+          trimEnd,
+          startMs: clipData.startTime,
+          volume: 1, // Video 클립엔 아직 별도의 오디오 볼륨 프로퍼티가 없으므로 기본값 1
+        };
+
+        console.log(
+          `[GraphicRenderer] Added video audio clip: ${clipData.id}`,
+          {
+            src: src.substring(0, 50) + '...',
+            trimStart: trimStart.toFixed(2) + 's',
+            trimEnd: trimEnd.toFixed(2) + 's',
+            duration: duration.toFixed(2) + 's',
+            startMs: clipData.startTime + 'ms',
+          }
+        );
+
+        clips.push(clipInfo);
+      }
+    }
+
+    console.log(
+      `[GraphicRenderer] Total video audio clips collected: ${clips.length}`
+    );
+    return clips;
+  }
 }

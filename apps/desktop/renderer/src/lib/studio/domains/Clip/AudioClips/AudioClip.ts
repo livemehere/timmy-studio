@@ -201,6 +201,10 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
           this.stop(playStateChanged ? 'playStateChanged' : 'seeking');
         }
       }
+    } else if (isPlaying && !this.isPlaying) {
+      // Catch-up: 클립이 visible 인데 아직 재생이 안 된 경우
+      // (예: 첫 tick 에서 onBecameVisible 이 호출되지 않음, 또는 play() 실패 후 재시도)
+      this.startAt(currentTime, 'catchUp');
     }
   }
 
@@ -222,6 +226,9 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
     if (this.isPlaying) this.stop('restart');
     if (!this.slot) return;
 
+    // 🔒 isPlaying 을 먼저 true 로 설정해 중복 startAt 호출 방지
+    this.isPlaying = true;
+
     const ctx = this.renderer.audioContext;
     if (ctx.state !== 'running') {
       try {
@@ -229,6 +236,7 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
         this.debugCall('(Audio) audio context resumed');
       } catch (e) {
         console.warn('[AudioClip] Failed to resume audio context', e);
+        if (this.isPlaying) this.isPlaying = false;
         return;
       }
     }
@@ -243,19 +251,15 @@ export class AudioClip extends Clip<IAudioClip, AudioRenderer> {
 
     this.slot.audioEl.currentTime = offset;
 
-    const playPromise = this.slot.audioEl.play();
-    if (playPromise !== undefined) {
-      playPromise
-        .then(() => {
-          this.isPlaying = true;
-          this.debugCall('(Audio) play started');
-        })
-        .catch((e) => {
-          console.warn('[AudioClip] Play failed:', e);
-          this.isPlaying = false;
-        });
-    } else {
-      this.isPlaying = true;
+    try {
+      await this.slot.audioEl.play();
+      this.debugCall('(Audio) play started');
+    } catch (e) {
+      // stop() 이 호출돼서 이미 isPlaying=false 이면 건드리지 않음
+      if (this.isPlaying) {
+        console.warn('[AudioClip] Play failed:', e);
+        this.isPlaying = false;
+      }
     }
   }
 

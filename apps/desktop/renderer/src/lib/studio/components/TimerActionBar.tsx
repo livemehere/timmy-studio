@@ -244,10 +244,13 @@ export function TimerActionBar() {
             console.log('[export][ffmpeg][progress]', p);
           }
 
-          // racy but good enough for UI
+          // racy but good enough for UI — ffmpeg 인코딩 진행률 (프레임 추출 후 인코딩 마무리 구간에서 사용)
           setExportState((prev) => ({
             ...prev,
-            percent: typeof p.progress === 'number' ? p.progress : prev.percent,
+            percent: Math.max(
+              prev.percent,
+              typeof p.progress === 'number' ? p.progress : 0
+            ),
           }));
         }
         if (data?.type === 'error') {
@@ -319,6 +322,16 @@ export function TimerActionBar() {
         invokeMsMax = Math.max(invokeMsMax, dt);
         framesSent += batch.length;
         batch = [];
+
+        // 프레임 추출 진행률 업데이트
+        setExportState((prev) => ({
+          ...prev,
+          writtenFrames: framesSent,
+          percent: Math.max(
+            prev.percent,
+            totalFrames > 0 ? (framesSent / totalFrames) * 100 : 0
+          ),
+        }));
       };
 
       {
@@ -388,46 +401,42 @@ export function TimerActionBar() {
       // Check if we need to merge with audio
       let finalOutputPath = videoOutputPath;
 
-      if (audioRenderer) {
-        const audioTracks = audioRenderer.getExportAudioTracks();
+      // 오디오 클립 + 비디오 클립의 오디오 모두 수집
+      const audioClipTracks = audioRenderer
+        ? audioRenderer.getExportAudioTracks()
+        : [];
+      const videoAudioTracks = renderer.getExportVideoAudioTracks();
+      const allAudioTracks = [...audioClipTracks, ...videoAudioTracks];
 
-        if (audioTracks.length > 0) {
-          console.log(
-            `[export][renderer] Merging ${audioTracks.length} audio tracks with video...`
-          );
+      if (allAudioTracks.length > 0) {
+        console.log(
+          `[export][renderer] Merging audio: ${audioClipTracks.length} audio clips + ${videoAudioTracks.length} video audio tracks`
+        );
 
-          try {
-            const mergeResult = await window.app.invoke(
-              'export:mergeWithAudio',
-              {
-                videoPath: videoOutputPath,
-                audioTracks,
-                totalDurationSec: settings.duration / 1000,
-                sampleRate: settings.sampleRate || 48000,
-              }
-            );
+        try {
+          const mergeResult = await window.app.invoke('export:mergeWithAudio', {
+            videoPath: videoOutputPath,
+            audioTracks: allAudioTracks,
+            totalDurationSec: settings.duration / 1000,
+            sampleRate: settings.sampleRate || 48000,
+          });
 
-            finalOutputPath = mergeResult.outputPath;
-            console.log(`[export][renderer] Final output: ${finalOutputPath}`);
-          } catch (mergeErr) {
-            console.error('[export][renderer] Merge failed:', mergeErr);
-            setExportState((prev) => ({
-              ...prev,
-              isExporting: false,
-              error:
-                'Video exported but audio merge failed: ' +
-                (mergeErr instanceof Error
-                  ? mergeErr.message
-                  : String(mergeErr)),
-            }));
-            return;
-          }
-        } else {
-          console.log('[export][renderer] No audio tracks, video-only export');
+          finalOutputPath = mergeResult.outputPath;
+          console.log(`[export][renderer] Final output: ${finalOutputPath}`);
+        } catch (mergeErr) {
+          console.error('[export][renderer] Merge failed:', mergeErr);
+          setExportState((prev) => ({
+            ...prev,
+            isExporting: false,
+            error:
+              'Video exported but audio merge failed: ' +
+              (mergeErr instanceof Error ? mergeErr.message : String(mergeErr)),
+          }));
+          return;
         }
       } else {
         console.log(
-          '[export][renderer] AudioRenderer not available, video-only export'
+          '[export][renderer] No audio tracks (clips or video), video-only export'
         );
       }
 
@@ -451,12 +460,12 @@ export function TimerActionBar() {
   };
 
   const handleExportAudio = async () => {
-    if (!audioRenderer) {
+    if (!audioRenderer && !renderer) {
       setAudioExportState({
         isExporting: false,
         percent: 0,
         outputPath: '',
-        error: 'AudioRenderer is not initialized',
+        error: 'Renderers are not initialized',
       });
       return;
     }
@@ -469,24 +478,32 @@ export function TimerActionBar() {
         error: null,
       });
 
-      // AudioRenderer에서 오디오 트랙 정보 수집
-      const audioTracks = audioRenderer.getExportAudioTracks();
+      // AudioRenderer 오디오 클립 + GraphicRenderer 비디오 오디오 수집
+      const audioClipTracks = audioRenderer
+        ? audioRenderer.getExportAudioTracks()
+        : [];
+      const videoAudioTracks = renderer
+        ? renderer.getExportVideoAudioTracks()
+        : [];
+      const allAudioTracks = [...audioClipTracks, ...videoAudioTracks];
 
-      if (audioTracks.length === 0) {
+      if (allAudioTracks.length === 0) {
         setAudioExportState({
           isExporting: false,
           percent: 0,
           outputPath: '',
-          error: 'No audio clips found',
+          error: 'No audio clips found (audio clips or video audio)',
         });
         return;
       }
 
-      console.log('[Audio Export] Collected audio tracks:', audioTracks);
+      console.log(
+        `[Audio Export] Collected ${audioClipTracks.length} audio clips + ${videoAudioTracks.length} video audio tracks`
+      );
 
       // Main 프로세스로 오디오 내보내기 요청
       const result = await window.app.invoke('export:audio', {
-        tracks: audioTracks,
+        tracks: allAudioTracks,
         totalDurationSec: settings.duration / 1000,
         sampleRate: settings.sampleRate || 48000,
       });

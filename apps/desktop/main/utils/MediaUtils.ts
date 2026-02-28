@@ -327,10 +327,11 @@ export class MediaUtils {
 
     const metadata: IMediaAssetMetadata = {
       size: data.format.size ?? 0,
-      durationMs,
+      durationMs: durationMs ?? 0,
       createdAt: MediaUtils.getCreatedTime(data),
       width: 0,
       height: 0,
+      hasAudio: !!audioStream,
     };
 
     // video / image / animated-image 공통 (video stream 기준)

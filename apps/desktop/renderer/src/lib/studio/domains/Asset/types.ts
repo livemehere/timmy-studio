@@ -13,6 +13,8 @@ export interface IMediaAssetMetadata extends IBaseAssetMetadata {
   height: number;
   frameRate?: number;
   codec?: string;
+  /** 오디오 스트림 존재 여부 (ffprobe 검출) */
+  hasAudio?: boolean;
 }
 
 export interface IBaseAsset {
