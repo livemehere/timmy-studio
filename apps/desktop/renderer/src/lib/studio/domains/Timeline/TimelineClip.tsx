@@ -32,6 +32,7 @@ import { ClipContent } from './components/ClipContent';
 import { ClipResizeHandles } from './components/ClipResizeHandles';
 import { useEffect } from 'react';
 import { selectClipById, selectTrackById } from '../../stores/docStore';
+import type { IVideoAsset } from '../Asset/types';
 import { registerClipMotion, unregisterClipMotion } from './clipMotionRegistry';
 
 export function TimelineClip({
@@ -108,6 +109,16 @@ export function TimelineClip({
 
   const isLoaded = syncedClipIds.includes(clipId);
   const isFailed = failedClipIds.includes(clipId);
+
+  // Proxy readiness for video clips
+  const assetId = 'assetId' in clip ? (clip as any).assetId : undefined;
+  const isProxyReady = useDocStore((state) => {
+    if (clip.type !== 'video' || !assetId) return undefined;
+    const asset = state.assets.find((a) => a.id === assetId) as
+      | IVideoAsset
+      | undefined;
+    return asset?.isProxyReady ?? false;
+  });
 
   const isSelected = useInteractionStore((state) =>
     state.selectedClipIds.includes(clip.id)
@@ -197,6 +208,7 @@ export function TimelineClip({
               clip={clip}
               isLoaded={isLoaded}
               isFailed={isFailed}
+              isProxyReady={isProxyReady}
               displayStartTime={displayStartTime}
               displayEndTime={displayEndTime}
               displayTrimStart={displayTrimStart}

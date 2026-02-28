@@ -59,8 +59,7 @@ export class Asset {
     switch (asset.type) {
       case 'video':
         return {
-          isReady:
-            !isError && Boolean(asset.isProxyReady && asset.thumbnailPath),
+          isReady: !isError && Boolean(asset.thumbnailPath),
           trackType: 'graphic',
           isError,
         };

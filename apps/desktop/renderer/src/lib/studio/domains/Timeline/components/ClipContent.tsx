@@ -8,6 +8,7 @@ export function ClipContent({
   clip,
   isLoaded,
   isFailed,
+  isProxyReady,
   displayStartTime,
   displayEndTime,
   displayTrimStart,
@@ -16,6 +17,7 @@ export function ClipContent({
   clip: IClip;
   isLoaded: boolean;
   isFailed: boolean;
+  isProxyReady?: boolean; // undefined = not a video clip
   displayStartTime: number;
   displayEndTime: number;
   displayTrimStart: number;
@@ -32,6 +34,7 @@ export function ClipContent({
       {/* Header */}
       <div className="flex items-center gap-1 px-2 py-0.5 bg-black/20">
         <span className="text-[10px] truncate flex-1">{clip.name}</span>
+        {isProxyReady !== undefined && <ProxyBadge ready={isProxyReady} />}
         <StatusLight isLoaded={isLoaded} isFailed={isFailed} />
       </div>
 
@@ -80,4 +83,27 @@ function StatusLight({
   }
 
   return null;
+}
+
+/** Proxy 상태 뱃지 — 준비 완료 시 ⚡, 처리 중 시 깜박이는 텍스트 뱃지 */
+function ProxyBadge({ ready }: { ready: boolean }) {
+  if (ready) {
+    return (
+      <span
+        className="shrink-0 text-[8px] leading-none px-1 py-px rounded bg-cyan-500/30 text-cyan-300 font-medium"
+        title="Proxy ready"
+      >
+        ⚡
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="shrink-0 text-[8px] leading-none px-1 py-px rounded bg-orange-500/25 text-orange-300/80 font-medium animate-pulse"
+      title="Proxy encoding…"
+    >
+      ⏳
+    </span>
+  );
 }

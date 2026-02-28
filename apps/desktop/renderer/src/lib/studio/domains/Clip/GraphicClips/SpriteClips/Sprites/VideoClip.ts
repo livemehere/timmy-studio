@@ -6,6 +6,9 @@ import type { SeekingRenderMode, TickContext } from '@/lib/studio/engine/types';
 import { toFilePath } from '@/lib/studio/utils/toFilePath';
 import type { IVideoAsset } from '../../../../Asset/types';
 
+/** Debounce delay for backward seeks on origin (no proxy) */
+const BACKWARD_SEEK_DEBOUNCE_MS = 300;
+
 export class VideoClip extends SpriteClip {
   readonly type = 'video';
   declare protected _data: IVideoClip;
@@ -19,6 +22,13 @@ export class VideoClip extends SpriteClip {
   private pendingProxySwap = false;
   private pendingOriginSwap = false;
   private _wasVisible = false;
+
+  // Backward seek debounce state (used when no proxy)
+  private _backwardDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private _lastSeekTime = -1;
+
+  // Lazy proxy hot-swap state
+  private _proxyInitAttempted = false;
 
   // VideoClip은 항상 origin 기준으로 contentSize 반환 (proxy는 해상도가 낮음)
   protected override getContentSize(): { width: number; height: number } {
@@ -83,6 +93,7 @@ export class VideoClip extends SpriteClip {
 
   destroy(): void {
     this.debugCall('(Video) destroy');
+    this._clearBackwardDebounce();
     if (this.originEl) {
       this.cleanupVideoElement(this.originEl);
       this.originEl = null;
@@ -158,6 +169,8 @@ export class VideoClip extends SpriteClip {
     const mode = this.decideSeekingMode();
 
     if (mode === 'proxy') {
+      // Proxy available — fast path
+      this._clearBackwardDebounce();
       if (this.isUsingProxy) {
         this.seekWithDirty(this.proxyEl!, clipRelativeTime);
       } else {
@@ -166,19 +179,38 @@ export class VideoClip extends SpriteClip {
         this.requestSwapToProxyWithDirty();
       }
     } else {
-      // === origin 모드 ===
+      // === origin 모드 (no proxy or export) ===
       this.cancelPendingSwaps('proxy');
-      // origin 을 사용 중이지 않으면 스왑 요청 & seek
+
       if (this.isUsingProxy && !this.pendingOriginSwap) {
         this.requestSwapToOrigin({ targetTime: clipRelativeTime });
-      } else {
-        // origin 을 사용 중이면 바로 seek
-        this.seekWithDirty(this.originEl!, clipRelativeTime);
+        return;
       }
+
+      // Direction-based strategy when seeking on origin (editing mode, no proxy yet)
+      if (this.renderer.seekingRenderMode === 'proxy' && !this.proxyEl) {
+        // No proxy available — use direction heuristic
+        const isBackward = clipRelativeTime < this._lastSeekTime;
+        this._lastSeekTime = clipRelativeTime;
+
+        if (isBackward) {
+          // Backward = random access, debounce
+          this._scheduleBackwardSeek(clipRelativeTime);
+          return;
+        }
+        // Forward = sequential decode, proceed normally
+        this._clearBackwardDebounce();
+      }
+
+      this.seekWithDirty(this.originEl!, clipRelativeTime);
     }
   }
 
   private decideSeekingMode(): SeekingRenderMode {
+    // Try lazy hot-swap if proxy not yet initialized
+    if (!this.proxyEl && !this._proxyInitAttempted) {
+      this._tryLazyProxyInit();
+    }
     const canUseProxy = !!this.proxyEl;
     return canUseProxy && this.renderer.seekingRenderMode === 'proxy'
       ? 'proxy'
@@ -351,5 +383,72 @@ export class VideoClip extends SpriteClip {
     video.removeAttribute('src');
     video.src = '';
     video.load();
+  }
+
+  // ── Backward seek debounce ──
+
+  private _scheduleBackwardSeek(targetTime: number): void {
+    this._clearBackwardDebounce();
+    this._backwardDebounceTimer = setTimeout(() => {
+      this._backwardDebounceTimer = null;
+      this.seekWithDirty(this.originEl!, targetTime);
+    }, BACKWARD_SEEK_DEBOUNCE_MS);
+  }
+
+  private _clearBackwardDebounce(): void {
+    if (this._backwardDebounceTimer !== null) {
+      clearTimeout(this._backwardDebounceTimer);
+      this._backwardDebounceTimer = null;
+    }
+  }
+
+  // ── Lazy proxy hot-swap ──
+
+  /**
+   * Check if the proxy file has become ready since init.
+   * Called lazily on each seek decision.
+   * Uses a flag (_proxyInitAttempted) so we only try once per "not ready" cycle.
+   * Resets if the asset updates with isProxyReady=true.
+   */
+  private _tryLazyProxyInit(): void {
+    const asset = this.renderer
+      .getDoc()
+      .assets.find((a) => a.id === this._data.assetId) as
+      | IVideoAsset
+      | undefined;
+
+    if (!asset || !asset.isProxyReady || !asset.proxyFilePath) {
+      // Not ready yet — don't keep retrying every tick
+      this._proxyInitAttempted = true;
+      return;
+    }
+
+    this.debugCall('(Video) lazy proxy init — proxy became ready');
+    this._proxyInitAttempted = true;
+
+    // Fire-and-forget async init
+    this.createProxyVideoElement(asset)
+      .then((proxyEl) => {
+        if (!proxyEl) return;
+        this.proxyEl = proxyEl;
+        this.proxyEl.pause();
+        this.proxyEl.currentTime = this.originEl?.currentTime ?? 0;
+        this.proxyVideoSource = new VideoSource({
+          resource: this.proxyEl,
+          autoPlay: false,
+        });
+        this.debugCall('(Video) proxy hot-swap ready — will use on next seek');
+      })
+      .catch((err) => {
+        console.warn(`[VideoClip] Lazy proxy init failed for ${this.id}`, err);
+      });
+  }
+
+  /**
+   * Called externally (e.g. from AssetUpdater) to notify that the asset has been
+   * updated. Resets the lazy-init flag so we try again on the next seek.
+   */
+  notifyAssetUpdated(): void {
+    this._proxyInitAttempted = false;
   }
 }
