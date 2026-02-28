@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Empty } from '../Properties/Empty';
 import { Properties } from '../Properties/Properties';
+import { QuickActions } from '../Properties/QuickActions';
 import { useInteractionStore, useDocStore } from '../../hooks/useStudioStores';
 import { GradientScroll } from '@/components/GradientScroll';
 import { Track } from '../../domains/Track/Track';
@@ -54,6 +55,9 @@ export function PropertiesPanel() {
           )}
         </ErrorBoundary>
       </div>
+
+      {/* 멀티 선택 시 편의 기능 */}
+      <QuickActions />
     </div>
   );
 }
