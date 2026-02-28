@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "main": "dist/main.js",
   "author": "livemehere",
-  "description": "Desktop app with useful utilities",
+  "description": "Timmy Studio desktop video editor",
   "scripts": {
     "dev": "pnpm electron-dev",
     "preview": "pnpm electron-preview",

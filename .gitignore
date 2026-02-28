@@ -34,6 +34,20 @@ Thumbs.db
 *.swo
 *~
 
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local AI/editor agents
+.claude/
+.agents/
+.codex/
+
 # Temporary files
 tmp/
 temp/
@@ -46,7 +60,7 @@ temp/
 .pnpm-lock.yaml.bak
 
 
-.idea
+.idea/
 
 # 실제 I/O 테스트를 위한 데이터
 test-data/

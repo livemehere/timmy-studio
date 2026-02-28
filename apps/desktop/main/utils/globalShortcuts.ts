@@ -1,12 +1,17 @@
 import { ipc } from '@timmy-studio/electron-utils/ipc/main';
-import { globalShortcut } from 'electron';
+import { app, globalShortcut } from 'electron';
+import path from 'node:path';
+
 export function registerGlobalShortcuts(win: Electron.BrowserWindow) {
-  // temp for testing
+  // Sample shortcut for quickly checking the asset update flow during development.
   globalShortcut.register('Command+F1', () => {
+    const sampleVideoPath = path.join(app.getPath('videos'), 'sample.mp4');
+    const cachePath = path.join(app.getPath('userData'), 'contents-cache');
+
     ipc.send(win.webContents, 'asset:update', {
-      id: '8c6d7370',
-      name: 'good-2.mp4',
-      filePath: '/path/to/sample-media.mp4',
+      id: 'sample-video',
+      name: 'sample.mp4',
+      filePath: sampleVideoPath,
       metadata: {
         size: 11871672,
         durationMs: 35169,
@@ -17,10 +22,8 @@ export function registerGlobalShortcuts(win: Electron.BrowserWindow) {
         frameRate: 29.97002997002997,
       },
       type: 'video',
-      thumbnailPath:
-        '/path/to/sample-media.jpg',
-      proxyFilePath:
-        '/path/to/sample-media.mp4',
+      thumbnailPath: path.join(cachePath, 'thumbnails', 'thumbnail.sample.jpg'),
+      proxyFilePath: path.join(cachePath, 'proxies', 'proxy.sample.mp4'),
       isProxyReady: true,
     });
   });

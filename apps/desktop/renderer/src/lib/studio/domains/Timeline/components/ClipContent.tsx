@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
 import type { IClip } from '../../Clip/types';
 import type { IFilmstripData } from '../../Asset/types';
+import type { WaveformData } from '@/lib/studio/engine/waveformCache';
 import { FilmstripBackground } from './FilmstripBackground';
+import { WaveformBackground } from './WaveformBackground';
 
 /**
  * 배경 없음 순수 콘텐츠만 렌더링
@@ -18,6 +20,8 @@ export function ClipContent({
   displayTrimEnd,
   pxPerSec,
   filmstripData,
+  waveformData,
+  isWaveformLoading,
 }: {
   clip: IClip;
   isLoaded: boolean;
@@ -34,6 +38,8 @@ export function ClipContent({
   displayTrimEnd: number;
   pxPerSec?: number;
   filmstripData?: IFilmstripData;
+  waveformData?: WaveformData | null;
+  isWaveformLoading?: boolean;
 }) {
   const durationSec = useMemo(
     () => ((displayEndTime - displayStartTime) / 1000).toFixed(2),
@@ -52,6 +58,12 @@ export function ClipContent({
   // 비디오 클립인데 필름스트립이 아직 없으면 로딩 중
   const isFilmstripLoading = clip.type === 'video' && !filmstripData;
 
+  // 오디오 파형 표시 여부
+  const hasWaveform =
+    clip.type === 'audio' && waveformData && pxPerSec && clipWidthPx > 0;
+
+  const hasBackground = hasFilmstrip || hasWaveform;
+
   return (
     <div className="relative flex flex-col h-full pointer-events-none select-none">
       {/* Filmstrip background layer (video clips only) */}
@@ -64,12 +76,23 @@ export function ClipContent({
         />
       )}
 
+      {/* Waveform background layer (audio clips only) */}
+      {hasWaveform && (
+        <WaveformBackground
+          waveformData={waveformData}
+          trimStart={displayTrimStart}
+          pxPerSec={pxPerSec}
+          clipWidthPx={clipWidthPx}
+        />
+      )}
+
       {/* Header */}
       <div
-        className={`relative z-10 flex items-center gap-1 px-2 py-0.5 ${hasFilmstrip ? 'bg-black/40' : 'bg-black/20'}`}
+        className={`relative z-10 flex items-center gap-1 px-2 py-0.5 ${hasBackground ? 'bg-black/40' : 'bg-black/20'}`}
       >
         <span className="text-[10px] truncate flex-1">{clip.name}</span>
         {isFilmstripLoading && <FilmstripLoadingBadge />}
+        {isWaveformLoading && <WaveformLoadingBadge />}
         {poolInfo && <PoolBadge poolInfo={poolInfo} />}
         {isProxyReady !== undefined && <ProxyBadge ready={isProxyReady} />}
         <StatusLight isLoaded={isLoaded} isFailed={isFailed} />
@@ -79,7 +102,7 @@ export function ClipContent({
       <div className="relative z-10 flex-1 px-2 py-0.5 flex items-end justify-between">
         {/* Duration */}
         <span
-          className={`text-[10px] truncate ${hasFilmstrip ? 'text-white/80 drop-shadow-sm' : 'text-white/60'}`}
+          className={`text-[10px] truncate ${hasBackground ? 'text-white/80 drop-shadow-sm' : 'text-white/60'}`}
         >
           {durationSec}s
         </span>
@@ -87,7 +110,7 @@ export function ClipContent({
         {/* trim */}
         {isTrimmed && (
           <span
-            className={`text-[9px] font-mono ${hasFilmstrip ? 'text-yellow-300/90 drop-shadow-sm' : 'text-yellow-400/70'}`}
+            className={`text-[9px] font-mono ${hasBackground ? 'text-yellow-300/90 drop-shadow-sm' : 'text-yellow-400/70'}`}
           >
             {(displayTrimStart / 1000).toFixed(2)}-
             {(displayTrimEnd / 1000).toFixed(2)}
@@ -178,6 +201,18 @@ function FilmstripLoadingBadge() {
       title="Generating filmstrip…"
     >
       🎞
+    </span>
+  );
+}
+
+/** 파형 생성 중 뱃지 */
+function WaveformLoadingBadge() {
+  return (
+    <span
+      className="shrink-0 text-[8px] leading-none px-1 py-px rounded bg-green-500/25 text-green-300/80 font-medium animate-pulse"
+      title="Generating waveform…"
+    >
+      🔊
     </span>
   );
 }

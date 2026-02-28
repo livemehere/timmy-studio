@@ -37,6 +37,7 @@ import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { selectClipById, selectTrackById } from '../../stores/docStore';
 import type { IVideoAsset } from '../Asset/types';
 import { registerClipMotion, unregisterClipMotion } from './clipMotionRegistry';
+import { useWaveform } from './hooks/useWaveform';
 
 export function TimelineClip({
   clipId,
@@ -131,6 +132,17 @@ export function TimelineClip({
       | undefined;
     return asset?.filmstripData;
   });
+
+  // Waveform data for audio clips
+  const audioFilePath = useDocStore((state) => {
+    if (clip.type !== 'audio' || !assetId) return undefined;
+    const asset = state.assets.find((a) => a.id === assetId);
+    return asset && 'filePath' in asset ? asset.filePath : undefined;
+  });
+  const { waveformData, isLoading: isWaveformLoading } = useWaveform(
+    clip.type === 'audio' ? assetId : undefined,
+    audioFilePath
+  );
 
   // Video pool info — reactive via useSyncExternalStore
   const renderer = useEngineStore((state) => state.renderer);
@@ -261,6 +273,8 @@ export function TimelineClip({
               displayTrimEnd={displayTrimEnd}
               pxPerSec={pxPerSec}
               filmstripData={filmstripData}
+              waveformData={waveformData}
+              isWaveformLoading={isWaveformLoading}
             />
             <ClipResizeHandles />
           </motion.div>

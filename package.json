@@ -1,10 +1,17 @@
 {
   "name": "timmy-studio",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
+  "description": "Electron-based desktop video editor",
   "author": "livemehere",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/livemehere/timmy-studio.git"
+  },
+  "engines": {
+    "node": ">=22"
+  },
   "packageManager": "pnpm@10.18.1",
   "scripts": {
     "dev": "turbo run dev",

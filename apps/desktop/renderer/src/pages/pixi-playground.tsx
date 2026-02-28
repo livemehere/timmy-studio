@@ -312,7 +312,7 @@ export default function PixiPlaygroundPage() {
     ];
     getApp().stage.addChild(adjustmentSprite);
 
-    const imgUrl = `/path/path/to/sample-media.png`;
+    const imgUrl = '/path/to/sample-image.png';
 
     const item = new Item();
     await item.load(imgUrl);
@@ -469,7 +469,7 @@ export default function PixiPlaygroundPage() {
     //
     // world.addChild(rect);
     //
-    // // 모자이크 처리: sample-image 이미지의 특정 영역에만 적용
+    // // 모자이크 처리: 샘플 이미지의 특정 영역에만 적용
     // const mosaicArea = new PIXI.Container();
     //
     // // 원본 이미지와 동일한 위치에 배치
@@ -521,12 +521,10 @@ export default function PixiPlaygroundPage() {
     // dom.y = 300;
     // world.addChild(dom);
 
-    await PIXI.Assets.load('/path/path/to/sample-media.svg');
+    await PIXI.Assets.load('/path/to/sample-logo.svg');
 
     // gap이 있는 타일 패턴 만들기
-    const logoTexture = PIXI.Texture.from(
-      '/path/path/to/sample-media.svg'
-    );
+    const logoTexture = PIXI.Texture.from('/path/to/sample-logo.svg');
 
     const tileSize = 150; // 로고 크기
     const gap = 150; // 타일 사이 간격
@@ -566,7 +564,7 @@ export default function PixiPlaygroundPage() {
   };
 
   const swapTexture = async () => {
-    const imgUrl = `/path/path/to/sample-media.jpeg`;
+    const imgUrl = '/path/to/alternate-image.jpg';
     await itemRef.current!.load(imgUrl);
 
     // 크기 조정
