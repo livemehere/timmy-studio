@@ -68,9 +68,8 @@ export function hitTestClips(
       if (!clip.enabled) continue;
 
       // 현재 시간에 보이는 클립인지 체크
-      const clipStartMs = clip.startTime * 1000;
-      const clipEndMs = clip.endTime * 1000;
-      if (currentTimeMs < clipStartMs || currentTimeMs >= clipEndMs) continue;
+      if (currentTimeMs < clip.startTime || currentTimeMs >= clip.endTime)
+        continue;
 
       // hitTest
       if (isPointInClip(canvasX, canvasY, clip.transforms)) {
