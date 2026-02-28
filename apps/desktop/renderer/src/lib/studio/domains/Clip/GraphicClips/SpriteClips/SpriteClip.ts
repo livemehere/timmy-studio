@@ -54,14 +54,14 @@ export abstract class SpriteClip extends GraphicClip {
     });
   }
 
-  protected getContentSize(): { width: number; height: number } {
+  public getContentSize(): { width: number; height: number } {
     const texture = this.sprite.texture;
     const width = texture?.orig?.width || texture?.width || 0;
     const height = texture?.orig?.height || texture?.height || 0;
     return { width, height };
   }
 
-  protected shouldApplyBaseScale(): boolean {
+  public shouldApplyBaseScale(): boolean {
     return true;
   }
 

@@ -72,10 +72,10 @@ export abstract class GraphicClip extends Clip<IGraphicClip, GraphicRenderer> {
     // 애니메이션/트랜지션이 필요할 때만 여기서 처리
   }
 
-  // 각 Clip 유형별로 콘텐츠 크기 반환
-  protected abstract getContentSize(): { width: number; height: number };
+  // 각 Clip 유형별로 콘텐츠 크기 반환 (TransformOverlay 에서도 사용)
+  public abstract getContentSize(): { width: number; height: number };
   // 기본 scale 계산 여부 (TextClip은 false)
-  protected abstract shouldApplyBaseScale(): boolean;
+  public abstract shouldApplyBaseScale(): boolean;
 
   /** 🔥 실시간 미리보기용 - store 거치지 않고 직접 transform 적용 */
   public applyTransform(transforms: ITransform): void {

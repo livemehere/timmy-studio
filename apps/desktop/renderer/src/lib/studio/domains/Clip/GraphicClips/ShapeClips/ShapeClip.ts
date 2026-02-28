@@ -9,7 +9,7 @@ export class ShapeClip extends GraphicClip {
 
   private graphics: Graphics | null = null;
 
-  protected getContentSize(): { width: number; height: number } {
+  public getContentSize(): { width: number; height: number } {
     const width = this._data.shapeData.width;
     const height = this._data.shapeData.height;
     return { width, height };
@@ -43,7 +43,7 @@ export class ShapeClip extends GraphicClip {
     super.destroy();
   }
 
-  protected shouldApplyBaseScale(): boolean {
+  public shouldApplyBaseScale(): boolean {
     return true;
   }
 

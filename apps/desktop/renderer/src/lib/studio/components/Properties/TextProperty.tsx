@@ -95,6 +95,7 @@ export function TextProperty({
       <TextField
         label="Font Family"
         defaultValue={local.fontFamily}
+        onChange={(value) => handleChange({ fontFamily: value })}
         onCommit={(value) => handleChange({ fontFamily: value })}
       />
 
@@ -373,17 +374,6 @@ export function TextProperty({
               }
               min={0}
               max={20}
-            />
-            <NumberField
-              label="Radius"
-              value={local.border.radius ?? 0}
-              onChange={(value) =>
-                handleChange({
-                  border: { ...local.border!, radius: value },
-                })
-              }
-              min={0}
-              max={50}
             />
           </>
         )}

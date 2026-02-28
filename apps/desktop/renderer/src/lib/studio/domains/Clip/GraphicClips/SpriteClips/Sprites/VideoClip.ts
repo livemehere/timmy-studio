@@ -51,7 +51,7 @@ export class VideoClip extends SpriteClip {
   private _proxyInitAttempted = false;
 
   // VideoClip은 항상 origin 기준으로 contentSize 반환 (proxy는 해상도가 낮음)
-  protected override getContentSize(): { width: number; height: number } {
+  public override getContentSize(): { width: number; height: number } {
     const el = this.originEl;
     if (!el) return { width: 0, height: 0 };
     return {

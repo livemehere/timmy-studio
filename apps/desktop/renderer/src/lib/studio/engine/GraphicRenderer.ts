@@ -299,7 +299,7 @@ export class GraphicRenderer extends RendererBase {
     });
   }
 
-  private renderOnce(): void {
+  public renderOnce(): void {
     if (!this._isInitialized) return;
 
     const ctx = this.captureTickContextFromState(

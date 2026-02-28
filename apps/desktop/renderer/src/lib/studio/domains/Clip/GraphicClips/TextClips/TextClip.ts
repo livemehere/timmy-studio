@@ -13,7 +13,7 @@ export class TextClip extends GraphicClip {
   private selectionBounds: Graphics | null = null; // 선택 영역 표시용
   private underline: Graphics | null = null; // 언더라인 표시용
 
-  protected getContentSize(): { width: number; height: number } {
+  public getContentSize(): { width: number; height: number } {
     const width = this.text?.width ?? 0;
     const height = this.text?.height ?? 0;
     return { width, height };
@@ -55,6 +55,7 @@ export class TextClip extends GraphicClip {
   protected applyData(): void {
     this.debugCall('applyData');
     this.updateContent();
+    this.syncTransformsSize();
     this.updateSelectionBounds();
   }
 
@@ -65,10 +66,33 @@ export class TextClip extends GraphicClip {
   applyTextPreview(textData: ITextData): void {
     this._data = { ...this._data, textData };
     this.updateContent();
+    this.syncTransformsSize();
     this.applyTransform(this._data.transforms);
+    // 즉시 렌더링하여 프리뷰 반영 (auto-render tick 대기 없이)
+    this.renderer.renderOnce();
   }
 
-  protected shouldApplyBaseScale(): boolean {
+  /**
+   * 텍스트 렌더 후 실제 Pixi 텍스트 크기를 transforms.size 에 반영.
+   * TransformOverlay 가 size × scale 로 박스를 그리기 때문에
+   * 항상 실제 텍스트 크기와 일치해야 한다.
+   */
+  private syncTransformsSize(): void {
+    if (!this.text) return;
+    const w = this.text.width;
+    const h = this.text.height;
+    if (w > 0 && h > 0) {
+      this._data = {
+        ...this._data,
+        transforms: {
+          ...this._data.transforms,
+          size: { width: w, height: h },
+        },
+      };
+    }
+  }
+
+  public shouldApplyBaseScale(): boolean {
     return false; // TextClip은 userScale만 사용
   }
 
@@ -151,14 +175,13 @@ export class TextClip extends GraphicClip {
     this.text.style.lineHeight =
       (this._data.textData.lineHeight ?? 1) * fontSize;
 
-    if (this._data.textData.border) {
+    if (this._data.textData.border && this._data.textData.border.width > 0) {
       this.text.style.stroke = {
         color: this._data.textData.border.color,
         width: this._data.textData.border.width,
       };
     } else {
-      // @ts-ignore - stroke type issue workaround
-      this.text.style.stroke = undefined;
+      (this.text.style as any).stroke = null;
     }
 
     if (this._data.textData.shadow) {
@@ -173,7 +196,7 @@ export class TextClip extends GraphicClip {
         alpha: shadow.alpha ?? 1,
       };
     } else {
-      this.text.style.dropShadow = false;
+      (this.text.style as any).dropShadow = null;
     }
 
     // Update Background
@@ -264,20 +287,27 @@ export class TextClip extends GraphicClip {
       const anchorX = this.text.anchor.x;
       const anchorY = this.text.anchor.y;
 
-      // Calculate underline position (2 pixels below baseline)
-      const underlineY = fontSize * 0.15;
-      const underlineHeight = fontSize * 0.05;
+      // 멀티라인 지원: 각 줄 별로 underline 그리기
+      const lines = this._data.textData.content.split('\n');
+      const lineCount = lines.length;
+      const lineHeightMul = this._data.textData.lineHeight ?? 1;
+      const lineHeight = lineHeightMul * fontSize;
+      const underlineThickness = Math.max(1, fontSize * 0.05);
 
-      this.underline.moveTo(
-        -(textWidth * anchorX),
-        underlineY - textHeight * anchorY
-      );
-      this.underline.lineTo(
-        textWidth - textWidth * anchorX,
-        underlineY - textHeight * anchorY
-      );
+      const startX = -(textWidth * anchorX);
+      const endX = textWidth - textWidth * anchorX;
+
+      for (let i = 0; i < lineCount; i++) {
+        // baseline ≈ lineTop + fontSize * 0.85 (ascent + 약간의 offset)
+        const lineTopY = i * lineHeight;
+        const underlineY = lineTopY + fontSize * 0.85 - textHeight * anchorY;
+
+        this.underline.moveTo(startX, underlineY);
+        this.underline.lineTo(endX, underlineY);
+      }
+
       this.underline.stroke({
-        width: underlineHeight,
+        width: underlineThickness,
         color: this._data.textData.color,
       });
     } else {

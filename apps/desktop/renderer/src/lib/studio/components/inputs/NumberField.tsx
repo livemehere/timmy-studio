@@ -2,7 +2,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 interface NumberFieldProps {
   label: string;
@@ -31,6 +31,8 @@ export function NumberField({
   // 로컬 상태 - 드래그 중 UI 업데이트
   const [localValue, setLocalValue] = useState<number | null>(null);
   const isDraggingRef = useRef(false);
+  const rafRef = useRef<number | null>(null);
+  const pendingValueRef = useRef<number | null>(null);
 
   // 외부 value가 변경되면 로컬 상태 리셋
   useEffect(() => {
@@ -38,6 +40,33 @@ export function NumberField({
       setLocalValue(null);
     }
   }, [value]);
+
+  // cleanup rAF on unmount
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
+  // rAF throttle: 프레임당 1회만 onChange 호출
+  const scheduleChange = useCallback(
+    (v: number) => {
+      pendingValueRef.current = v;
+      if (rafRef.current) return; // 이미 예약됨
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null;
+        const val = pendingValueRef.current;
+        if (val !== null) {
+          if (onLiveChange) {
+            onLiveChange(val);
+          } else {
+            onChange(val);
+          }
+        }
+      });
+    },
+    [onChange, onLiveChange]
+  );
 
   // 표시할 값: 드래그 중이면 로컬 값, 아니면 store 값
   const displayValue = localValue ?? value;
@@ -76,8 +105,8 @@ export function NumberField({
             onValueChange={([v]) => {
               isDraggingRef.current = true;
               setLocalValue(v);
-              // 🔥 드래그 중 실시간 미리보기 (store 안 거침)
-              onLiveChange?.(v);
+              // 🔥 rAF throttle — 프레임당 1회만 엔진 업데이트
+              scheduleChange(v);
             }}
             onValueCommit={([v]) => {
               // 🔥 드래그 끝날 때 store에 커밋

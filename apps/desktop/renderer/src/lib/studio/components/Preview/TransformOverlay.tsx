@@ -48,6 +48,9 @@ export function TransformOverlay({
     startMouseX: number;
     startMouseY: number;
     startTransforms: ITransform;
+    /** 드래그 시작 시점의 실제 표시 크기 (TextClip은 content size) */
+    startDisplayWidth: number;
+    startDisplayHeight: number;
     trackId: string;
     clipId: string;
   } | null>(null);
@@ -98,11 +101,27 @@ export function TransformOverlay({
       const startMouseX = e.clientX - containerRect.left;
       const startMouseY = e.clientY - containerRect.top;
 
+      // TextClip 등 content 기반 크기의 클립은 실제 contentSize 사용
+      let sdw = clipInfo.clip.transforms.size.width;
+      let sdh = clipInfo.clip.transforms.size.height;
+      if (clipInfo.clip.type === 'text' && renderer) {
+        const inst = renderer.findClipInstance(clipInfo.clip.id);
+        if (inst && !inst.shouldApplyBaseScale()) {
+          const cs = inst.getContentSize();
+          if (cs.width > 0 && cs.height > 0) {
+            sdw = cs.width;
+            sdh = cs.height;
+          }
+        }
+      }
+
       dragStartRef.current = {
         handleType,
         startMouseX,
         startMouseY,
         startTransforms: JSON.parse(JSON.stringify(clipInfo.clip.transforms)),
+        startDisplayWidth: sdw,
+        startDisplayHeight: sdh,
         trackId: clipInfo.trackId,
         clipId: clipInfo.clip.id,
       };
@@ -248,10 +267,13 @@ export function TransformOverlay({
         case 'rotate': {
           const centerX =
             startTransforms.position.x +
-            (startTransforms.size.width * startTransforms.scaleX) / 2;
+            (dragStartRef.current!.startDisplayWidth * startTransforms.scaleX) /
+              2;
           const centerY =
             startTransforms.position.y +
-            (startTransforms.size.height * startTransforms.scaleY) / 2;
+            (dragStartRef.current!.startDisplayHeight *
+              startTransforms.scaleY) /
+              2;
 
           const mouseCanvas = DOMToCanvas(
             currentMouseX,
@@ -307,9 +329,26 @@ export function TransformOverlay({
   const { scale, offset } = scaleInfo;
 
   // 바운딩 박스 계산
+  // TextClip 은 shouldApplyBaseScale=false 이므로
+  // 실제 렌더 크기 = contentSize × userScale (transforms.size 무시).
+  // 엔진 clip 인스턴스에서 실제 content 크기를 가져온다.
   const { position, size, scaleX, scaleY, rotation } = transforms;
-  const actualWidth = size.width * scaleX;
-  const actualHeight = size.height * scaleY;
+  let displayWidth = size.width;
+  let displayHeight = size.height;
+
+  if (graphicClip.type === 'text' && renderer) {
+    const clipInstance = renderer.findClipInstance(graphicClip.id);
+    if (clipInstance && !clipInstance.shouldApplyBaseScale()) {
+      const cs = clipInstance.getContentSize();
+      if (cs.width > 0 && cs.height > 0) {
+        displayWidth = cs.width;
+        displayHeight = cs.height;
+      }
+    }
+  }
+
+  const actualWidth = displayWidth * scaleX;
+  const actualHeight = displayHeight * scaleY;
 
   // DOM 좌표로 변환
   const boxLeft = position.x * scale + offset.x;
