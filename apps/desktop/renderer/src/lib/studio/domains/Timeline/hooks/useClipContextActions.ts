@@ -9,7 +9,10 @@ import {
   extractClipStyle,
   applyClipStyle,
   getStyleLabel,
+  extractPosition,
+  applyPosition,
 } from '../../../utils/clipStyleUtils';
+import type { IGraphicClip } from '../../Clip/types';
 
 type SelectedClipData = {
   clip: IClip;
@@ -75,6 +78,12 @@ export function useClipContextActions({
     (state) => state.setStyleClipboard
   );
   const styleClipboard = useInteractionStore((state) => state.styleClipboard);
+  const setPositionClipboard = useInteractionStore(
+    (state) => state.setPositionClipboard
+  );
+  const positionClipboard = useInteractionStore(
+    (state) => state.positionClipboard
+  );
 
   const handleCopy = useCallback(() => {
     // 선택된 클립이 여러 개인 경우
@@ -231,6 +240,28 @@ export function useClipContextActions({
     toast.success('Style applied');
   }, [clip, styleClipboard, trackId, updateClip]);
 
+  // ── 위치 복사 / 붙여넣기 ──
+  const isGraphicClip = clip.type !== 'audio';
+
+  const handleCopyPosition = useCallback(() => {
+    if (!isGraphicClip) return;
+    const pos = extractPosition(clip as IGraphicClip);
+    setPositionClipboard(pos);
+    toast.success('Position copied', {
+      description: 'Press ⌘⌥V to paste position',
+    });
+  }, [clip, isGraphicClip, setPositionClipboard]);
+
+  const handlePastePosition = useCallback(() => {
+    if (!isGraphicClip || !positionClipboard) return;
+    const updates = applyPosition(
+      clip as IGraphicClip,
+      positionClipboard
+    );
+    updateClip(trackId, clip.id, updates);
+    toast.success('Position applied');
+  }, [clip, isGraphicClip, positionClipboard, trackId, updateClip]);
+
   return {
     handleCopy,
     handleCut,
@@ -240,6 +271,10 @@ export function useClipContextActions({
     handleToggleVisibility,
     handleCopyStyle,
     handlePasteStyle,
+    handleCopyPosition,
+    handlePastePosition,
     hasStyleClipboard: !!styleClipboard,
+    hasPositionClipboard: !!positionClipboard,
+    isGraphicClip,
   };
 }

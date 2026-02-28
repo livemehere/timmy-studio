@@ -237,3 +237,30 @@ export function getStyleLabel(type: ClipType): string {
       return 'Audio Style';
   }
 }
+
+// ─── 포지션 복사/붙여넣기 ─────────────────────────────
+
+export interface PositionData {
+  position: { x: number; y: number };
+  size: { width: number; height: number };
+}
+
+export function extractPosition(clip: IGraphicClip): PositionData {
+  return {
+    position: { ...clip.transforms.position },
+    size: { ...clip.transforms.size },
+  };
+}
+
+export function applyPosition(
+  targetClip: IGraphicClip,
+  pos: PositionData
+): Partial<IClip> {
+  return {
+    transforms: {
+      ...targetClip.transforms,
+      position: { ...pos.position },
+      size: { ...pos.size },
+    },
+  };
+}

@@ -27,6 +27,7 @@ export interface InteractionState {
   activeTrackId: string | null; // 현재 활성화된 트랙 ID
   clipboard: ClipboardData | null;
   styleClipboard: StyleClipboardData | null; // 속성 복사용
+  positionClipboard: { position: { x: number; y: number }; size: { width: number; height: number } } | null; // 위치 복사용
   lastClickedTime: number | null; // 트랙 클릭 시 시간 위치 (ms)
   exportPreviewRange: { start: number; end: number } | null; // Export 다이얼로그 열릴 때 범위 표시
 }
@@ -41,6 +42,7 @@ export interface InteractionActions {
   setActiveTrackId: (trackId: string | null) => void;
   setClipboard: (data: ClipboardData | null) => void;
   setStyleClipboard: (data: StyleClipboardData | null) => void;
+  setPositionClipboard: (data: { position: { x: number; y: number }; size: { width: number; height: number } } | null) => void;
   setLastClickedTime: (time: number | null) => void;
   setExportPreviewRange: (range: { start: number; end: number } | null) => void;
 }
@@ -58,6 +60,7 @@ export const createInteractionStore = () => {
     activeTrackId: null,
     clipboard: null,
     styleClipboard: null,
+    positionClipboard: null,
     lastClickedTime: null,
     exportPreviewRange: null,
 
@@ -94,6 +97,10 @@ export const createInteractionStore = () => {
 
     setStyleClipboard: (data) => {
       set({ styleClipboard: data });
+    },
+
+    setPositionClipboard: (data) => {
+      set({ positionClipboard: data });
     },
 
     setLastClickedTime: (time) => {

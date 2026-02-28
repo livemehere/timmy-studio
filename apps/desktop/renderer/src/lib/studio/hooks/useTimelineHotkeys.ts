@@ -11,7 +11,10 @@ import {
   extractClipStyle,
   applyClipStyle,
   getStyleLabel,
+  extractPosition,
+  applyPosition,
 } from '../utils/clipStyleUtils';
+import type { IGraphicClip } from '../domains/Clip/types';
 
 /**
  * TimelinePanel에서 사용하는 모든 키보드 단축키 로직을 모은 훅.
@@ -33,6 +36,10 @@ export function useTimelineHotkeys(
   const setClipboard = useInteractionStore((s) => s.setClipboard);
   const styleClipboard = useInteractionStore((s) => s.styleClipboard);
   const setStyleClipboard = useInteractionStore((s) => s.setStyleClipboard);
+  const positionClipboard = useInteractionStore((s) => s.positionClipboard);
+  const setPositionClipboard = useInteractionStore(
+    (s) => s.setPositionClipboard
+  );
   const updateClip = useDocStore((s) => s.updateClip);
   const lastClickedTime = useInteractionStore((s) => s.lastClickedTime);
   const activeTrackId = useInteractionStore((s) => s.activeTrackId);
@@ -273,6 +280,52 @@ export function useTimelineHotkeys(
       toast.error('Cannot paste style', {
         description: 'Incompatible clip types',
       });
+    }
+  });
+
+  // ── Copy Position ──────────────────────────────────
+  useHotkeys('mod+alt+c', (e) => {
+    e.preventDefault();
+    if (selectedClipIds.length !== 1) return;
+
+    const clipId = selectedClipIds[0];
+    const track = findTrackByClipId(tracks, clipId);
+    if (!track) return;
+
+    const clip = track.clips.find((c) => c.id === clipId);
+    if (!clip || clip.type === 'audio') return;
+
+    const pos = extractPosition(clip as IGraphicClip);
+    setPositionClipboard(pos);
+    toast.success('Position copied', {
+      description: 'Press ⌘⌥V to paste position',
+    });
+  });
+
+  // ── Paste Position ─────────────────────────────────
+  useHotkeys('mod+alt+v', (e) => {
+    e.preventDefault();
+    if (!positionClipboard || selectedClipIds.length === 0) return;
+
+    let appliedCount = 0;
+    selectedClipIds.forEach((clipId) => {
+      const track = findTrackByClipId(tracks, clipId);
+      if (!track) return;
+
+      const clip = track.clips.find((c) => c.id === clipId);
+      if (!clip || clip.type === 'audio') return;
+
+      const updates = applyPosition(clip as IGraphicClip, positionClipboard);
+      updateClip(track.id, clipId, updates);
+      appliedCount++;
+    });
+
+    if (appliedCount > 0) {
+      toast.success(
+        appliedCount === 1
+          ? 'Position applied'
+          : `Position applied to ${appliedCount} clips`
+      );
     }
   });
 }

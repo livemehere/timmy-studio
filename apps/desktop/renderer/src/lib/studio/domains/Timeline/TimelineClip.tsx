@@ -27,6 +27,7 @@ import {
   EyeOff,
   Paintbrush,
   ClipboardPaste,
+  Move,
 } from 'lucide-react';
 import { useTimelineClipDrag } from './hooks/useTimelineClipDrag';
 import { useClipContextActions } from './hooks/useClipContextActions';
@@ -161,7 +162,11 @@ export function TimelineClip({
     handleToggleVisibility,
     handleCopyStyle,
     handlePasteStyle,
+    handleCopyPosition,
+    handlePastePosition,
     hasStyleClipboard,
+    hasPositionClipboard,
+    isGraphicClip,
   } = useClipContextActions({
     clip,
     trackId,
@@ -280,6 +285,23 @@ export function TimelineClip({
             <span>Paste Style</span>
             <ContextMenuShortcut>⌘⇧V</ContextMenuShortcut>
           </ContextMenuItem>
+          {isGraphicClip && (
+            <>
+              <ContextMenuItem onSelect={handleCopyPosition}>
+                <Move size={14} />
+                <span>Copy Position</span>
+                <ContextMenuShortcut>⌘⌥C</ContextMenuShortcut>
+              </ContextMenuItem>
+              <ContextMenuItem
+                onSelect={handlePastePosition}
+                disabled={!hasPositionClipboard}
+              >
+                <Move size={14} />
+                <span>Paste Position</span>
+                <ContextMenuShortcut>⌘⌥V</ContextMenuShortcut>
+              </ContextMenuItem>
+            </>
+          )}
           <ContextMenuSeparator />
           <ContextMenuItem onSelect={handleToggleLock}>
             {clip.locked ? <Unlock size={14} /> : <Lock size={14} />}
