@@ -27,6 +27,10 @@ declare module '@timmy-studio/electron-utils/ipc' {
       response: IAsset;
     };
 
+    'asset:cleanupAll': {
+      response: { deletedFiles: number };
+    };
+
     'ffmpeg:getPath': {
       response: string;
     };

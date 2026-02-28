@@ -433,4 +433,26 @@ export class MediaUtils {
     }
     return undefined;
   }
+
+  /**
+   * 모든 캐시 디렉토리(thumbnails, proxies, filmstrips)를 비우고 재생성한다.
+   * @returns 삭제된 파일 수
+   */
+  static async cleanupAllCache(): Promise<number> {
+    const dirs = [
+      MediaUtils.THUMBNAILS_DIR,
+      MediaUtils.PROXIES_DIR,
+      MediaUtils.FILMSTRIPS_DIR,
+    ];
+    let deletedCount = 0;
+    for (const dir of dirs) {
+      if (fs.existsSync(dir)) {
+        const files = fs.readdirSync(dir);
+        deletedCount += files.length;
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    return deletedCount;
+  }
 }

@@ -93,6 +93,11 @@ export function registerIpcHandlers(win: BrowserWindow) {
     return asset;
   });
 
+  ipc.handle('asset:cleanupAll', async () => {
+    const deletedFiles = await MediaUtils.cleanupAllCache();
+    return { deletedFiles };
+  });
+
   ipc.handle(
     'export:start',
     async (

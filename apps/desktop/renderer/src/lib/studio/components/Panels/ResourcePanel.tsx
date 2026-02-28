@@ -14,6 +14,7 @@ import {
   FolderUp,
   Headphones,
   Pentagon,
+  Trash2,
   Type,
   Image,
   type LucideIcon,
@@ -57,6 +58,15 @@ export function ResourcePanel() {
   );
   const handleSelectFiles = useSelectAssets();
   const { isDragOver, dropHandlers } = useDropAssets();
+
+  const handleCleanupAll = useCallback(async () => {
+    if (!confirm('모든 에셋과 캐시(프록시, 썸네일)를 삭제합니다. 계속할까요?'))
+      return;
+    // 1) main 프로세스: proxy, thumbnail, filmstrip 파일 삭제
+    await window.app.invoke('asset:cleanupAll');
+    // 2) renderer: doc store 에셋 목록 초기화
+    setAssets(() => []);
+  }, [setAssets]);
   const handleSortBy = useCallback(
     (sort: string) => {
       setSortBy(sort);
@@ -132,14 +142,23 @@ export function ResourcePanel() {
           onSortChange={handleSortBy}
         />
 
-        {/* Upload Button */}
-        <button
-          className="flex justify-center items-center gap-2 text-sm py-4 m-2 rounded text-neutral-400 hover:bg-neutral-700/20 hover:text-white transition-colors cursor-pointer border border-dashed border-neutral-700/40"
-          onClick={handleSelectFiles}
-        >
-          <FolderUp stroke="currentColor" size={20} />
-          <span>UPLOAD</span>
-        </button>
+        {/* Upload & Reset */}
+        <div className="flex gap-2 m-2">
+          <button
+            className="flex-1 flex justify-center items-center gap-2 text-sm py-4 rounded text-neutral-400 hover:bg-neutral-700/20 hover:text-white transition-colors cursor-pointer border border-dashed border-neutral-700/40"
+            onClick={handleSelectFiles}
+          >
+            <FolderUp stroke="currentColor" size={20} />
+            <span>UPLOAD</span>
+          </button>
+          <button
+            className="flex justify-center items-center gap-2 text-sm py-4 px-4 rounded text-neutral-400 hover:bg-red-900/30 hover:text-red-400 transition-colors cursor-pointer border border-dashed border-neutral-700/40"
+            onClick={handleCleanupAll}
+            title="모든 에셋 및 캐시 초기화"
+          >
+            <Trash2 stroke="currentColor" size={20} />
+          </button>
+        </div>
 
         {/* Content Grid */}
         <div className="flex-1 overflow-auto p-3">
