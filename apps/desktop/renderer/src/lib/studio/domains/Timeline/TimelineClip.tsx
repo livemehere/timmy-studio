@@ -122,10 +122,16 @@ export function TimelineClip({
 
   // Video pool info — reactive via useSyncExternalStore
   const renderer = useEngineStore((state) => state.renderer);
-  const pool =
-    clip.type === 'video' && renderer
-      ? (renderer.tracks.get(trackId)?.videoPool ?? null)
-      : null;
+  const audioRenderer = useEngineStore((state) => state.audioRenderer);
+  const pool = useMemo(() => {
+    if (clip.type === 'video' && renderer) {
+      return renderer.tracks.get(trackId)?.videoPool ?? null;
+    }
+    if (clip.type === 'audio' && audioRenderer) {
+      return audioRenderer.tracks.get(trackId)?.audioPool ?? null;
+    }
+    return null;
+  }, [clip.type, renderer, audioRenderer, trackId]);
 
   const poolSubscribe = useCallback(
     (cb: () => void) => pool?.subscribe(cb) ?? (() => {}),

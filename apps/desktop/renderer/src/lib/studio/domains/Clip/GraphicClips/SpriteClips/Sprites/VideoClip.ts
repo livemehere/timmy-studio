@@ -40,6 +40,9 @@ export class VideoClip extends SpriteClip {
   private pendingOriginSwap = false;
   private _wasVisible = false;
 
+  // Pre-warm state (이중 버퍼: 재생 중 다음 클립이 미리 슬롯 확보)
+  private _isPreWarmed = false;
+
   // Backward seek debounce state (used when no proxy)
   private _backwardDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private _lastSeekTime = -1;
@@ -62,9 +65,52 @@ export class VideoClip extends SpriteClip {
     this.debugCall(`(Video) constructor`);
   }
 
+  /** pre-warm 상태인지 여부 (GraphicTrack 에서 확인용) */
+  get isPreWarmed(): boolean {
+    return this._isPreWarmed;
+  }
+
+  /** 슬롯을 보유 중인지 여부 */
+  get hasSlot(): boolean {
+    return this.slot !== null;
+  }
+
   /** 외부에서 pool 을 주입한다 (GraphicTrack.addClip 에서 호출) */
   setPool(pool: TrackVideoPool): void {
     this.pool = pool;
+  }
+
+  /**
+   * 재생 중 다음 클립을 미리 준비한다 (이중 버퍼).
+   * GraphicTrack.handleVideoPreWarm() 에서 호출.
+   * 슬롯을 acquire 하고 origin video 를 클립 시작 시간으로 pre-seek.
+   */
+  preWarm(): void {
+    if (this.slot || !this.pool) return;
+
+    const slot = this.pool.acquire(this._data.assetId, this.id);
+    if (!slot) return;
+
+    this.slot = slot;
+    this._isPreWarmed = true;
+
+    // 클립 시작 시간으로 pre-seek
+    const trimStart = this._data.trimStart ?? 0;
+    const startSec = trimStart / 1000;
+    slot.originEl.currentTime = startSec;
+    this.debugCall(`preWarm: seeked to ${startSec.toFixed(2)}s`);
+  }
+
+  /**
+   * pre-warm 상태의 슬롯을 해제한다.
+   * seeking 전환 시 또는 더 이상 "다음 클립"이 아닐 때 호출.
+   */
+  releasePreWarm(): void {
+    if (!this._isPreWarmed || !this.slot || !this.pool) return;
+    this.pool.release(this.id);
+    this.slot = null;
+    this._isPreWarmed = false;
+    this.debugCall('releasePreWarm');
   }
 
   async init(): Promise<void> {
@@ -99,12 +145,16 @@ export class VideoClip extends SpriteClip {
     super.onBecameVisible(ctx);
     this._wasVisible = true;
 
-    // 슬롯이 없으면 pool 에서 acquire
-    if (!this.slot && this.pool) {
+    if (this._isPreWarmed && this.slot) {
+      // Pre-warmed — 이미 슬롯 확보 + pre-seek 완료. texture + transform 만 설정
+      this._isPreWarmed = false;
+      this.rebindTexture();
+      this.applyTransform(this.data.transforms);
+    } else if (!this.slot && this.pool) {
+      // 일반 경로 — 슬롯 acquire
       const slot = this.pool.acquire(this._data.assetId, this.id);
       if (slot) {
         this.slot = slot;
-        // texture 재연결 + transform 재계산 (content size 가 slot 의 videoWidth 에 의존)
         this.rebindTexture();
         this.applyTransform(this.data.transforms);
       }
@@ -120,6 +170,7 @@ export class VideoClip extends SpriteClip {
   override onBecameHidden(ctx: TickContext): void {
     super.onBecameHidden(ctx);
     this._wasVisible = false;
+    this._isPreWarmed = false;
     this.cancelPendingSwaps('all');
     this.isUsingProxy = false;
 

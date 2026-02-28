@@ -1,6 +1,7 @@
 import { Container } from 'pixi.js';
 import type { GraphicRenderer } from '@/lib/studio/engine/GraphicRenderer';
 import { TrackVideoPool } from '@/lib/studio/engine/TrackVideoPool';
+import type { TickContext } from '@/lib/studio/engine/types';
 import type { IGraphicTrack } from './types';
 import type {
   IGraphicClip,
@@ -10,6 +11,7 @@ import type {
   IShapeClip,
 } from '@/lib/studio/domains/Clip/types';
 import type { IVideoAsset } from '@/lib/studio/domains/Asset/types';
+import { Clip } from '@/lib/studio/domains/Clip/Clip';
 import {
   VideoClip,
   ImageClip,
@@ -91,6 +93,73 @@ export class GraphicTrack extends Track<
 
   protected onTrackBecameHidden(): void {
     this.container.visible = false;
+  }
+
+  // ── Pre-warm (이중 버퍼) ──
+
+  override onTick(ctx: TickContext): void {
+    super.onTick(ctx);
+    if (this.container.visible) {
+      this.handleVideoPreWarm(ctx);
+    }
+  }
+
+  /**
+   * 재생 중: 다음에 재생될 VideoClip 을 미리 준비 (이중 버퍼).
+   * 정지/시킹: pre-warm 해제하여 슬롯 절약.
+   */
+  private handleVideoPreWarm(ctx: TickContext): void {
+    const { currentTime, isPlaying } = ctx;
+
+    // VideoClip 수집
+    const videoClips: VideoClip[] = [];
+    for (const clip of this.clips.values()) {
+      if (clip instanceof VideoClip) {
+        videoClips.push(clip);
+      }
+    }
+    if (videoClips.length < 2) return;
+
+    if (!isPlaying) {
+      // 정지 상태 — 모든 pre-warm 해제
+      for (const vc of videoClips) {
+        if (vc.isPreWarmed) vc.releasePreWarm();
+      }
+      return;
+    }
+
+    // 재생 중 — 시간순 정렬 후 "다음 클립" 찾기
+    const sorted = [...videoClips].sort((a, b) => {
+      const aStart = a.data.startTime + ((a.data as any).trimStart ?? 0);
+      const bStart = b.data.startTime + ((b.data as any).trimStart ?? 0);
+      return aStart - bStart;
+    });
+
+    let nextClip: VideoClip | null = null;
+    for (const vc of sorted) {
+      const { start: actualStart, end: actualEnd } = Clip.getActualTimeRange(
+        vc.data
+      );
+      // 이미 지난 클립 스킵
+      if (actualEnd <= currentTime) continue;
+      // 현재 재생 중인 클립 스킵
+      if (currentTime >= actualStart && currentTime < actualEnd) continue;
+      // 다음 클립 발견
+      nextClip = vc;
+      break;
+    }
+
+    // 더 이상 "다음"이 아닌 pre-warm 해제
+    for (const vc of videoClips) {
+      if (vc.isPreWarmed && vc !== nextClip) {
+        vc.releasePreWarm();
+      }
+    }
+
+    // 다음 클립 pre-warm
+    if (nextClip && !nextClip.isPreWarmed && !nextClip.hasSlot) {
+      nextClip.preWarm();
+    }
   }
 
   destroy(): void {
