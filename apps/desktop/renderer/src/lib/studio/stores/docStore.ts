@@ -40,7 +40,6 @@ export interface DocState {
 
 export interface DocActions {
   // Project actions
-  getProject: () => IProject; // 현재 상태를 IProject로 조합해서 반환
   updateSettings: (settings: Partial<IProject['settings']>) => void;
   updateMetadata: (metadata: Partial<IProject['metadata']>) => void;
   updateName: (name: string) => void;
@@ -49,7 +48,6 @@ export interface DocActions {
   addTrack: (track: ITrack | ITrack[]) => void;
   removeTrack: (trackId: string | string[]) => void;
   updateTrack: (trackId: string, updates: Partial<ITrack>) => void;
-  getTrackById: (trackId: string) => ITrack | undefined;
   resetTracks: () => void; // 트랙만 초기화 (프로젝트 설정/메타데이터는 유지)
 
   // Clip actions
@@ -73,17 +71,12 @@ export interface DocActions {
     newEndTime: number
   ) => string | null;
   addClipToTrack: (targetTrackId: string, clipData: IClip) => void;
-  getClipById: <T extends IClip = IClip>(
-    trackId: string,
-    clipId: string
-  ) => T | undefined;
 
   // Asset actions
   addAsset: (asset: IAsset | IAsset[]) => void;
   removeAsset: (assetId: string | string[]) => void;
   updateAsset: (assetId: string, updates: Partial<IAsset>) => void;
   setAssets: (cb: (assets: IAsset[]) => IAsset[]) => void;
-  getAssetById: <T extends IAsset = IAsset>(assetId: string) => T | undefined;
 
   // Reset
   reset: () => void;
@@ -112,19 +105,6 @@ export const createDocStore = (initialProject?: IProject) => {
       metadata: project.metadata,
       tracks: project.tracks,
       assets: project.assets,
-
-      getProject: () => {
-        const state = get();
-        const project: IProject = {
-          id: state.id,
-          name: state.name,
-          settings: state.settings,
-          metadata: state.metadata,
-          tracks: state.tracks,
-          assets: state.assets,
-        };
-        return project;
-      },
 
       updateSettings: (settingsUpdate) => {
         const currentSettings = get().settings;
@@ -175,11 +155,6 @@ export const createDocStore = (initialProject?: IProject) => {
 
       resetTracks: () => {
         set({ tracks: [] });
-      },
-
-      getTrackById: (trackId) => {
-        const currentTracks = get().tracks;
-        return currentTracks.find((t) => t.id === trackId);
       },
 
       addClip: (trackId: string, clip: IClip) => {
@@ -386,22 +361,6 @@ export const createDocStore = (initialProject?: IProject) => {
         set({ assets: newAssets });
       },
 
-      getAssetById: <T extends IAsset = IAsset>(assetId: string) => {
-        const currentAssets = get().assets;
-        return currentAssets.find((a) => a.id === assetId) as T | undefined;
-      },
-
-      getClipById: <T extends IClip = IClip>(
-        trackId: string,
-        clipId: string
-      ): T | undefined => {
-        const currentTracks = get().tracks;
-        const track = currentTracks.find((t) => t.id === trackId);
-        if (!track) return undefined;
-        const clip = (track.clips as IClip[]).find((c) => c.id === clipId);
-        return clip as T | undefined;
-      },
-
       reset: () => {
         console.log(`[DocStore] 초기값으로 리셋`);
         set({
@@ -428,3 +387,35 @@ export const createDocStore = (initialProject?: IProject) => {
     };
   });
 };
+
+// selectors
+export const selectProject = (state: DocStore): IProject => ({
+  id: state.id,
+  name: state.name,
+  settings: state.settings,
+  metadata: state.metadata,
+  tracks: state.tracks,
+  assets: state.assets,
+});
+
+export const selectTrackById =
+  (trackId: string) =>
+  (state: DocStore): ITrack | undefined => {
+    return state.tracks.find((track) => track.id === trackId);
+  };
+
+export const selectClipById =
+  <T extends IClip = IClip>(trackId: string, clipId: string) =>
+  (state: DocStore): T | undefined => {
+    const track = state.tracks.find((item) => item.id === trackId);
+    if (!track) return undefined;
+    return (track.clips as IClip[]).find((clip) => clip.id === clipId) as
+      | T
+      | undefined;
+  };
+
+export const selectAssetById =
+  <T extends IAsset = IAsset>(assetId: string) =>
+  (state: DocStore): T | undefined => {
+    return state.assets.find((asset) => asset.id === assetId) as T | undefined;
+  };

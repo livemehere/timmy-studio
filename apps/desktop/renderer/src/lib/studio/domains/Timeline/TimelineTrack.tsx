@@ -4,6 +4,7 @@ import { TimelineClip } from '@/lib/studio/domains/Timeline/TimelineClip';
 import { useDocStore, useInteractionStore } from '../../hooks/useStudioStores';
 import { TrackHeader } from './TrackHeader';
 import { useRef } from 'react';
+import { selectTrackById } from '../../stores/docStore';
 
 export function TimelineTrack({
   trackId,
@@ -18,8 +19,7 @@ export function TimelineTrack({
 }) {
   const trackContentRef = useRef<HTMLDivElement>(null);
 
-  const getTrackById = useDocStore((state) => state.getTrackById);
-  const track = getTrackById(trackId);
+  const track = useDocStore(selectTrackById(trackId));
 
   if (!track) {
     throw new Error(`Track(${trackId}) not found`);
@@ -31,8 +31,10 @@ export function TimelineTrack({
     (state) => state.setActiveTrackId
   );
   const isActive = activeTrackId === trackId;
-  const activeTrack = activeTrackId ? getTrackById(activeTrackId) : undefined;
-  const activeTrackType = activeTrack?.type;
+  const activeTrackType = useDocStore((state) => {
+    if (!activeTrackId) return undefined;
+    return selectTrackById(activeTrackId)(state)?.type;
+  });
   const isSameTrackType = activeTrackType === track.type;
 
   /** last clicked time */

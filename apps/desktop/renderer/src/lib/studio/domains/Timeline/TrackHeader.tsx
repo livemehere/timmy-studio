@@ -31,6 +31,7 @@ import {
 
 import { Z_INDEX } from '../../constants/zIndex';
 import { toast } from 'sonner';
+import { selectTrackById } from '../../stores/docStore';
 
 export function TrackHeader({
   trackId,
@@ -39,7 +40,6 @@ export function TrackHeader({
   trackId: string;
   headerWidth: number;
 }) {
-  const getTrackById = useDocStore((state) => state.getTrackById);
   const updateTrack = useDocStore((state) => state.updateTrack);
   const removeTrack = useDocStore((state) => state.removeTrack);
   const addClipToTrack = useDocStore((state) => state.addClipToTrack);
@@ -60,7 +60,7 @@ export function TrackHeader({
     (state) => state.failedAudioTrackIds || []
   );
 
-  const track = getTrackById(trackId);
+  const track = useDocStore(selectTrackById(trackId));
 
   if (!track) {
     return null;

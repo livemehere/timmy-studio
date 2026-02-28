@@ -30,6 +30,8 @@ import { useTimelineClipDrag } from './hooks/useTimelineClipDrag';
 import { useClipContextActions } from './hooks/useClipContextActions';
 import { ClipContent } from './components/ClipContent';
 import { ClipResizeHandles } from './components/ClipResizeHandles';
+import { useEffect } from 'react';
+import { selectClipById, selectTrackById } from '../../stores/docStore';
 
 export function TimelineClip({
   clipId,
@@ -42,12 +44,14 @@ export function TimelineClip({
   pxPerSec: number;
   trackHeight: number;
 }) {
-  const getClipById = useDocStore((state) => state.getClipById);
-  const getTrackById = useDocStore((state) => state.getTrackById);
   // Use IClip to support both graphic and audio clips
-  const clip = getClipById<IClip>(trackId, clipId)!;
+  const clip = useDocStore(selectClipById<IClip>(trackId, clipId))!;
 
-  const track = getTrackById(trackId);
+  useEffect(() => {
+    console.log('clip', clip);
+  }, [clip]);
+
+  const track = useDocStore(selectTrackById(trackId));
   const syncedGraphicClipIds = useEngineStore(
     (state) => state.syncedGraphicClipIds
   );

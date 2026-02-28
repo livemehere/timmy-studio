@@ -9,6 +9,7 @@ import {
   useDocStore,
   useInteractionStore,
 } from '../../../hooks/useStudioStores';
+import { selectAssetById } from '../../../stores/docStore';
 
 // 최소 클립 길이 (ms)
 const MIN_CLIP_DURATION_MS = 100;
@@ -31,11 +32,9 @@ export function useTimelineClipDrag({
   const updateClip = useDocStore((state) => state.updateClip);
   const moveClipToTrack = useDocStore((state) => state.moveClipToTrack);
   const cloneClipToTrack = useDocStore((state) => state.cloneClipToTrack);
-  const getAssetById = useDocStore((state) => state.getAssetById) as <
-    T extends IMediaAsset = IMediaAsset,
-  >(
-    assetId: string
-  ) => T | undefined;
+  const mediaAsset = useDocStore(
+    'assetId' in clip ? selectAssetById(clip.assetId) : () => undefined
+  ) as IMediaAsset | undefined;
 
   const setActiveTrackId = useInteractionStore(
     (state) => state.setActiveTrackId
@@ -153,11 +152,8 @@ export function useTimelineClipDrag({
   };
 
   const _getMediaAssetDurationMs = (): number | null => {
-    if ('assetId' in clip) {
-      const assetId = clip.assetId;
-      const asset = getAssetById<IMediaAsset>(assetId);
-      if (!asset) return null;
-      return asset.metadata.durationMs;
+    if ('assetId' in clip && mediaAsset) {
+      return mediaAsset.metadata.durationMs;
     }
     // 미디어 에셋이 없는 클립은 최대 길이 제약 없음
     return null;
