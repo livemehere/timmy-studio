@@ -12,6 +12,9 @@ export class TextClip extends GraphicClip {
   private background: Graphics | null = null;
   private selectionBounds: Graphics | null = null; // 선택 영역 표시용
   private underline: Graphics | null = null; // 언더라인 표시용
+  /** 이전 실제 텍스트 픽셀 크기 — position 보정이 필요한지 판단용 */
+  private _prevContentWidth = 0;
+  private _prevContentHeight = 0;
 
   public getContentSize(): { width: number; height: number } {
     const width = this.text?.width ?? 0;
@@ -81,6 +84,9 @@ export class TextClip extends GraphicClip {
    * - left  : 좌측 고정 (position.x 유지)
    * - center: 중심 고정 (position 을 크기 변화량의 절반만큼 이동)
    * - right : 우측 고정 (position.x + oldWidth 유지 → x 를 왼쪽으로 이동)
+   *
+   * ⚠️ position 보정은 실제 텍스트 크기가 변했을 때만 적용.
+   * store sync 에 의한 재호출 시 _prevContent 와 동일하면 skip.
    */
   private syncTransformsSize(): void {
     if (!this.text) return;
@@ -88,25 +94,27 @@ export class TextClip extends GraphicClip {
     const newH = this.text.height;
     if (newW <= 0 || newH <= 0) return;
 
-    const oldW = this._data.transforms.size.width;
-    const oldH = this._data.transforms.size.height;
-    const scaleX = this._data.transforms.scaleX ?? 1;
-    const scaleY = this._data.transforms.scaleY ?? 1;
-    const align = this._data.textData.align ?? 'left';
+    const prevW = this._prevContentWidth;
+    const prevH = this._prevContentHeight;
+    this._prevContentWidth = newW;
+    this._prevContentHeight = newH;
 
+    // 텍스트 크기가 실제로 변했을 때만 position 보정
     let dx = 0;
     let dy = 0;
 
-    if (align === 'center') {
-      // 중심 고정: 크기 변화량의 절반 × scale 만큼 보정
-      dx = -((newW - oldW) * scaleX) / 2;
-      dy = -((newH - oldH) * scaleY) / 2;
-    } else if (align === 'right') {
-      // 우측 고정: 전체 변화량 × scale 만큼 보정
-      dx = -(newW - oldW) * scaleX;
-      dy = 0; // 세로는 left 와 동일 (상단 고정)
+    if (prevW > 0 && prevH > 0 && (prevW !== newW || prevH !== newH)) {
+      const scaleX = this._data.transforms.scaleX ?? 1;
+      const scaleY = this._data.transforms.scaleY ?? 1;
+      const align = this._data.textData.align ?? 'left';
+
+      if (align === 'center') {
+        dx = -((newW - prevW) * scaleX) / 2;
+        dy = -((newH - prevH) * scaleY) / 2;
+      } else if (align === 'right') {
+        dx = -(newW - prevW) * scaleX;
+      }
     }
-    // left: 보정 없음 (좌상단 고정)
 
     this._data = {
       ...this._data,
