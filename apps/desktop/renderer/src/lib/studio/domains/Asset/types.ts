@@ -15,6 +15,8 @@ export interface IMediaAssetMetadata extends IBaseAssetMetadata {
   codec?: string;
   /** 오디오 스트림 존재 여부 (ffprobe 검출) */
   hasAudio?: boolean;
+  /** GPS 좌표 문자열 (ISO 6709 등, ffprobe tags 에서 추출) */
+  location?: string;
 }
 
 export interface IBaseAsset {

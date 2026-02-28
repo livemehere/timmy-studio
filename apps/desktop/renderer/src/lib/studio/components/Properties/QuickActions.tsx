@@ -1,10 +1,17 @@
 import { useCallback, useMemo } from 'react';
 import { useDocStore, useInteractionStore } from '../../hooks/useStudioStores';
 import { Track } from '../../domains/Track/Track';
-import type { IGraphicClip, IClip } from '../../domains/Clip/types';
-import type { ITrack } from '../../domains/Track/types';
+import { Clip } from '../../domains/Clip/Clip';
+import type { IGraphicClip, IClip, ITextClip } from '../../domains/Clip/types';
+import type { ITrack, IGraphicTrack } from '../../domains/Track/types';
+import type { IMediaAsset } from '../../domains/Asset/types';
 import { Button } from '@/components/ui/button';
-import { AlignCenter, Merge, GalleryHorizontalEnd } from 'lucide-react';
+import {
+  AlignCenter,
+  Merge,
+  GalleryHorizontalEnd,
+  FileText,
+} from 'lucide-react';
 
 /**
  * QuickActions — 선택된 여러 클립에 동시에 적용 가능한 편의 기능 모음
@@ -12,6 +19,7 @@ import { AlignCenter, Merge, GalleryHorizontalEnd } from 'lucide-react';
 export function QuickActions() {
   const selectedClipIds = useInteractionStore((s) => s.selectedClipIds);
   const tracks = useDocStore((s) => s.tracks);
+  const assets = useDocStore((s) => s.assets);
   const settings = useDocStore((s) => s.settings);
   const batch = useDocStore((s) => s.batch);
 
@@ -182,8 +190,165 @@ export function QuickActions() {
     });
   }, [allSelectedClips, batch]);
 
-  // 선택이 1개 이하면 표시하지 않음
-  if (selectedClipIds.length < 2) return null;
+  // ── Generate Info Text ──
+  // 선택된 클립(미디어 에셋 보유)마다 생성시간(KST), 장소 텍스트 클립 2개 생성
+  // 새로운 트랙 2개 (시간용 / 장소용) 에 배치, 소스 클립 duration 과 동일
+  const clipsWithAsset = useMemo(() => {
+    const result: Array<{
+      clip: IClip;
+      asset: IMediaAsset;
+    }> = [];
+    for (const { clip } of allSelectedClips) {
+      if (!('assetId' in clip)) continue;
+      const assetId = (clip as { assetId: string }).assetId;
+      const asset = assets.find((a) => a.id === assetId);
+      if (!asset || !('metadata' in asset) || !('filePath' in asset)) continue;
+      result.push({ clip, asset: asset as IMediaAsset });
+    }
+    return result;
+  }, [allSelectedClips, assets]);
+
+  const handleGenerateInfoText = useCallback(() => {
+    if (clipsWithAsset.length === 0) return;
+
+    const FONT_SIZE = 28;
+    const PADDING_BOTTOM = 50;
+    const LINE_GAP = 8;
+
+    /**
+     * ISO 6709 좌표를 사람이 읽을 수 있는 형태로 변환
+     * e.g. "+37.5665+126.9780+013.800/" → "37.5665°N 126.9780°E"
+     */
+    const formatLocation = (raw: string): string => {
+      // ISO 6709: +DD.DDDD+DDD.DDDD(+AAA.AAA)/ 형식
+      const m = raw.match(/([+-]\d+\.?\d*)\s*([+-]\d+\.?\d*)/);
+      if (!m) return raw.replace(/\/$/, '');
+
+      const lat = parseFloat(m[1]);
+      const lng = parseFloat(m[2]);
+
+      const latDir = lat >= 0 ? 'N' : 'S';
+      const lngDir = lng >= 0 ? 'E' : 'W';
+
+      return `${Math.abs(lat).toFixed(4)}°${latDir} ${Math.abs(lng).toFixed(4)}°${lngDir}`;
+    };
+
+    /** createdAt → KST 포맷 */
+    const formatKST = (dateStr: string): string => {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleString('ko-KR', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      });
+    };
+
+    batch((draft) => {
+      // 새 트랙 2개 생성 (시간용, 장소용)
+      const timeTrack = Track.create(
+        'graphic',
+        Track.getNextTrackZIndex(draft.tracks, 'graphic')
+      ) as IGraphicTrack;
+      timeTrack.name = 'Info-Time';
+
+      const locTrack = Track.create(
+        'graphic',
+        Track.getNextTrackZIndex([...draft.tracks, timeTrack], 'graphic')
+      ) as IGraphicTrack;
+      locTrack.name = 'Info-Location';
+
+      for (const { clip, asset } of clipsWithAsset) {
+        const meta = asset.metadata;
+        const duration = clip.endTime - clip.startTime;
+
+        // 1) 생성시간 텍스트 클립
+        const timeStr = meta.createdAt
+          ? formatKST(meta.createdAt)
+          : '시간 정보 없음';
+
+        const timeClip = Clip.createText({
+          content: timeStr,
+          fontSize: FONT_SIZE,
+          fontFamily: 'Pretendard, sans-serif',
+          color: '#ffffff',
+          align: 'center',
+          shadow: {
+            color: '#000000',
+            blur: 4,
+            offsetX: 1,
+            offsetY: 1,
+            alpha: 0.7,
+          },
+        }) as ITextClip;
+
+        // 소스 클립과 동일한 시간 범위
+        timeClip.startTime = clip.startTime;
+        timeClip.endTime = clip.startTime + duration;
+        timeClip.name = `Time: ${timeStr.substring(0, 12)}`;
+
+        // 캔버스 하단 2번째 줄에 중앙 배치
+        const timeTextHeight = FONT_SIZE * 1.2;
+        timeClip.transforms.position = {
+          x: canvasWidth / 2 - timeClip.transforms.size.width / 2,
+          y: canvasHeight - PADDING_BOTTOM - timeTextHeight * 2 - LINE_GAP,
+        };
+
+        (timeTrack.clips as IClip[]).push(timeClip);
+
+        // 2) 장소 텍스트 클립
+        const locStr = meta.location
+          ? formatLocation(meta.location)
+          : '위치 정보 없음';
+
+        const locClip = Clip.createText({
+          content: locStr,
+          fontSize: FONT_SIZE,
+          fontFamily: 'Pretendard, sans-serif',
+          color: '#ffffff',
+          align: 'center',
+          shadow: {
+            color: '#000000',
+            blur: 4,
+            offsetX: 1,
+            offsetY: 1,
+            alpha: 0.7,
+          },
+        }) as ITextClip;
+
+        locClip.startTime = clip.startTime;
+        locClip.endTime = clip.startTime + duration;
+        locClip.name = `Loc: ${locStr.substring(0, 12)}`;
+
+        // 캔버스 하단 1번째 줄에 중앙 배치
+        const locTextHeight = FONT_SIZE * 1.2;
+        locClip.transforms.position = {
+          x: canvasWidth / 2 - locClip.transforms.size.width / 2,
+          y: canvasHeight - PADDING_BOTTOM - locTextHeight,
+        };
+
+        (locTrack.clips as IClip[]).push(locClip);
+      }
+
+      // 클립이 생성되었을 때만 트랙 추가
+      if (timeTrack.clips.length > 0) {
+        draft.tracks.push(timeTrack);
+      }
+      if (locTrack.clips.length > 0) {
+        draft.tracks.push(locTrack);
+      }
+    });
+  }, [clipsWithAsset, batch, canvasWidth, canvasHeight]);
+
+  // 선택 없으면 표시하지 않음
+  if (selectedClipIds.length === 0) return null;
+
+  const isMulti = selectedClipIds.length >= 2;
 
   return (
     <div className="border-t border-neutral-800 px-3 py-3 space-y-2">
@@ -195,40 +360,56 @@ export function QuickActions() {
       </div>
 
       <div className="flex flex-wrap gap-1.5">
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-xs gap-1.5 h-7"
-          disabled={!hasGraphicClips}
-          onClick={handleCenterAll}
-          title="Fit Width + 캔버스 중앙 정렬"
-        >
-          <AlignCenter size={13} />
-          Fit &amp; Center All
-        </Button>
+        {isMulti && (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs gap-1.5 h-7"
+              disabled={!hasGraphicClips}
+              onClick={handleCenterAll}
+              title="Fit Width + 캔버스 중앙 정렬"
+            >
+              <AlignCenter size={13} />
+              Fit &amp; Center All
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs gap-1.5 h-7"
+              disabled={!spanMultipleTracks}
+              onClick={handleMergeToTrack}
+              title="여러 트랙에 흩어진 클립을 하나의 트랙으로 모아 순차 배치"
+            >
+              <Merge size={13} />
+              Merge to Track
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs gap-1.5 h-7"
+              disabled={allSelectedClips.length < 2}
+              onClick={handleCloseGaps}
+              title="선택된 클립 사이의 빈 간격을 제거하여 연속 배치"
+            >
+              <GalleryHorizontalEnd size={13} />
+              Close Gaps
+            </Button>
+          </>
+        )}
 
         <Button
           variant="outline"
           size="sm"
           className="text-xs gap-1.5 h-7"
-          disabled={!spanMultipleTracks}
-          onClick={handleMergeToTrack}
-          title="여러 트랙에 흩어진 클립을 하나의 트랙으로 모아 순차 배치"
+          disabled={clipsWithAsset.length === 0}
+          onClick={handleGenerateInfoText}
+          title="각 클립의 생성시간(KST)과 장소를 텍스트 클립으로 생성"
         >
-          <Merge size={13} />
-          Merge to Track
-        </Button>
-
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-xs gap-1.5 h-7"
-          disabled={allSelectedClips.length < 2}
-          onClick={handleCloseGaps}
-          title="선택된 클립 사이의 빈 간격을 제거하여 연속 배치"
-        >
-          <GalleryHorizontalEnd size={13} />
-          Close Gaps
+          <FileText size={13} />
+          Generate Info
         </Button>
       </div>
     </div>

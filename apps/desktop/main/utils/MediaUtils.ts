@@ -76,6 +76,24 @@ export class MediaUtils {
     return creationTime ?? FileUtils.getCreatedTime(data.format.filename!);
   }
 
+  /**
+   * GPS 좌표 문자열 추출 (ISO 6709 형식 등)
+   * - iPhone: `com.apple.quicktime.location.ISO6709` (e.g. "+37.5665+126.9780+013.800/")
+   * - Android: `location` (e.g. "+37.5665+126.9780/")
+   * - 일부 기기: `location-eng`
+   */
+  static getLocation(data: FfprobeData): string | undefined {
+    const tags = data.format.tags as Record<string, string> | undefined;
+    if (!tags) return undefined;
+
+    const raw =
+      tags['com.apple.quicktime.location.ISO6709'] ??
+      tags['location'] ??
+      tags['location-eng'];
+
+    return raw?.trim() || undefined;
+  }
+
   /** 비디오 스트림 추출 (커버아트/썸네일 제외) */
   static extractPrimaryVideoStream(data: FfprobeData) {
     return data.streams.find(
@@ -332,6 +350,7 @@ export class MediaUtils {
       width: 0,
       height: 0,
       hasAudio: !!audioStream,
+      location: MediaUtils.getLocation(data),
     };
 
     // video / image / animated-image 공통 (video stream 기준)
