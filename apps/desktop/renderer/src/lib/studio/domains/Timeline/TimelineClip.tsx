@@ -123,6 +123,15 @@ export function TimelineClip({
     return asset?.isProxyReady ?? false;
   });
 
+  // Filmstrip data for video clips
+  const filmstripData = useDocStore((state) => {
+    if (clip.type !== 'video' || !assetId) return undefined;
+    const asset = state.assets.find((a) => a.id === assetId) as
+      | IVideoAsset
+      | undefined;
+    return asset?.filmstripData;
+  });
+
   // Video pool info — reactive via useSyncExternalStore
   const renderer = useEngineStore((state) => state.renderer);
   const audioRenderer = useEngineStore((state) => state.audioRenderer);
@@ -250,6 +259,8 @@ export function TimelineClip({
               displayEndTime={displayEndTime}
               displayTrimStart={displayTrimStart}
               displayTrimEnd={displayTrimEnd}
+              pxPerSec={pxPerSec}
+              filmstripData={filmstripData}
             />
             <ClipResizeHandles />
           </motion.div>

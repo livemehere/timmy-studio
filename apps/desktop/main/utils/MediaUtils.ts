@@ -5,6 +5,7 @@ import { FileUtils } from '@main/utils/FileUtils';
 import type {
   AssetType,
   IAsset,
+  IFilmstripData,
   IMediaAssetMetadata,
   IMediaAsset,
 } from '@/lib/studio/domains/Asset/types';
@@ -398,12 +399,25 @@ export class MediaUtils {
         case 'video':
           const proxyFilePath = MediaUtils.getProxyFilePath(filePath);
           const proxyAlreadyExists = fs.existsSync(proxyFilePath); // 이미 있으면 생성 안함
+
+          // 필름스트립 캐시 확인
+          const filmstripDir = path.join(
+            MediaUtils.FILMSTRIPS_DIR,
+            baseAsset.id
+          );
+          let filmstripData: IFilmstripData | undefined;
+          if (fs.existsSync(filmstripDir)) {
+            const cached = MediaUtils.readFilmstripFromCache(filmstripDir, 80);
+            if (cached) filmstripData = cached;
+          }
+
           return {
             ...baseAsset,
             type: 'video',
             thumbnailPath: await MediaUtils.createThumbnailImage(filePath),
             proxyFilePath,
             isProxyReady: proxyAlreadyExists,
+            filmstripData,
           };
         case 'audio':
           return {
@@ -444,14 +458,176 @@ export class MediaUtils {
   static async postProcessAssetCreation(
     asset: IAsset
   ): Promise<IAsset | undefined> {
-    if (asset.type === 'video' && !asset.isProxyReady) {
-      return {
-        ...asset,
+    if (asset.type !== 'video') return undefined;
+
+    let updated = { ...asset };
+    let changed = false;
+
+    // 1) 프록시 생성
+    if (!asset.isProxyReady) {
+      updated = {
+        ...updated,
         isProxyReady: true,
         proxyFilePath: await MediaUtils.createProxyVideo(asset.filePath),
       };
+      changed = true;
     }
-    return undefined;
+
+    // 2) 필름스트립 생성
+    if (!asset.filmstripData && asset.metadata.durationMs > 0) {
+      try {
+        const filmstripData = await MediaUtils.createFilmstrip(
+          asset.filePath,
+          asset.id,
+          asset.metadata.durationMs
+        );
+        // 메타 저장 (캐시 재사용용)
+        MediaUtils.saveFilmstripMeta(filmstripData);
+        updated = { ...updated, filmstripData };
+        changed = true;
+      } catch (e) {
+        console.error('[MediaUtils] Filmstrip generation failed:', e);
+      }
+    }
+
+    return changed ? updated : undefined;
+  }
+
+  /**
+   * 비디오에서 일정 간격으로 프레임을 추출하여 필름스트립 이미지를 생성한다.
+   * @param filePath 원본 비디오 파일 경로
+   * @param assetId 에셋 ID (디렉토리 이름으로 사용)
+   * @param durationMs 비디오 총 길이 (ms)
+   * @param options 추출 옵션
+   * @returns FilmstripData 메타데이터
+   */
+  static async createFilmstrip(
+    filePath: string,
+    assetId: string,
+    durationMs: number,
+    options: { maxFrames?: number; frameHeight?: number } = {}
+  ): Promise<IFilmstripData> {
+    const { maxFrames = 60, frameHeight = 80 } = options;
+    const outputDir = path.join(MediaUtils.FILMSTRIPS_DIR, assetId);
+
+    // 이미 생성된 필름스트립이 있으면 캐시에서 복원
+    if (fs.existsSync(outputDir)) {
+      const existing = MediaUtils.readFilmstripFromCache(
+        outputDir,
+        frameHeight
+      );
+      if (existing) return existing;
+    }
+
+    fs.mkdirSync(outputDir, { recursive: true });
+
+    const durationSec = durationMs / 1000;
+    // 최소 1프레임, 최대 maxFrames 프레임
+    const frameCount = Math.max(
+      1,
+      Math.min(maxFrames, Math.floor(durationSec))
+    );
+    const intervalSec = durationSec / frameCount;
+    const intervalMs = intervalSec * 1000;
+
+    return new Promise<IFilmstripData>((resolve, reject) => {
+      MediaUtils.ffmpeg(filePath)
+        .on('start', (cmd) => console.log('[ffmpeg filmstrip]', cmd))
+        .on('end', () => {
+          // 생성된 프레임 수 확인 및 실제 프레임 크기 읽기
+          const files = fs
+            .readdirSync(outputDir)
+            .filter((f) => f.endsWith('.jpg'))
+            .sort();
+          const actualCount = files.length;
+
+          if (actualCount === 0) {
+            reject(new Error('Filmstrip: no frames generated'));
+            return;
+          }
+
+          // 첫 프레임에서 실제 너비 계산 (aspect ratio 보존)
+          // ffmpeg scale=-1:height 이므로 너비는 원본 비율에 따라 달라짐
+          // sizeOf 대신 ffprobe 로 확인
+          MediaUtils.ffprobe(path.join(outputDir, files[0]))
+            .then((probeData) => {
+              const stream = probeData.streams[0];
+              const frameWidth =
+                stream?.width ?? Math.round(frameHeight * (16 / 9));
+              const data: IFilmstripData = {
+                dir: outputDir,
+                frameCount: actualCount,
+                intervalMs,
+                frameWidth,
+                frameHeight,
+              };
+              console.log('[ffmpeg filmstrip] done:', data);
+              resolve(data);
+            })
+            .catch(() => {
+              // ffprobe 실패 시 추정값 사용
+              resolve({
+                dir: outputDir,
+                frameCount: actualCount,
+                intervalMs,
+                frameWidth: Math.round(frameHeight * (16 / 9)),
+                frameHeight,
+              });
+            });
+        })
+        .on('error', (err) => {
+          console.error('[ffmpeg filmstrip] error:', err);
+          reject(err);
+        })
+        .outputOptions([
+          '-vf',
+          `fps=1/${intervalSec},scale=-1:${frameHeight}`,
+          '-q:v',
+          '5',
+          '-vsync',
+          'vfr',
+        ])
+        .noAudio()
+        .save(path.join(outputDir, 'frame-%04d.jpg'));
+    });
+  }
+
+  /**
+   * 캐시된 필름스트립 디렉토리에서 메타데이터를 복원한다.
+   */
+  static readFilmstripFromCache(
+    dir: string,
+    _frameHeight: number
+  ): IFilmstripData | null {
+    try {
+      const files = fs
+        .readdirSync(dir)
+        .filter((f) => f.endsWith('.jpg'))
+        .sort();
+      if (files.length === 0) return null;
+
+      // 메타 파일이 있으면 사용
+      const metaPath = path.join(dir, 'meta.json');
+      if (fs.existsSync(metaPath)) {
+        const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+        return meta as IFilmstripData;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * 필름스트립 메타데이터를 디스크에 저장한다.
+   */
+  private static saveFilmstripMeta(data: IFilmstripData): void {
+    try {
+      const metaPath = path.join(data.dir, 'meta.json');
+      fs.writeFileSync(metaPath, JSON.stringify(data), 'utf-8');
+    } catch (e) {
+      console.warn('[MediaUtils] Failed to save filmstrip meta:', e);
+    }
   }
 
   /**

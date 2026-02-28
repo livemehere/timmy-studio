@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import type { IClip } from '../../Clip/types';
+import type { IFilmstripData } from '../../Asset/types';
+import { FilmstripBackground } from './FilmstripBackground';
 
 /**
  * 배경 없음 순수 콘텐츠만 렌더링
@@ -14,6 +16,8 @@ export function ClipContent({
   displayEndTime,
   displayTrimStart,
   displayTrimEnd,
+  pxPerSec,
+  filmstripData,
 }: {
   clip: IClip;
   isLoaded: boolean;
@@ -28,6 +32,8 @@ export function ClipContent({
   displayEndTime: number;
   displayTrimStart: number;
   displayTrimEnd: number;
+  pxPerSec?: number;
+  filmstripData?: IFilmstripData;
 }) {
   const durationSec = useMemo(
     () => ((displayEndTime - displayStartTime) / 1000).toFixed(2),
@@ -35,10 +41,30 @@ export function ClipContent({
   );
   const isTrimmed = displayTrimStart > 0 || displayTrimEnd > 0;
 
+  const clipWidthPx = useMemo(
+    () => ((displayEndTime - displayStartTime) / 1000) * (pxPerSec ?? 0),
+    [displayEndTime, displayStartTime, pxPerSec]
+  );
+
+  const hasFilmstrip =
+    clip.type === 'video' && filmstripData && pxPerSec && clipWidthPx > 0;
+
   return (
-    <div className="flex flex-col pointer-events-none select-none">
+    <div className="relative flex flex-col h-full pointer-events-none select-none">
+      {/* Filmstrip background layer (video clips only) */}
+      {hasFilmstrip && (
+        <FilmstripBackground
+          filmstripData={filmstripData}
+          trimStart={displayTrimStart}
+          pxPerSec={pxPerSec}
+          clipWidthPx={clipWidthPx}
+        />
+      )}
+
       {/* Header */}
-      <div className="flex items-center gap-1 px-2 py-0.5 bg-black/20">
+      <div
+        className={`relative z-10 flex items-center gap-1 px-2 py-0.5 ${hasFilmstrip ? 'bg-black/40' : 'bg-black/20'}`}
+      >
         <span className="text-[10px] truncate flex-1">{clip.name}</span>
         {poolInfo && <PoolBadge poolInfo={poolInfo} />}
         {isProxyReady !== undefined && <ProxyBadge ready={isProxyReady} />}
@@ -46,15 +72,19 @@ export function ClipContent({
       </div>
 
       {/* Body */}
-      <div className="flex-1 px-2 py-0.5 flex items-center justify-between">
+      <div className="relative z-10 flex-1 px-2 py-0.5 flex items-end justify-between">
         {/* Duration */}
-        <span className="text-[10px] text-white/60 truncate">
+        <span
+          className={`text-[10px] truncate ${hasFilmstrip ? 'text-white/80 drop-shadow-sm' : 'text-white/60'}`}
+        >
           {durationSec}s
         </span>
 
         {/* trim */}
         {isTrimmed && (
-          <span className="text-[9px] text-yellow-400/70 font-mono">
+          <span
+            className={`text-[9px] font-mono ${hasFilmstrip ? 'text-yellow-300/90 drop-shadow-sm' : 'text-yellow-400/70'}`}
+          >
             {(displayTrimStart / 1000).toFixed(2)}-
             {(displayTrimEnd / 1000).toFixed(2)}
           </span>
