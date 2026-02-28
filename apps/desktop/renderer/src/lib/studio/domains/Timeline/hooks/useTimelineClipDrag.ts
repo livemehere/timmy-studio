@@ -11,7 +11,12 @@ import {
   useInteractionStore,
 } from '../../../hooks/useStudioStores';
 import { selectAssetById } from '../../../stores/docStore';
-import { getClipMotions } from '../clipMotionRegistry';
+import {
+  getClipMotions,
+  registerClipPreview,
+  unregisterClipPreview,
+  type ClipPreviewState,
+} from '../clipMotionRegistry';
 
 // 최소 클립 길이 (ms)
 const MIN_CLIP_DURATION_MS = 100;
@@ -89,6 +94,24 @@ export function useTimelineClipDrag({
     trimStart: number;
     trimEnd: number;
   } | null>(null);
+
+  // Properties 패널 등 외부에서 실시간 프리뷰를 위해 localDragState를 조작하는 콜백 등록
+  useEffect(() => {
+    const handlePreview = (preview: ClipPreviewState | null) => {
+      if (preview === null) {
+        setLocalDragState(null);
+        return;
+      }
+      setLocalDragState({
+        startTime: preview.startTime ?? clip.startTime,
+        endTime: preview.endTime ?? clip.endTime,
+        trimStart: preview.trimStart ?? clip.trimStart,
+        trimEnd: preview.trimEnd ?? clip.trimEnd,
+      });
+    };
+    registerClipPreview(clip.id, handlePreview);
+    return () => unregisterClipPreview(clip.id);
+  }, [clip.id, clip.startTime, clip.endTime, clip.trimStart, clip.trimEnd]);
 
   // 드래그 중이면 로컬 상태 사용, 아니면 store 값 사용
   const displayStartTime = localDragState?.startTime ?? clip.startTime;

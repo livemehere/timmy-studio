@@ -39,6 +39,7 @@ import {
   type JsonPath,
   type JsonPrimitive,
 } from '../../utils/transformHelpers';
+import { setClipPreview } from '../../domains/Timeline/clipMotionRegistry';
 
 interface PropertiesProps {
   clipId: string;
@@ -125,17 +126,24 @@ export function Properties({ clipId }: PropertiesProps) {
               defaultStartTime={clip.startTime}
               defaultEndTime={clip.endTime}
               onCommitStartTime={(value) => {
+                setClipPreview(clip.id, null);
                 updateClip({ startTime: value });
               }}
               onCommitEndTime={(value) => {
+                setClipPreview(clip.id, null);
                 updateClip({ endTime: value });
               }}
-              onLiveStartTimeChange={() => {
-                // TODO: preview 업데이트
-                // TODO: clip 을 포퍼먼스 이슈 없이 tranlsate 처리할 방법 고안 (motionValue or dom ref 잡아서 zustand 공유) - insteractionStore 활용
+              onLiveStartTimeChange={(value) => {
+                setClipPreview(clip.id, {
+                  startTime: value,
+                  endTime: value + (clip.endTime - clip.startTime),
+                });
               }}
-              onLiveEndTimeChange={() => {
-                // TODO: 위와 동일
+              onLiveEndTimeChange={(value) => {
+                setClipPreview(clip.id, {
+                  startTime: value - (clip.endTime - clip.startTime),
+                  endTime: value,
+                });
               }}
             />
           }
@@ -151,16 +159,18 @@ export function Properties({ clipId }: PropertiesProps) {
               defaultTrimEnd={clip.trimEnd}
               maxTrimMs={Math.max(0, clip.endTime - clip.startTime)}
               onCommitTrimStart={(value) => {
+                setClipPreview(clip.id, null);
                 updateClip({ trimStart: value });
               }}
               onCommitTrimEnd={(value) => {
+                setClipPreview(clip.id, null);
                 updateClip({ trimEnd: value });
               }}
-              onLiveTrimStartChange={() => {
-                // TODO: preview 업데이트
+              onLiveTrimStartChange={(value) => {
+                setClipPreview(clip.id, { trimStart: value });
               }}
-              onLiveTrimEndChange={() => {
-                // TODO: preview 업데이트
+              onLiveTrimEndChange={(value) => {
+                setClipPreview(clip.id, { trimEnd: value });
               }}
             />
           }
