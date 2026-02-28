@@ -32,6 +32,7 @@ import { ClipContent } from './components/ClipContent';
 import { ClipResizeHandles } from './components/ClipResizeHandles';
 import { useEffect } from 'react';
 import { selectClipById, selectTrackById } from '../../stores/docStore';
+import { registerClipMotion, unregisterClipMotion } from './clipMotionRegistry';
 
 export function TimelineClip({
   clipId,
@@ -50,6 +51,41 @@ export function TimelineClip({
   useEffect(() => {
     console.log('clip', clip);
   }, [clip]);
+
+  // Register motionX in the module-level registry for multi-clip drag
+  const {
+    clipRef,
+    motionX,
+    isCloneMode,
+    isDragging,
+    isMultiDrag,
+    dragMode,
+    displayStartTime,
+    displayEndTime,
+    displayTrimStart,
+    displayTrimEnd,
+    displayWidth,
+    displayLeft,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+    handlePointerCancel,
+    handleDragStart,
+    handleDrag,
+    handleWheel,
+    handleClick,
+    handleDragEnd,
+  } = useTimelineClipDrag({
+    clip,
+    trackId,
+    trackHeight,
+    pxPerSec,
+  });
+
+  useEffect(() => {
+    registerClipMotion(clipId, motionX, trackId);
+    return () => unregisterClipMotion(clipId);
+  }, [clipId, motionX, trackId]);
 
   const track = useDocStore(selectTrackById(trackId));
   const syncedGraphicClipIds = useEngineStore(
@@ -76,34 +112,6 @@ export function TimelineClip({
   const isSelected = useInteractionStore((state) =>
     state.selectedClipIds.includes(clip.id)
   );
-
-  const {
-    clipRef,
-    motionX,
-    isCloneMode,
-    isDragging,
-    dragMode,
-    displayStartTime,
-    displayEndTime,
-    displayTrimStart,
-    displayTrimEnd,
-    displayWidth,
-    displayLeft,
-    handlePointerDown,
-    handlePointerMove,
-    handlePointerUp,
-    handlePointerCancel,
-    handleDragStart,
-    handleDrag,
-    handleWheel,
-    handleClick,
-    handleDragEnd,
-  } = useTimelineClipDrag({
-    clip,
-    trackId,
-    trackHeight,
-    pxPerSec,
-  });
 
   const {
     handleCopy,
@@ -141,6 +149,7 @@ export function TimelineClip({
           <motion.div
             ref={clipRef}
             data-clip-id={clip.id}
+            data-track-id={trackId}
             style={{
               width: displayWidth,
               left: displayLeft,
@@ -162,8 +171,14 @@ export function TimelineClip({
                 'opacity-50': !clip.enabled,
               }
             )}
-            // 리사이즈 모드에서는 드래그 완전 비활성화, move 모드에서는 x/y 모두 허용
-            drag={dragMode === 'move' || dragMode === null ? true : false}
+            // 리사이즈: 드래그 비활성화, multi-drag: x축만, 단일: 자유
+            drag={
+              dragMode === 'resize-start' || dragMode === 'resize-end'
+                ? false
+                : isMultiDrag
+                  ? 'x'
+                  : true
+            }
             dragMomentum={false}
             dragSnapToOrigin={dragMode === 'move'}
             dragElastic={0}

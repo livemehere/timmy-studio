@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
+import type { MotionValue } from 'motion/react';
 import { useMotionValue } from 'motion/react';
 import { msToSec } from '../../../utils/time';
 import { Track } from '../../Track/Track';
@@ -10,6 +11,7 @@ import {
   useInteractionStore,
 } from '../../../hooks/useStudioStores';
 import { selectAssetById } from '../../../stores/docStore';
+import { getClipMotions } from '../clipMotionRegistry';
 
 // 최소 클립 길이 (ms)
 const MIN_CLIP_DURATION_MS = 100;
@@ -32,6 +34,7 @@ export function useTimelineClipDrag({
   const updateClip = useDocStore((state) => state.updateClip);
   const moveClipToTrack = useDocStore((state) => state.moveClipToTrack);
   const cloneClipToTrack = useDocStore((state) => state.cloneClipToTrack);
+  const batch = useDocStore((state) => state.batch);
   const mediaAsset = useDocStore(
     'assetId' in clip ? selectAssetById(clip.assetId) : () => undefined
   ) as IMediaAsset | undefined;
@@ -48,6 +51,7 @@ export function useTimelineClipDrag({
   const setDraggingClipId = useInteractionStore(
     (state) => state.setDraggingClipId
   );
+  const selectedClipIds = useInteractionStore((state) => state.selectedClipIds);
 
   // Refs for drag state
   const clipRef = useRef<HTMLDivElement>(null);
@@ -66,10 +70,17 @@ export function useTimelineClipDrag({
   // Motion value for x - 리사이즈 모드에서 motion의 transform을 비활성화
   const motionX = useMotionValue(0);
 
+  // Multi-drag: follower MotionValues cached at drag start
+  const followerMotionsRef = useRef<
+    Map<string, { motionX: MotionValue<number>; trackId: string }>
+  >(new Map());
+  const isMultiDragRef = useRef(false);
+
   // UI states
   const [isCloneMode, setIsCloneMode] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragMode, setDragMode] = useState<DragMode>(null);
+  const [isMultiDrag, setIsMultiDrag] = useState(false);
 
   // 🔥 로컬 드래그 상태 - 드래그 중 store 업데이트 없이 UI만 업데이트
   const [localDragState, setLocalDragState] = useState<{
@@ -334,15 +345,39 @@ export function useTimelineClipDrag({
     const altPressed = e.altKey || false;
     isAltPressedRef.current = altPressed;
     setIsCloneMode(altPressed);
+
+    // Multi-drag: 이 클립이 선택된 클립 그룹에 포함되면 follower들 캐싱
+    const isPartOfSelection =
+      selectedClipIds.length > 1 && selectedClipIds.includes(clip.id);
+    isMultiDragRef.current = isPartOfSelection;
+    setIsMultiDrag(isPartOfSelection);
+
+    if (isPartOfSelection) {
+      const followerIds = selectedClipIds.filter((id) => id !== clip.id);
+      followerMotionsRef.current = getClipMotions(followerIds);
+    } else {
+      followerMotionsRef.current = new Map();
+    }
   };
 
-  const handleDrag = (e: MouseEvent | TouchEvent | PointerEvent) => {
+  const handleDrag = (
+    e: MouseEvent | TouchEvent | PointerEvent,
+    info: { offset: { x: number; y: number } }
+  ) => {
     if (dragModeRef.current !== 'move') return;
 
     // @ts-ignore - e.altKey exists in drag events
     const altPressed = e.altKey || false;
     isAltPressedRef.current = altPressed;
     setIsCloneMode(altPressed);
+
+    // Multi-drag: leader의 offset을 follower들에게 전파 (MotionValue → no re-render)
+    if (isMultiDragRef.current) {
+      const offsetX = info.offset.x + wheelDeltaRef.current.x;
+      followerMotionsRef.current.forEach((entry) => {
+        entry.motionX.set(offsetX);
+      });
+    }
   };
 
   const handleWheel = (e: React.WheelEvent) => {
@@ -369,6 +404,49 @@ export function useTimelineClipDrag({
     }
   };
 
+  /**
+   * Follower 클립들의 motionX 를 리셋한다.
+   * motion의 dragSnapToOrigin이 leader만 처리하므로, followers는 직접 리셋해야 한다.
+   */
+  const _resetFollowers = () => {
+    followerMotionsRef.current.forEach((entry) => {
+      entry.motionX.set(0);
+    });
+    followerMotionsRef.current = new Map();
+    isMultiDragRef.current = false;
+    setIsMultiDrag(false);
+  };
+
+  /**
+   * 여러 클립을 동시에 같은 deltaMs만큼 이동한다 (same-track only, 수평 이동).
+   * immer batch 1회로 처리하여 re-render 1회로 끝낸다.
+   */
+  const _commitMultiDrag = (deltaMs: number) => {
+    batch((draft) => {
+      // leader 포함 전체 selectedClipIds 처리
+      for (const selClipId of selectedClipIds) {
+        // followerMotionsRef에서 trackId를 가져오거나, leader인 경우 현재 trackId 사용
+        const followerEntry = followerMotionsRef.current.get(selClipId);
+        const clipTrackId =
+          selClipId === clip.id ? trackId : followerEntry?.trackId;
+        if (!clipTrackId) continue;
+
+        const draftTrack = draft.tracks.find((t) => t.id === clipTrackId);
+        if (!draftTrack) continue;
+
+        const draftClip = (draftTrack.clips as IClip[]).find(
+          (c) => c.id === selClipId
+        );
+        if (!draftClip) continue;
+
+        const duration = draftClip.endTime - draftClip.startTime;
+        const newStart = Math.max(0, draftClip.startTime + deltaMs);
+        draftClip.startTime = newStart;
+        draftClip.endTime = newStart + duration;
+      }
+    });
+  };
+
   const handleDragEnd = (
     _: MouseEvent | TouchEvent | PointerEvent,
     info: { offset: { x: number; y: number } }
@@ -376,6 +454,7 @@ export function useTimelineClipDrag({
     if (dragModeRef.current !== 'move') {
       dragModeRef.current = null;
       setDragMode(null);
+      _resetFollowers();
       return;
     }
     const isCloning = isAltPressedRef.current;
@@ -388,6 +467,22 @@ export function useTimelineClipDrag({
     const totalOffsetY = info.offset.y + wheelDeltaRef.current.y;
 
     const deltaStartTime = (totalOffsetX / pxPerSec) * 1000;
+
+    // ── Multi-drag path (같은 트랙 내 수평 이동, 복제 아닌 경우) ──
+    const trackIndexDelta = Math.round(totalOffsetY / trackHeight);
+    if (isMultiDragRef.current && !isCloning && trackIndexDelta === 0) {
+      _commitMultiDrag(deltaStartTime);
+
+      _resetFollowers();
+      setActiveTrackId(trackId);
+      dragModeRef.current = null;
+      setDragMode(null);
+      return;
+    }
+
+    // Multi-drag 였지만 cross-track이나 clone 같은 복잡한 경우 → followers 리셋하고 leader만 단건 처리
+    _resetFollowers();
+
     const newStartTime = Math.max(0, clip.startTime + deltaStartTime);
     const newEndTime = newStartTime + (clip.endTime - clip.startTime);
 
@@ -399,7 +494,6 @@ export function useTimelineClipDrag({
     });
 
     // 트랙 간 이동/복제 로직
-    const trackIndexDelta = Math.round(totalOffsetY / trackHeight);
 
     if (trackIndexDelta !== 0) {
       // 현재 트랙의 인덱스 찾기
@@ -544,6 +638,7 @@ export function useTimelineClipDrag({
     motionX,
     isCloneMode,
     isDragging,
+    isMultiDrag,
     dragMode,
     displayStartTime,
     displayEndTime,
